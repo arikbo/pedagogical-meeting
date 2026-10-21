@@ -202,7 +202,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 17:50</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 18:00</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -250,8 +250,8 @@ function scoreHeader(field, h){
   switch(field){
     case 'name': if(/שם\s*(פרטי|משפחה|האב|האם|הורה|מחנך|מורה|מקצוע|קבוצה|כיתה)/.test(h)) return 0;
       if(/^שם\s*(מלא|התלמיד|תלמיד|התלמידה)?$/.test(h)) return 10; if(has('שם התלמיד')||has('שם מלא')||has('תלמיד/ה')) return 8; if(h==='תלמיד'||h==='תלמידה') return 7; return 0;
-    case 'first': return has('שם פרטי')?10:0;
-    case 'last': return has('שם משפחה')?10:0;
+    case 'first': return has('שם פרטי')?10:(h==='פרטי'?8:0);
+    case 'last': return has('שם משפחה')?10:(h==='משפחה'?8:0);
     case 'cls': return (/^כיתה$/.test(h)||has('כיתה'))&&!has('מחנך')?(h==='כיתה'?10:5):0;
     case 'avg': return has('ממוצע')?(has('כללי')||has('סופי')||h==='ממוצע'?10:6):0;
     case 'math': return !grp&&(has('מתמטיקה')||has('חשבון'))?10:0;
@@ -385,7 +385,10 @@ function buildStudents(files, opts){
     for(const [fid,list] of Object.entries(st.src)){
       const distinct=[]; for(const e of list){ if(!distinct.some(d=>sameVal(fid,d.val,e.val))) distinct.push(e); }
       const ck=st.key+'|'+fid;
-      if(distinct.length>1&&INFO.includes(fid)){
+      const fromEvents=list.filter(e=>dataFiles.find(f=>f.id===e.file)?.kind==='events');
+      if(distinct.length>1&&['events','abs','late'].includes(fid)&&fromEvents.length){
+        val[fid]=fromEvents[fromEvents.length-1].val; /* report 42 counts lesson events directly */
+      } else if(distinct.length>1&&INFO.includes(fid)){
         /* general-info texts from several files (a deck + a PDF): keep them all, joined; the teacher can still pick one */
         const longest=distinct.reduce((a,b)=>b.val.length>a.val.length?b:a);
         if(distinct.every(d=>longest.val.includes(d.val))){ val[fid]=longest.val; continue; }
@@ -521,7 +524,13 @@ function pdfItemsToAoa(pages){
   const rows = headerScore(b)>headerScore(a) ? b : a;
   const isHeaderRow=r=>{ const cells=rowCells(r); return cells.length>=2&&cells.some(c=>isNameHeader(c.str)); };
   const segs=[]; let cur=null;
-  for(const r of rows){ if(isHeaderRow(r)){ cur={hdr:r,data:[]}; segs.push(cur); } else if(cur) cur.data.push(r); }
+  rows.forEach((r,i)=>{
+    if(isHeaderRow(r)){
+      /* a header cell written on two lines ("שם" above "משפחה") puts a word on the row just above */
+      const above=[]; for(let j=i-1;j>=0&&j>=i-2;j--){ const q=rows[j]; if(q.page===r.page&&(q.y-r.y)<r.h*1.6&&!q.items.some(t=>/\d/.test(t.str))) above.unshift(q); else break; }
+      cur={hdr:r,above,data:[]}; segs.push(cur);
+    } else if(cur) cur.data.push(r);
+  });
   const aoa=[], meta=[];
   if(!segs.length){ /* no header found: raw rows, columns can be mapped by hand */
     for(const r of rows){ aoa.push(rowCells(r).map(c=>c.str)); meta.push({page:r.page,y:r.y,h:r.h}); }
@@ -532,11 +541,13 @@ function pdfItemsToAoa(pages){
     const cols=colIntervals(s.data,s.hdr);
     if(!cols.length) continue;
     let names=assignCols(s.hdr,cols);
+    for(const q of [...s.above].reverse()){ const v=assignCols(q,cols); names=names.map((n,k)=>clean(v[k]+' '+n)); }
     const nameCol=names.findIndex(n=>isNameHeader(n));
     const nx=s.data[0];
     if(nx&&nx.page===s.hdr.page&&(s.hdr.y-nx.y)<s.hdr.h*1.8&&!nx.items.some(t=>/\d/.test(t.str))){
-      const v=assignCols(nx,cols);
-      if(nameCol>=0&&!v[nameCol]){ names=names.map((n,k)=>clean(n+' '+v[k])); s.data.shift(); }
+      const v=assignCols(nx,cols), filled=v.filter(Boolean);
+      /* a second header line: no digits, only a few short words (data rows fill many columns) */
+      if((nameCol>=0&&!v[nameCol])||(filled.length<=Math.max(2,cols.length/3)&&filled.every(x=>x.split(' ').length<=2))){ names=names.map((n,k)=>clean(n+' '+v[k])); s.data.shift(); }
     }
     /* map this page's columns onto the shared header by name */
     const idx=names.map(n=>{ let k=n?header.indexOf(n):-1; if(k<0){ header.push(n); k=header.length-1; } return k; });
@@ -1016,7 +1027,7 @@ async function rosterPhotosFromPdf(file){
   const hr=findHeaderRow(aoa), headers=(aoa[hr]||[]).map(clean), fl={headers,mapping:autoMap(headers)};
   const rows=[]; for(let i=hr+1;i<aoa.length;i++){
     const text=stripNum((aoa[i]||[]).join(' ')); /* every word on the row, in case the name columns were not found */
-    const nm=rowName(fl,aoa[i])||text;
+    const nm=rowName(fl,aoa[i]);
     if(nm&&meta[i]&&/[\u05D0-\u05EA]/.test(nm)&&!/תלמידים|עמוד/.test(nm)) rows.push({name:nm,text,...meta[i]}); }
   const isRoster=isRosterHeaders(headers);
   const out={}; let images=0, done=0;
