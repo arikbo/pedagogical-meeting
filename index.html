@@ -182,7 +182,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
     <label>ציון נכשל: מתחת ל-<input type="number" id="sPass" value="55" min="0" max="100"></label>
     <label>שורת קרדיט בתחתית כל שקף<input type="text" id="sCredit" value="נבנה על ידי: אריק - @mathfun.with.arik"></label>
     <label class="check"><input type="checkbox" id="sBsd" checked> בס״ד בפינה הימנית העליונה</label>
-    <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה (מהסדין או מדוח 66)</label>
+    <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה (לפי דוח 66; בלעדיו רק מורים שהזינו ציונים בסדין)</label>
     <label class="check"><input type="checkbox" id="sTop3"> שקף 3 התלמידים המצטיינים לפי ממוצע</label>
   </div>
   <div class="uploads">
@@ -204,7 +204,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 18:30</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 19:00</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -222,7 +222,7 @@ const FIELDS = [
   {id:'name', label:'שם מלא'}, {id:'first', label:'שם פרטי'}, {id:'last', label:'שם משפחה'},
   {id:'cls', label:'כיתה'}, {id:'avg', label:'ממוצע כללי'},
   {id:'math', label:'מתמטיקה'}, {id:'lang', label:'עברית'}, {id:'eng', label:'אנגלית'}, {id:'sci', label:'מדעים'},
-  {id:'geo', label:'גאוגרפיה'}, {id:'hist', label:'היסטוריה'},
+  {id:'geo', label:'גאוגרפיה'}, {id:'hist', label:'היסטוריה'}, {id:'gender', label:'מין (בן/בת)'},
   {id:'fails', label:'מספר נכשלים'}, {id:'late', label:'איחורים'}, {id:'abs', label:'חיסורים'}, {id:'events', label:'אירועי שיעור'},
   {id:'gMath', label:'הקבצה במתמטיקה'}, {id:'gEng', label:'הקבצה באנגלית'},
   {id:'iGen', label:'כללי'}, {id:'iExc', label:'בעיות חריגות'}, {id:'iAtt', label:'ביקור סדיר'},
@@ -269,6 +269,7 @@ function scoreHeader(field, h){
     case 'sci': return !grp&&(has('מדעים')||h==='מדע'||has('מדע וטכנולוגיה'))?10:0;
     case 'geo': return has('גאוגרפיה')||has('גיאוגרפיה')||has('ג״ג')||has('ג"ג')||has("ג''ג")?10:0;
     case 'hist': return has('היסטוריה')||has('הסטוריה')?10:0;
+    case 'gender': return h==='מין'||has('מגדר')||h==='בן/בת'||h==='בן / בת'||h==='מין התלמיד'?10:0;
     case 'fails': return has('נכשל')||has('שליליים')?10:0;
     case 'late': return has('איחור')?10:0;
     case 'events': return has('אירועי שיעור')||has('א.שיעור')?10:0;
@@ -435,6 +436,7 @@ function buildStudents(files, opts){
       gMath:val.gMath||'', gEng:val.gEng||'',
       iGen:val.iGen||'', iExc:val.iExc||'', iAtt:val.iAtt||'', iEmo:val.iEmo||'', iAns:val.iAns||'',
       evs:st.evs||null,
+      gender:(()=>{ const g=clean(val.gender); return /^(ז|זכר|בן|m|male)/i.test(g)?'m':/^(נ|נקבה|בת|f|female)/i.test(g)?'f':null; })(),
       aliasKeys:Object.keys(aliasOf).filter(k=>aliasOf[k]===st.key),
       files:[...st.files]
     });
@@ -870,6 +872,17 @@ function renderChecks(){
     <div class="stat ${missing.length?'warn':'good'}"><b>${missing.length}</b><span>חסרים בחלק מהדוחות</span></div>
     <div class="stat"><b>${withPhoto}/${students.length}</b><span>עם תמונה</span></div>`;
   const box=$('#issues'); box.innerHTML='';
+  const realFiles=state.files.filter(f=>!state.sample);
+  if(realFiles.length&&$('#sTeachers').checked&&!state.files.some(f=>f.kind==='teachers')){
+    const el=document.createElement('div'); el.className='issue missing';
+    el.innerHTML=`<div class="issue-title">שקף מורי הכיתה: חסר דוח 66</div><span class="hint">בלי דוח 66 (רשימת מורי הכיתה/שכבה) יופיעו רק מורים שכבר הזינו ציונים בסדין.</span>`;
+    box.appendChild(el);
+  }
+  if(realFiles.length&&built.students.length&&!built.students.some(s=>s.gender)){
+    const el=document.createElement('div'); el.className='issue missing';
+    el.innerHTML=`<div class="issue-title">אין נתון בנים/בנות</div><span class="hint">כדי להציג כמה בנים וכמה בנות, העלו דוח עם עמודת ״מין״. בלעדיו השקף יציג רק את מספר התלמידים.</span>`;
+    box.appendChild(el);
+  }
   const clsSet=[...new Set((built.classes||[]).map(c=>c.cls))];
   if(clsSet.length>1){
     const el=document.createElement('div'); el.className='issue';
@@ -1385,30 +1398,36 @@ async function generate(){
   const sub=[s.teacher&&('מחנך/ת: '+s.teacher), dateTxt].filter(Boolean).join('   ·   ');
   if(sub) cv.addText(sub,T({x:4.6,y:4.0,w:7.9,h:0.45,fontSize:18,color:C.soft}));
   cv.addShape(pptx.ShapeType.rect,{x:11.3,y:4.65,w:1.2,h:0.06,fill:{color:ACC},line:{color:ACC}});
-  const stats=[[String(built.students.length),'תלמידים'], classAvg!=null?[fmt(classAvg),'ממוצע כיתתי']:null, [String(built.students.filter(x=>x.fails).length),'תלמידים עם נכשלים']].filter(Boolean);
-  stats.forEach(([n,l],i)=>{ const x=12.5-(i+1)*2.25+0.15;
-    cv.addShape(pptx.ShapeType.roundRect,{x,y:5.05,w:2.1,h:1.15,fill:{color:'FFFFFF'},line:{color:C.line,width:0.75},rectRadius:0.1});
-    cv.addText(n,T({x,y:5.12,w:2.1,h:0.62,fontSize:28,bold:true,color:C.ink,align:'center'}));
-    cv.addText(l,T({x,y:5.72,w:2.1,h:0.36,fontSize:12,color:C.soft,align:'center'})); });
   credit(cv);
 
-  /* who teaches the class */
-  const tList=state.files.flatMap(f=>f.teachers||[]);
-  if(s.showTeachers&&tList.length){
-    const by={}; for(const t of tList){ const k=t.subject; (by[k] ||= new Set()).add((t.group?t.group+': ':'')+t.teacher); }
-    const subj=Object.entries(by);
-    const ts=pptx.addSlide(); ts.background={color:PAGE}; bsd(ts);
-    ts.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
-    ts.addText('צוות המורים'+(s.cls?' · כיתה '+s.cls:''),T({x:0.6,y:0.45,w:11.9,h:0.7,fontSize:30,bold:true}));
-    if(s.teacher) ts.addText('מחנך/ת הכיתה: '+s.teacher,T({x:0.6,y:1.1,w:11.9,h:0.4,fontSize:16,color:ACC,bold:true}));
-    const cols=3, cw=3.85, gx=0.18, top=1.7, avail=6.85-top, rows=Math.ceil(subj.length/cols), chh=Math.min(1.3,(avail-(rows-1)*0.14)/rows);
-    subj.forEach(([name,set],i)=>{
-      const r=Math.floor(i/cols), k=i%cols, x=12.5-(k+1)*cw-k*gx, y=top+r*(chh+0.14);
-      ts.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:chh,fill:{color:'FFFFFF'},line:{color:C.line,width:0.75},rectRadius:0.08});
-      ts.addText(name,T({x:x+0.15,y:y+0.06,w:cw-0.3,h:Math.min(0.45,chh*0.42),fontSize:17,bold:true,color:C.ink,fit:'shrink'}));
-      ts.addText([...set].join('\n'),T({x:x+0.15,y:y+Math.min(0.5,chh*0.42),w:cw-0.3,h:chh-Math.min(0.54,chh*0.44),fontSize:13,color:C.soft,valign:'top',fit:'shrink'}));
-    });
-    credit(ts);
+  /* the class at a glance: boys / girls */
+  {
+    const BOY='2F5BD8', GIRL='D9467A';
+    const boys=built.students.filter(x=>x.gender==='m').length, girls=built.students.filter(x=>x.gender==='f').length, total=built.students.length;
+    const cs=pptx.addSlide(); cs.background={color:PAGE}; bsd(cs);
+    cs.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
+    cs.addText('הכיתה במספרים'+(s.cls?' · '+s.cls:''),T({x:0.6,y:0.45,w:11.9,h:0.7,fontSize:30,bold:true}));
+    if(boys+girls){
+      /* two big circles, then one bar split by share */
+      const circ=(x,n,label,col,tint)=>{
+        cs.addShape(pptx.ShapeType.ellipse,{x,y:1.55,w:2.6,h:2.6,fill:{color:tint},line:{color:col,width:3}});
+        cs.addText(String(n),T({x,y:1.95,w:2.6,h:1.2,fontSize:66,bold:true,color:col,align:'center'}));
+        cs.addText(label,T({x,y:3.05,w:2.6,h:0.5,fontSize:20,bold:true,color:col,align:'center'}));
+        cs.addText(Math.round(100*n/(boys+girls))+'%',T({x,y:4.25,w:2.6,h:0.45,fontSize:18,color:C.soft,align:'center'}));
+      };
+      circ(8.2,boys,'בנים',BOY,'EAF0FF'); circ(4.6,girls,'בנות',GIRL,'FCE8EF');
+      cs.addText(String(total),T({x:0.9,y:1.95,w:3.0,h:1.2,fontSize:66,bold:true,color:C.ink,align:'center'}));
+      cs.addText('תלמידים בכיתה',T({x:0.9,y:3.05,w:3.0,h:0.5,fontSize:20,bold:true,color:C.soft,align:'center'}));
+      const bx=0.9, bw=10.9, by=5.05, bh=0.5, wb=bw*boys/(boys+girls);
+      cs.addShape(pptx.ShapeType.roundRect,{x:bx+bw-wb,y:by,w:wb,h:bh,fill:{color:BOY},line:{color:BOY},rectRadius:0.08});
+      cs.addShape(pptx.ShapeType.roundRect,{x:bx,y:by,w:bw-wb,h:bh,fill:{color:GIRL},line:{color:GIRL},rectRadius:0.08});
+    } else {
+      cs.addText(String(total),T({x:0.9,y:2.0,w:11.6,h:1.6,fontSize:96,bold:true,color:ACC,align:'center'}));
+      cs.addText('תלמידים בכיתה',T({x:0.9,y:3.6,w:11.6,h:0.6,fontSize:24,bold:true,color:C.soft,align:'center'}));
+    }
+    const extra=[classAvg!=null?`ממוצע כיתתי ${fmt(classAvg)}`:'', `${built.students.filter(x=>x.fails).length} תלמידים עם נכשלים`].filter(Boolean).join('   ·   ');
+    cs.addText(extra,T({x:0.9,y:5.85,w:10.9,h:0.45,fontSize:16,color:C.soft,align:'center'}));
+    credit(cs);
   }
 
   /* top three by overall average */
@@ -1437,6 +1456,26 @@ async function generate(){
     }
     credit(tp);
   }
+  /* who teaches the class */
+  const t66=state.files.filter(f=>f.kind==='teachers').flatMap(f=>f.teachers);
+  const tList=t66.length?t66:state.files.flatMap(f=>f.teachers||[]); /* the סדין lists only teachers who entered grades */
+  if(s.showTeachers&&tList.length){
+    const by={}; for(const t of tList){ const k=t.subject; (by[k] ||= new Set()).add((t.group?t.group+': ':'')+t.teacher); }
+    const subj=Object.entries(by);
+    const ts=pptx.addSlide(); ts.background={color:PAGE}; bsd(ts);
+    ts.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
+    ts.addText('צוות המורים'+(s.cls?' · כיתה '+s.cls:''),T({x:0.6,y:0.45,w:11.9,h:0.7,fontSize:30,bold:true}));
+    if(s.teacher) ts.addText('מחנך/ת הכיתה: '+s.teacher,T({x:0.6,y:1.1,w:11.9,h:0.4,fontSize:16,color:ACC,bold:true}));
+    const cols=3, cw=3.85, gx=0.18, top=1.7, avail=6.85-top, rows=Math.ceil(subj.length/cols), chh=Math.min(1.3,(avail-(rows-1)*0.14)/rows);
+    subj.forEach(([name,set],i)=>{
+      const r=Math.floor(i/cols), k=i%cols, x=12.5-(k+1)*cw-k*gx, y=top+r*(chh+0.14);
+      ts.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:chh,fill:{color:'FFFFFF'},line:{color:C.line,width:0.75},rectRadius:0.08});
+      ts.addText(name,T({x:x+0.15,y:y+0.06,w:cw-0.3,h:Math.min(0.45,chh*0.42),fontSize:17,bold:true,color:C.ink,fit:'shrink'}));
+      ts.addText([...set].join('\n'),T({x:x+0.15,y:y+Math.min(0.5,chh*0.42),w:cw-0.3,h:chh-Math.min(0.54,chh*0.44),fontSize:13,color:C.soft,valign:'top',fit:'shrink'}));
+    });
+    credit(ts);
+  }
+
 
   const flagsBy={}; for(const c of built.conflicts) if(!c.resolved)(flagsBy[c.key] ||= []).push(`${FLABEL[c.field]} (${c.options.map(o=>o.val).join(' / ')})`);
   for(const st of built.students){
