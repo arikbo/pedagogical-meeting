@@ -1,0 +1,1135 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>מחולל ישיבה פדגוגית</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=Assistant:wght@400;600;700&display=swap">
+<style>
+/* Layout: one working column of numbered steps (real order: upload → details → check → students), sticky action bar at the bottom */
+:root{
+  --bg:#F3F5FA; --surface:#FFFFFF; --surface-2:#EEF3FC; --line:#DDE3EF;
+  --ink:#1E2A44; --ink-soft:#5A6785; --ink-faint:#8A94AD;
+  --accent:#2F5BD8; --accent-ink:#FFFFFF; --accent-soft:#E6EDFF;
+  --good:#15803D; --warn:#B45309; --bad:#B91C1C;
+  --good-bg:#E8F6EC; --warn-bg:#FFF4E5; --bad-bg:#FDECEC;
+  --display:'Rubik', 'Arial Hebrew', Arial, sans-serif;
+  --body:'Assistant', 'Arial Hebrew', Arial, sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121826; --surface:#1A2234; --surface-2:#222C42; --line:#2E3A54;
+  --ink:#E8ECF5; --ink-soft:#A9B3CB; --ink-faint:#7B86A1;
+  --accent:#7FA2FF; --accent-ink:#0E1424; --accent-soft:#25335A;
+  --good:#5DD08A; --warn:#F2B15C; --bad:#FF8A8A;
+  --good-bg:#18301F; --warn-bg:#33270F; --bad-bg:#3A1A1C; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#121826; --surface:#1A2234; --surface-2:#222C42; --line:#2E3A54;
+  --ink:#E8ECF5; --ink-soft:#A9B3CB; --ink-faint:#7B86A1;
+  --accent:#7FA2FF; --accent-ink:#0E1424; --accent-soft:#25335A;
+  --good:#5DD08A; --warn:#F2B15C; --bad:#FF8A8A;
+  --good-bg:#18301F; --warn-bg:#33270F; --bad-bg:#3A1A1C; color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;margin:0;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:0 120px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+header{padding-block:36px 4px;display:flex;flex-direction:column;gap:8px}
+.eyebrow{font-family:var(--display);font-size:14px;letter-spacing:.04em;color:var(--accent);font-weight:500}
+h1{font-family:var(--display);font-size:clamp(30px,5vw,44px);line-height:1.1;margin:0;text-wrap:balance;font-weight:700}
+.lede{color:var(--ink-soft);max-width:62ch;margin:0}
+.privacy{display:inline-flex;gap:8px;align-items:center;font-size:15px;color:var(--good);background:var(--good-bg);padding:6px 12px;border-radius:999px;width:fit-content}
+section.step{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:24px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.step-head{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.num{font-family:var(--display);font-weight:700;color:var(--accent);font-size:15px;background:var(--accent-soft);border-radius:999px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+h2{font-family:var(--display);font-size:24px;margin:0;font-weight:700}
+.hint{color:var(--ink-soft);font-size:15px;margin:0}
+.sample{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--warn-bg);color:var(--ink);border-radius:10px;padding:12px 16px;font-size:15px}
+.sample b{color:var(--warn)}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:28px 20px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;cursor:pointer;transition:border-color .15s, background .15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop strong{font-family:var(--display);font-size:19px}
+.drop span{color:var(--ink-soft);font-size:15px}
+.btn{font-family:var(--display);font-weight:500;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 16px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:18px;padding:12px 26px}
+.btn.primary:disabled{opacity:.5;cursor:not-allowed}
+.btn.small{font-size:14px;padding:5px 12px}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.drop:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.files{display:flex;flex-direction:column;gap:12px}
+details.file{border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+details.file summary{list-style:none;cursor:pointer;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+details.file summary::-webkit-details-marker{display:none}
+.fname{font-weight:700;font-family:var(--display);overflow-wrap:anywhere}
+.chip{font-size:13px;border-radius:999px;padding:3px 10px;background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);white-space:nowrap}
+.chip.ok{color:var(--good);background:var(--good-bg);border-color:transparent}
+.chip.warn{color:var(--warn);background:var(--warn-bg);border-color:transparent}
+.chip.bad{color:var(--bad);background:var(--bad-bg);border-color:transparent}
+.grow{flex:1}
+.map{padding:4px 16px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 16px}
+.map label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--ink-soft)}
+select,input[type=text],input[type=number],input[type=date],textarea{font-family:var(--body);font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%}
+select.mapped{border-color:var(--accent)}
+textarea{resize:vertical;min-height:56px}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px 18px}
+.form label{display:flex;flex-direction:column;gap:5px;font-size:15px;color:var(--ink-soft)}
+.form label.check{flex-direction:row;align-items:center;gap:8px;color:var(--ink)}
+.uploads{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{border-radius:12px;padding:14px 16px;background:var(--surface-2);display:flex;flex-direction:column;gap:2px}
+.stat b{font-family:var(--display);font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:14px;color:var(--ink-soft)}
+.stat.bad b{color:var(--bad)} .stat.warn b{color:var(--warn)} .stat.good b{color:var(--good)}
+.issues{display:flex;flex-direction:column;gap:10px}
+.issue{border:1px solid var(--line);border-inline-start:4px solid var(--bad);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.issue.missing{border-inline-start-color:var(--warn)}
+.issue.done{border-inline-start-color:var(--good)}
+.issue-title{font-weight:700}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:15px;cursor:pointer;background:var(--surface)}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt small{color:var(--ink-faint)}
+.students{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.card{border:1px solid var(--line);border-radius:12px;background:var(--surface);display:flex;flex-direction:column;min-width:0}
+.card-top{display:flex;gap:12px;align-items:center;padding:14px 14px 10px}
+.ph{width:52px;height:52px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;flex:none;overflow:hidden}
+.ph img{width:100%;height:100%;object-fit:cover}
+button.ph{border:2px dashed transparent;cursor:pointer;padding:0;font-size:inherit}
+button.ph:hover{border-color:var(--accent)}
+.deck{display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
+.deck-text{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}
+.deck h3{font-family:var(--display);font-size:19px;margin:0}
+#deckInfo:empty{display:none}
+#deckInfo{color:var(--good)}
+.who{display:flex;flex-direction:column;min-width:0}
+.who b{font-family:var(--display);font-size:18px;overflow-wrap:anywhere}
+.who span{font-size:14px;color:var(--ink-soft)}
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 14px}
+.n{text-align:center;background:var(--surface-2);border-radius:8px;padding:6px 2px}
+.n.wide{grid-column:span 2}
+.n b{display:block;font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums}
+.n span{font-size:12px;color:var(--ink-soft)}
+.bars{display:flex;flex-direction:column;gap:6px;padding:12px 14px}
+.bar{display:grid;grid-template-columns:70px 1fr 42px;gap:8px;align-items:center;font-size:14px}
+.track{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;display:flex;justify-content:flex-start}
+.fill{height:100%;border-radius:4px;background:var(--accent)}
+.score{font-family:var(--display);font-weight:700;text-align:left;font-variant-numeric:tabular-nums}
+.tags{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 10px}
+.flag{font-size:13px;color:var(--bad);padding:0 14px 8px}
+details.info{border-top:1px solid var(--line)}
+details.info summary{cursor:pointer;padding:10px 14px;font-size:15px;color:var(--accent);font-weight:600}
+.info-fields{display:flex;flex-direction:column;gap:8px;padding:0 14px 14px}
+.info-fields label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--ink-soft)}
+.bar-bottom{position:fixed;inset:auto 0 0 0;background:var(--surface);border-top:1px solid var(--line);
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:12px calc(12px + env(safe-area-inset-bottom, 0px));z-index:5}
+.bar-in{max-width:1080px;margin:0 auto;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+#status{color:var(--ink-soft);font-size:15px;flex:1;min-width:200px}
+.empty{color:var(--ink-faint);font-size:15px;padding:8px 0}
+.err{color:var(--bad);font-size:15px}
+.logos{display:flex;gap:8px;flex-wrap:wrap}
+.logos img{height:40px;border-radius:6px;background:#fff;padding:3px;border:1px solid var(--line)}
+footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px}
+@media (max-width:520px){ section.step{padding:18px} .nums{grid-template-columns:repeat(2,1fr)} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="eyebrow">ישיבה פדגוגית · מצגת אוטומטית מדוחות סמארט סקול</span>
+  <h1>מחולל ישיבה פדגוגית</h1>
+  <p class="lede">מעלים את הדוחות, בודקים סתירות, ומורידים מצגת PowerPoint עם שקף לכל תלמיד: ממוצע כללי, ציוני ליבה, נכשלים, איחורים, חיסורים, הקבצות ומידע כללי.</p>
+  <span class="privacy">הקבצים מעובדים במחשב שלכם בלבד. שום נתון לא נשלח לשרת.</span>
+</header>
+
+<section class="step" aria-labelledby="h-files">
+  <div class="step-head"><span class="num">1</span><h2 id="h-files">הדוחות</h2></div>
+  <p class="hint">דוחות מסמארט סקול ב-PDF, Excel או CSV: ציונים, נוכחות, ואם יש, טבלת מידע כללי. אפשר כמה קבצים, והתלמידים יאוחדו לפי שם. מהאייפון: הפיקו את הדוח כ-PDF, שמרו אותו בקבצים והעלו מכאן.</p>
+  <div id="sampleBanner" class="sample"><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
+  <div class="drop" id="dropData" tabindex="0" role="button" aria-label="העלאת דוחות">
+    <strong>גררו לכאן דוחות, או לחצו לבחירה</strong>
+    <span>‎.pdf · .xlsx · .xls · .csv</span>
+  </div>
+  <input type="file" id="inData" accept=".xlsx,.xls,.csv,.html,.htm,.pdf" multiple hidden>
+  <div id="fileErr" class="err" hidden></div>
+  <div class="files" id="files"></div>
+  <div class="deck">
+    <div class="deck-text">
+      <h3>העלאת מידע ותמונות ממצגת קיימת</h3>
+      <p class="hint">מצגת PowerPoint או PDF מישיבה קודמת. לכל תלמיד יישלפו טבלת המידע הכללי (כללי, בעיות חריגות, ביקור סדיר, קשיים רגשיים או אחרים, מענים) והתמונה שלו. אחר כך אפשר לערוך את הטקסט בכרטיס התלמיד.</p>
+      <span class="hint" id="deckInfo"></span>
+    </div>
+    <button class="btn" id="bDeck" type="button">בחירת קובץ</button>
+    <input type="file" id="inDeck" accept=".pptx,.pdf" multiple hidden>
+  </div>
+</section>
+
+<section class="step" aria-labelledby="h-meta">
+  <div class="step-head"><span class="num">2</span><h2 id="h-meta">פרטי הישיבה</h2></div>
+  <div class="form">
+    <label>כיתה<input type="text" id="sClass" placeholder="ח׳3"></label>
+    <label>מחנך/ת<input type="text" id="sTeacher" placeholder="שם המחנך/ת"></label>
+    <label>תאריך הישיבה<input type="date" id="sDate"></label>
+    <label>בית הספר<input type="text" id="sSchool" placeholder="שם בית הספר"></label>
+    <label>ציון נכשל: מתחת ל-<input type="number" id="sPass" value="55" min="0" max="100"></label>
+    <label>שורת קרדיט בתחתית כל שקף<input type="text" id="sCredit" value="נבנה על ידי: אריק - @mathfun.with.arik"></label>
+    <label class="check"><input type="checkbox" id="sBsd" checked> בס״ד בפינה הימנית העליונה</label>
+  </div>
+  <div class="uploads">
+    <button class="btn" id="bPhotos" type="button">הוספת תמונות תלמידים</button>
+    <button class="btn" id="bLogos" type="button">הוספת לוגואים לשקף הפתיחה</button>
+    <input type="file" id="inPhotos" accept="image/*,.zip,.pdf" multiple hidden>
+    <input type="file" id="inLogos" accept="image/*" multiple hidden>
+    <span class="hint" id="photoInfo">תמונות: דוח 61 מסמארט סקול (אלפון עם תמונות) כ-PDF, קובץ לכל תלמיד בשם התלמיד (למשל ״נועה לוי.jpg״), או קובץ ZIP. אפשר גם ללחוץ על העיגול בכרטיס של תלמיד ולבחור לו תמונה.</span>
+  </div>
+  <div class="logos" id="logos"></div>
+</section>
+
+<section class="step" aria-labelledby="h-check">
+  <div class="step-head"><span class="num">3</span><h2 id="h-check">בדיקת נתונים</h2></div>
+  <div class="stats" id="stats"></div>
+  <div class="issues" id="issues"></div>
+</section>
+
+<section class="step" aria-labelledby="h-stu">
+  <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
+  <div class="students" id="students"></div>
+</section>
+<footer id="credit"></footer>
+</div>
+
+<div class="bar-bottom"><div class="bar-in">
+  <span id="status"></span>
+  <button class="btn primary" id="bGen" type="button">יצירת מצגת PowerPoint</button>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
+<script id="logic">
+/* ---------- pure logic (no DOM) ---------- */
+const FIELDS = [
+  {id:'name', label:'שם מלא'}, {id:'first', label:'שם פרטי'}, {id:'last', label:'שם משפחה'},
+  {id:'cls', label:'כיתה'}, {id:'avg', label:'ממוצע כללי'},
+  {id:'math', label:'מתמטיקה'}, {id:'lang', label:'לשון'}, {id:'eng', label:'אנגלית'}, {id:'sci', label:'מדעים'},
+  {id:'fails', label:'מספר נכשלים'}, {id:'late', label:'איחורים'}, {id:'abs', label:'חיסורים'}, {id:'events', label:'אירועי שיעור'},
+  {id:'gMath', label:'הקבצה במתמטיקה'}, {id:'gEng', label:'הקבצה באנגלית'},
+  {id:'iGen', label:'כללי'}, {id:'iExc', label:'בעיות חריגות'}, {id:'iAtt', label:'ביקור סדיר'},
+  {id:'iEmo', label:'קשיים רגשיים או אחרים'}, {id:'iAns', label:'מענים'}
+];
+const FLABEL = Object.fromEntries(FIELDS.map(f=>[f.id,f.label]));
+const CORE = ['math','lang','eng','sci'];
+const INFO = ['iGen','iExc','iAtt','iEmo','iAns'];
+const NUMERIC = ['avg','math','lang','eng','sci','fails','late','abs','events'];
+
+function clean(s){ return String(s==null?'':s).replace(/[‎‏‪-‮]/g,'').replace(/\s+/g,' ').trim(); }
+/* like clean, but keeps line breaks (for the general-info texts) */
+function cleanML(s){ return String(s==null?'':s).replace(/[‎‏‪-‮]/g,'').replace(/\r/g,'').split('\n').map(l=>l.replace(/[ \t ]+/g,' ').trim()).filter(Boolean).join('\n'); }
+function nameKey(s){
+  return clean(s).replace(/["'`״׳׳״.,()]/g,'').replace(/[-–_]/g,' ').replace(/\s+/g,' ').trim()
+    .split(' ').filter(Boolean).sort().join(' ');
+}
+function toNum(v){
+  if(v==null) return null; if(typeof v==='number') return isFinite(v)?v:null;
+  const s=clean(v).replace(',','.').replace('%',''); if(!s) return null;
+  const n=Number(s); return isFinite(n)?n:null;
+}
+/* score a header against a field; higher = better, 0 = no match */
+function scoreHeader(field, h){
+  h = clean(h); if(!h) return 0;
+  const has = w => h.includes(w);
+  const grp = has('הקבצה')||has('הקבצ');
+  switch(field){
+    case 'name': if(/שם\s*(פרטי|משפחה|האב|האם|הורה|מחנך|מורה|מקצוע|קבוצה|כיתה)/.test(h)) return 0;
+      if(/^שם\s*(מלא|התלמיד|תלמיד|התלמידה)?$/.test(h)) return 10; if(has('שם התלמיד')||has('שם מלא')||has('תלמיד/ה')) return 8; if(h==='תלמיד'||h==='תלמידה') return 7; return 0;
+    case 'first': return has('שם פרטי')?10:0;
+    case 'last': return has('שם משפחה')?10:0;
+    case 'cls': return (/^כיתה$/.test(h)||has('כיתה'))&&!has('מחנך')?(h==='כיתה'?10:5):0;
+    case 'avg': return has('ממוצע')?(has('כללי')||has('סופי')||h==='ממוצע'?10:6):0;
+    case 'math': return !grp&&(has('מתמטיקה')||has('חשבון'))?10:0;
+    case 'lang': return !grp&&!has('אולפן')&&(has('לשון')||has('עברית')||h==='שפה'||has('הבעה'))?10:0;
+    case 'eng': return !grp&&has('אנגלית')?10:0;
+    case 'sci': return !grp&&(has('מדעים')||h==='מדע'||has('מדע וטכנולוגיה'))?10:0;
+    case 'fails': return has('נכשל')||has('שליליים')?10:0;
+    case 'late': return has('איחור')?10:0;
+    case 'events': return has('אירועי שיעור')||has('א.שיעור')?10:0;
+    case 'abs': return (has('חיסור')||has('היעדרו')||has('העדרו'))&&!has('מוצדק ')?10:0;
+    case 'gMath': return grp&&(has('מתמטיקה')||has('חשבון'))?10:0;
+    case 'gEng': return grp&&has('אנגלית')?10:0;
+    case 'iGen': return h==='כללי'||has('מידע כללי')?10:0;
+    case 'iExc': return has('חריג')?10:0;
+    case 'iAtt': return has('ביקור סדיר')?10:0;
+    case 'iEmo': return has('רגשי')||has('קשיים')?10:0;
+    case 'iAns': return has('מענ')?10:0;
+  }
+  return 0;
+}
+function autoMap(headers){
+  const map={}; const used=new Set();
+  for(const f of FIELDS){
+    let best=-1,bs=0;
+    headers.forEach((h,i)=>{ if(used.has(i)) return; const s=scoreHeader(f.id,h); if(s>bs){bs=s;best=i;} });
+    map[f.id]=best; if(best>=0) used.add(best);
+  }
+  if(map.name>=0 && (map.first>=0||map.last>=0)){ /* full name wins */ map.first=-1; map.last=-1; }
+  return map;
+}
+function findHeaderRow(aoa){
+  for(let r=0;r<Math.min(aoa.length,20);r++){
+    const row=aoa[r]||[];
+    if(row.some(c=>{const h=clean(c); return scoreHeader('name',h)>0||scoreHeader('first',h)>0||scoreHeader('last',h)>0;})) return r;
+  }
+  return 0;
+}
+/* columns that look like subject grades: mostly numbers in 0..100, header not an id/attendance/meta column */
+function gradeColumns(file){
+  const skip=/אירוע|ת\.?ז|תעודת|זהות|מספר|מס'|טלפון|חיסור|איחור|היעדר|העדר|נכשל|ממוצע|כיתה|שם|הקבצ|סה"כ|סה״כ|קוד|מזהה|גיל|שנת/;
+  const mappedNonGrade=new Set(Object.entries(file.mapping).filter(([k,v])=>v>=0&&!CORE.includes(k)).map(([k,v])=>v));
+  const out=[];
+  file.headers.forEach((h,i)=>{
+    if(!clean(h)||skip.test(clean(h))||mappedNonGrade.has(i)) return;
+    let n=0,ok=0;
+    for(const row of file.rows){ const v=row[i]; if(clean(v)==='') continue; n++; const x=toNum(v); if(x!=null&&x>=0&&x<=100) ok++; }
+    if(n>0 && ok/n>=0.6) out.push(i);
+  });
+  return out;
+}
+function rowName(file,row){
+  const m=file.mapping;
+  if(m.name>=0) return clean(row[m.name]);
+  const f=m.first>=0?clean(row[m.first]):'', l=m.last>=0?clean(row[m.last]):'';
+  return clean(f+' '+l);
+}
+function sameVal(field,a,b){
+  if(NUMERIC.includes(field)){ const x=toNum(a),y=toNum(b); if(x!=null&&y!=null) return Math.abs(x-y)<0.05; }
+  return clean(a).replace(/["'״׳\s]/g,'')===clean(b).replace(/["'״׳\s]/g,'');
+}
+/* merge all files → students + conflicts + missing */
+function buildStudents(files, opts){
+  const pass = opts.pass ?? 55;
+  const byKey=new Map();
+  const dataFiles=files.filter(f=>f.mapping&&(f.mapping.name>=0||f.mapping.first>=0||f.mapping.last>=0));
+  for(const file of dataFiles){
+    const gcols=gradeColumns(file);
+    for(const row of file.rows){
+      const nm=rowName(file,row); if(!nm||nm.length<2) continue;
+      if(/^(סה"כ|סה״כ|ממוצע|סיכום)/.test(nm)) continue;
+      if(scoreHeader('name',nm)>0||scoreHeader('first',nm)>0||scoreHeader('last',nm)>0) continue; /* repeated header row */
+      const key=nameKey(nm);
+      if(!byKey.has(key)) byKey.set(key,{key,name:nm,src:{},files:new Set(),grades:[]});
+      const st=byKey.get(key); st.files.add(file.id);
+      for(const f of FIELDS){
+        if(['name','first','last'].includes(f.id)) continue;
+        const ci=file.mapping[f.id]; if(ci==null||ci<0) continue;
+        const v=INFO.includes(f.id)?cleanML(row[ci]):clean(row[ci]); if(v==='') continue;
+        (st.src[f.id] ||= []).push({file:file.id,fileName:file.name,val:v});
+      }
+      for(const ci of gcols){ const x=toNum(row[ci]); if(x!=null) st.grades.push({subject:clean(file.headers[ci]),val:x,file:file.id}); }
+    }
+  }
+  const conflicts=[], students=[];
+  for(const st of byKey.values()){
+    const val={};
+    for(const [fid,list] of Object.entries(st.src)){
+      const distinct=[]; for(const e of list){ if(!distinct.some(d=>sameVal(fid,d.val,e.val))) distinct.push(e); }
+      const ck=st.key+'|'+fid;
+      if(distinct.length>1){
+        const chosen = opts.choices?.[ck];
+        const pick = chosen!=null && distinct.some(d=>d.val===chosen) ? chosen : distinct[distinct.length-1].val;
+        conflicts.push({key:st.key,name:st.name,field:fid,options:distinct,ck,resolved:chosen!=null,value:pick});
+        val[fid]=pick;
+      } else val[fid]=distinct[0].val;
+    }
+    const ov=opts.overrides?.[st.key]||{}; Object.assign(val,ov);
+    /* average: from report, else computed from detected grade columns, else from core */
+    let avg=toNum(val.avg), avgSource='report';
+    const uniq={}; for(const g of st.grades) uniq[g.subject]=g.val;
+    const allGrades=Object.values(uniq);
+    if(avg==null){
+      const pool = allGrades.length ? allGrades : CORE.map(c=>toNum(val[c])).filter(x=>x!=null);
+      if(pool.length){ avg=pool.reduce((a,b)=>a+b,0)/pool.length; avgSource='computed'; }
+    }
+    let fails=toNum(val.fails), failSubjects=[];
+    const gradeMap = Object.keys(uniq).length ? uniq : Object.fromEntries(CORE.map(c=>[FLABEL[c],toNum(val[c])]).filter(([,x])=>x!=null));
+    failSubjects = Object.entries(gradeMap).filter(([,x])=>x<pass).map(([s])=>s);
+    if(fails==null) fails = Object.keys(gradeMap).length ? failSubjects.length : null;
+    students.push({
+      key:st.key, name:st.name, cls:val.cls||'', avg, avgSource, fails, failSubjects,
+      late:toNum(val.late), abs:toNum(val.abs), events:toNum(val.events),
+      math:toNum(val.math), lang:toNum(val.lang), eng:toNum(val.eng), sci:toNum(val.sci),
+      gMath:val.gMath||'', gEng:val.gEng||'',
+      iGen:val.iGen||'', iExc:val.iExc||'', iAtt:val.iAtt||'', iEmo:val.iEmo||'', iAns:val.iAns||'',
+      files:[...st.files]
+    });
+  }
+  students.sort((a,b)=>a.name.localeCompare(b.name,'he'));
+  const missing=[];
+  if(dataFiles.length>1) for(const s of students){
+    const absent=dataFiles.filter(f=>!s.files.includes(f.id)).map(f=>f.name);
+    if(absent.length) missing.push({name:s.name,key:s.key,absent});
+  }
+  return {students,conflicts,missing};
+}
+/* report 98 gives one lesson-event total instead of separate lateness / absences */
+function eventsOnly(s){ return s.late==null&&s.abs==null&&s.events!=null; }
+function scoreTone(x,pass){ if(x==null) return 'none'; if(x>=70) return 'good'; if(x>=pass) return 'warn'; return 'bad'; }
+function fmt(x,d){ if(x==null) return '—'; return Number.isInteger(x)?String(x):x.toFixed(d??1); }
+/* ---------- PDF table reconstruction ----------
+   pages: [[{str, x, y, w, h}]]  (x = left edge, y = baseline, PDF units, y grows upward)
+   Groups text into rows by baseline, finds the header row, cuts columns at the
+   midpoints between header cells, and returns an array of rows like a spreadsheet. */
+const HEB=/[֐-׿]/;
+function revHeb(s){ return HEB.test(s)?[...s].reverse().join(''):s; }
+function isHeaderish(s){ return FIELDS.some(f=>scoreHeader(f.id,s)>0); }
+function isNameHeader(s){ return scoreHeader('name',s)>0||scoreHeader('first',s)>0||scoreHeader('last',s)>0; }
+function pdfRows(pages,flip){
+  const out=[];
+  pages.forEach((items,p)=>{
+    const its=items.filter(i=>clean(i.str)!=='').map(i=>({str:flip?revHeb(clean(i.str)):clean(i.str),x:i.x,w:Math.max(0,i.w||0),y:i.y,h:i.h||8,page:p}));
+    its.sort((a,b)=>b.y-a.y);
+    const rows=[];
+    for(const it of its){
+      const tol=Math.max(2,it.h*0.45);
+      let r=rows.find(r=>Math.abs(r.y-it.y)<=tol);
+      if(!r){ r={y:it.y,h:it.h,page:p,items:[]}; rows.push(r); }
+      r.items.push(it);
+    }
+    rows.sort((a,b)=>b.y-a.y);
+    out.push(...rows);
+  });
+  return out;
+}
+/* merge neighbouring fragments of one row into cells (gap smaller than ~0.8 of a letter height) */
+function rowCells(row,gapFactor){
+  const its=[...row.items].sort((a,b)=>(b.x+b.w)-(a.x+a.w)); /* right to left */
+  const cells=[], gf=gapFactor||0.8;
+  for(const it of its){
+    const last=cells[cells.length-1];
+    if(last && (last.x-(it.x+it.w)) < it.h*gf){ last.str=clean(last.str+' '+it.str); last.x=Math.min(last.x,it.x); }
+    else cells.push({str:it.str,x:it.x,right:it.x+it.w,h:it.h});
+  }
+  cells.forEach(c=>{ c.cx=(c.x+c.right)/2; });
+  return cells;
+}
+function headerScore(rows){
+  let n=0; for(const r of rows.slice(0,60)) for(const c of rowCells(r)) if(isHeaderish(c.str)) n++;
+  return n;
+}
+/* columns = runs of x that the data rows cover, separated by empty gaps (more reliable than header positions) */
+function colIntervals(rows,hdr){
+  const iv=rows.filter(r=>rowCells(r,0.5).length>=2).flatMap(r=>r.items.map(t=>({l:t.x,r:t.x+t.w,h:t.h}))).sort((p,q)=>p.l-q.l);
+  const out=[];
+  for(const t of iv){ const last=out[out.length-1]; if(last&&t.l<=last.r+Math.max(2,t.h*0.5)) last.r=Math.max(last.r,t.r); else out.push({l:t.l,r:t.r}); }
+  /* a header over a column that is empty in these rows still gets its own column */
+  if(hdr) for(const c of rowCells(hdr)) if(!out.some(o=>c.x<o.r&&c.right>o.l)) out.push({l:c.x,r:c.right});
+  out.sort((p,q)=>q.r-p.r); /* right to left */
+  out.forEach((c,k)=>{ c.hi=k===0?Infinity:(out[k-1].l+c.r)/2; c.lo=k===out.length-1?-Infinity:(c.l+out[k+1].r)/2; });
+  return out;
+}
+function assignCols(row,cols){
+  const vals=cols.map(()=>[]);
+  for(const it of [...row.items].sort((x,y)=>(y.x+y.w)-(x.x+x.w))){
+    const cx=it.x+it.w/2; let k=cols.findIndex(c=>cx>=c.lo&&cx<c.hi); if(k<0) k=cols.length-1;
+    vals[k].push(it.str);
+  }
+  return vals.map(v=>clean(v.join(' ')));
+}
+function pdfItemsToAoa(pages){
+  const a=pdfRows(pages,false), b=pdfRows(pages,true);
+  const rows = headerScore(b)>headerScore(a) ? b : a;
+  const isHeaderRow=r=>{ const cells=rowCells(r); return cells.length>=2&&cells.some(c=>isNameHeader(c.str)); };
+  const segs=[]; let cur=null;
+  for(const r of rows){ if(isHeaderRow(r)){ cur={hdr:r,data:[]}; segs.push(cur); } else if(cur) cur.data.push(r); }
+  const aoa=[], meta=[];
+  if(!segs.length){ /* no header found: raw rows, columns can be mapped by hand */
+    for(const r of rows){ aoa.push(rowCells(r).map(c=>c.str)); meta.push({page:r.page,y:r.y,h:r.h}); }
+    aoa.meta=meta; return aoa;
+  }
+  const header=[]; aoa.push(header); meta.push(null);
+  for(const s of segs){
+    const cols=colIntervals(s.data,s.hdr);
+    if(!cols.length) continue;
+    let names=assignCols(s.hdr,cols);
+    const nameCol=names.findIndex(n=>isNameHeader(n));
+    const nx=s.data[0];
+    if(nx&&nx.page===s.hdr.page&&(s.hdr.y-nx.y)<s.hdr.h*1.8&&!nx.items.some(t=>/\d/.test(t.str))){
+      const v=assignCols(nx,cols);
+      if(nameCol>=0&&!v[nameCol]){ names=names.map((n,k)=>clean(n+' '+v[k])); s.data.shift(); }
+    }
+    /* map this page's columns onto the shared header by name */
+    const idx=names.map(n=>{ let k=n?header.indexOf(n):-1; if(k<0){ header.push(n); k=header.length-1; } return k; });
+    for(const r of s.data){
+      const v=assignCols(r,cols); if(!v.some(x=>x!=='')) continue;
+      const out=[]; v.forEach((x,k)=>{ out[idx[k]]=out[idx[k]]?clean(out[idx[k]]+' '+x):x; });
+      aoa.push(out); meta.push({page:r.page,y:r.y,h:r.h});
+    }
+  }
+  for(const r of aoa) for(let k=0;k<header.length;k++) if(r[k]==null) r[k]='';
+  aoa.meta=meta;
+  return aoa;
+}
+/* ---------- Smart School report 98: "סדין ציונים למועצות פדגוגיות" ----------
+   One header row of subject blocks ("מתמטיקה הקבצה א` \n(teacher)"), each block holding
+   lesson-event count + grade per student, then fails / average / name at the end of the row. */
+function sadinText(s){ return clean(String(s??'').replace(/``/g,'״').replace(/`/g,'׳')); }
+function parseSadin(aoa){
+  let hr=-1, nameCol=-1;
+  for(let r=0;r<Math.min(aoa.length,40);r++){ const k=(aoa[r]||[]).findIndex(c=>/שם התלמיד\s*\//.test(clean(c))); if(k>=0){ hr=r; nameCol=k; break; } }
+  if(hr<0) return null;
+  const head=aoa[hr], starts=[];
+  head.forEach((c,i)=>{ if(i<nameCol&&clean(c)) starts.push(i); });
+  if(!starts.length) return null;
+  const blocks=starts.map((s,j)=>{
+    const subj=sadinText(String(head[s]).split('\n')[0]);
+    const m=subj.match(/^(.*?)\s+((?:הקבצה|מצוינות|מצויינות|רמה|מואץ|מקבץ|מגמה)(?:\s.*)?)$/);
+    return {from:s, to:(j<starts.length-1?starts[j+1]:nameCol)-1, base:(m?m[1]:subj).trim(), group:m?m[2].trim():''};
+  });
+  let cls='';
+  for(let r=0;r<hr&&!cls;r++) for(const c of (aoa[r]||[])){ const m=sadinText(c).match(/לכיתה\s+([א-ת]+[׳']?\s*\d+)/); if(m){ cls=m[1].replace(/\s+/g,'').replace("'",'׳'); break; } }
+  const bases=[...new Set(blocks.map(b=>b.base))];
+  const out=[['שם התלמיד','כיתה','ממוצע כללי','מספר נכשלים','אירועי שיעור',...bases,'הקבצה מתמטיקה','הקבצה אנגלית']];
+  for(let r=hr+1;r<aoa.length;r++){
+    const row=aoa[r]||[];
+    const name=row.slice(nameCol).map(sadinText).find(s=>/[א-ת]/.test(s));
+    if(!name||/ממוצע|חציון|ס\.תקן|שליליים|ציון\//.test(name)) continue;
+    const fails=toNum(row[nameCol]), avg=toNum(row[nameCol+1]);
+    let ev=0, anyEv=false, gM='', gE=''; const grade={};
+    for(const b of blocks){
+      const vals=row.slice(b.from,b.to+1).filter(c=>clean(c)!=='');
+      if(!vals.length) continue;
+      let e=null, g=null;
+      if(vals.length>=2){ e=vals[0]; g=vals[1]; } else if(typeof vals[0]==='number') e=vals[0]; else g=vals[0];
+      const en=toNum(e); if(en!=null){ ev+=en; anyEv=true; }
+      const gn=toNum(g); if(gn!=null&&grade[b.base]==null) grade[b.base]=gn;
+      if(b.group){ if(/מתמטיקה|חשבון/.test(b.base)&&!gM) gM=b.group; if(/אנגלית/.test(b.base)&&!gE) gE=b.group; }
+    }
+    out.push([name, cls, avg??'', fails??'', anyEv?ev:'', ...bases.map(b=>grade[b]??''), gM, gE]);
+  }
+  return out.length>1 ? {aoa:out, cls} : null;
+}
+
+/* ---------- existing decks: general-info table + student name ---------- */
+const INFO_HEAD={iGen:'כללי',iExc:'בעיות חריגות',iAtt:'ביקור סדיר',iEmo:'קשיים רגשיים או אחרים',iAns:'מענים'};
+/* a label cell of the general-info table → field id (short text that starts with the label word) */
+function infoLabelStart(s){
+  const w=clean(s).replace(/[:׃]/g,''); if(!w) return null;
+  const words=w.split(' '); if(words.length>5) return null;
+  const f=words[0];
+  if(f==='כללי'||(f==='מידע'&&words[1]==='כללי'&&words.length===2)) return 'iGen';
+  if(f==='בעיות'||f==='בעיה'||f.startsWith('חריג')) return 'iExc';
+  if(f==='ביקור'||f==='נוכחות') return 'iAtt';
+  if(f==='קשיים'||f==='קשי'||f.startsWith('רגשי')) return 'iEmo';
+  if(f==='מענים'||f==='מענה'||f==='טיפול') return 'iAns';
+  return null;
+}
+const NAME_STOP=/כיתה|בס"ד|בס״ד|ממוצע|נכשל|מתמטיקה|אנגלית|עברית|לשון|מדעים|הקבצ|הישגים|מידע|כללי|אירוע|צל"ש|צל״ש|מצוינות|בעיות|ביקור|קשיים|מענים|תלמיד|ישיבה|פדגוגית|ציון|מקצוע|חיסור|איחור|נבנה|מחנך|תיכון|עיריית|שכבה|מחצית|רגשיים|חריגות|סדיר|אחרים|הערות|ליבה|קבוצה/;
+const NAME_RE=/^[א-ת'"`׳״\-]+$/;
+/* cands: [{text, size}] in slide order; known: [{key,name}] students already loaded from reports */
+function pickName(cands, known){
+  const texts=cands.map((c,i)=>({...c,i,text:clean(c.text).replace(/^(שם( התלמיד(ה)?)?|תלמיד(ה)?)\s*[:׃-]\s*/,'')})).filter(c=>c.text);
+  for(const c of texts){
+    const k=nameKey(c.text); const toks=k.split(' ');
+    const hit=known.find(s=>s.key===k) || (toks.length<=5 ? known.find(s=>{ const st=s.key.split(' '); return st.length>=2 && st.every(t=>toks.includes(t)); }) : null);
+    if(hit) return hit.name;
+  }
+  const ok=texts.filter(c=>{ const w=c.text.split(' '); return w.length>=2&&w.length<=4&&w.every(x=>NAME_RE.test(x))&&!NAME_STOP.test(c.text); });
+  if(!ok.length) return '';
+  ok.sort((a,b)=>(b.size||0)-(a.size||0)||a.i-b.i);
+  return ok[0].text;
+}
+/* rows of the general-info table, as cell texts per row → {field: text} */
+function infoFromTableRows(rows){
+  const info={};
+  for(const cells of rows){
+    const k=cells.findIndex(c=>infoLabelStart(c.split('\n').join(' ')));
+    if(k<0) continue;
+    const f=infoLabelStart(cells[k].split('\n').join(' '));
+    const val=cleanML(cells.filter((c,i)=>i!==k&&cleanML(c)).join('\n'));
+    if(val && !info[f]) info[f]=val; else if(!(f in info)) info[f]='';
+  }
+  return info;
+}
+/* one PDF page of a deck: text items → {info, cands} (values sit left of the label column, RTL table) */
+function pdfDeckPage(items, flip){
+  const rows=pdfRows([items],flip);
+  const cells=rows.flatMap(r=>rowCells(r,0.4).map(c=>({...c,y:r.y,h:r.h})));
+  const starters=cells.filter(c=>infoLabelStart(c.str)&&c.str.split(' ').length<=4&&!/^מידע/.test(c.str)).sort((a,b)=>b.y-a.y)
+    .filter((c,i,arr)=>i===0||infoLabelStart(c.str)!==infoLabelStart(arr[i-1].str)); /* 'קשיים' / 'רגשיים או' = one label on two lines */
+  const info={};
+  if(starters.length){
+    const colLeft=Math.min(...starters.map(s=>s.x)), tol=Math.max(...starters.map(s=>s.h))*0.6;
+    const gaps=starters.slice(1).map((s,i)=>starters[i].y-s.y), avg=gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:starters[0].h*6;
+    starters.forEach((s,i)=>{
+      const f=infoLabelStart(s.str); if(f in info) return;
+      const top=s.y+s.h*0.9, bottom= i<starters.length-1 ? starters[i+1].y+starters[i+1].h*0.9 : s.y-Math.max(avg*1.3,s.h*4);
+      const vals=cells.filter(c=>c.right<=colLeft+tol && c.y<=top && c.y>bottom && !/נבנה על ידי/.test(c.str));
+      const byLine=[]; for(const c of vals.sort((a,b)=>b.y-a.y||b.right-a.right)){ const l=byLine.find(l=>Math.abs(l.y-c.y)<c.h*0.45); if(l) l.t.push(c.str); else byLine.push({y:c.y,t:[c.str]}); }
+      info[f]=cleanML(byLine.map(l=>l.t.join(' ')).join('\n'));
+    });
+  }
+  return {info, cands:cells.map(c=>({text:c.str,size:c.h})), starters:starters.length};
+}
+function deckAoa(entries){
+  return [['שם',...INFO.map(f=>INFO_HEAD[f])], ...entries.filter(e=>e.name).map(e=>[e.name,...INFO.map(f=>e.info[f]||'')])];
+}
+if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,pickName,infoFromTableRows,pdfDeckPage,deckAoa,infoLabelStart};
+</script>
+
+<script>
+/* ---------- app ---------- */
+const $=s=>document.querySelector(s);
+const state={ files:[], photos:{}, logos:[], choices:{}, overrides:{}, sample:true, nextId:1 };
+let built={students:[],conflicts:[],missing:[]};
+
+function addFileFromAoa(name, aoa){
+  const sadin=parseSadin(aoa);
+  if(sadin){ aoa=sadin.aoa; if(sadin.cls&&!clean($('#sClass').value)) $('#sClass').value=sadin.cls; }
+  const hr=findHeaderRow(aoa);
+  const headers=(aoa[hr]||[]).map(clean);
+  const rows=aoa.slice(hr+1).filter(r=>r&&r.some(c=>clean(c)!==''));
+  const file={id:'f'+(state.nextId++), name, headers, rows, mapping:autoMap(headers), kind:sadin?'sadin':undefined};
+  state.files.push(file); return file;
+}
+function loadSample(){
+  state.files=[]; state.choices={}; state.overrides={}; state.sample=true; state.photos={};
+  addFileFromAoa('דוגמה – ציונים.xlsx',[
+    ['דוח ציונים מחצית א׳ (דוגמה)'],[],
+    ['שם התלמיד','כיתה','מתמטיקה','לשון','אנגלית','מדעים','היסטוריה','תנ״ך','ספרות','הקבצה מתמטיקה','הקבצה אנגלית'],
+    ['נועה לוי','ח׳3',78,64,88,52,81,90,75,'א׳','א׳'],
+    ['איתי כהן','ח׳3',91,85,72,88,79,84,80,'א׳','ב׳'],
+    ['מאיה אברהם','ח׳3',48,61,55,49,66,70,58,'ב׳','ב׳'],
+    ['יונתן מזרחי','ח׳3',65,70,'',74,68,72,77,'ב׳',''],
+    ['שירה פרץ','ח׳3',83,92,95,86,90,88,94,'א׳','א׳'],
+    ['דניאל ביטון','ח׳3',57,49,62,60,53,64,51,'ב׳','ב׳']
+  ]);
+  addFileFromAoa('דוגמה – נוכחות.xlsx',[
+    ['שם תלמיד','כיתה','חיסורים','איחורים'],
+    ['לוי נועה','ח׳3',9,6],['כהן איתי','ח׳3',2,1],['אברהם מאיה','ח׳3',17,11],
+    ['מזרחי יונתן','ח׳3',5,3],['פרץ שירה','ח׳3',0,2],['ביטון דניאל','ח׳2',12,14]
+  ]);
+  addFileFromAoa('דוגמה – מידע כללי.xlsx',[
+    ['שם','כללי','בעיות חריגות','ביקור סדיר','קשיים רגשיים או אחרים','מענים'],
+    ['נועה לוי','תלמידה משקיעה ומשתתפת בשיעורים.','','תקין','קושי בריכוז בשיעורים ארוכים','שיחה עם ההורים. תגבור במדעים.'],
+    ['מאיה אברהם','שקטה בכיתה, חברה טובה.','','חיסורים רבים','','שיחה עם יועצת. מעקב נוכחות שבועי.'],
+    ['דניאל ביטון','','מפריע בשיעורים','איחורים רבים','','שיחה עם האב. חוזה התנהגות.']
+  ]);
+  $('#sClass').value='ח׳3'; $('#sTeacher').value='';
+  try{ $('#sDate').valueAsDate=new Date(); }catch(e){}
+  refresh();
+}
+function settings(){
+  return { cls:clean($('#sClass').value), teacher:clean($('#sTeacher').value), date:$('#sDate').value,
+    school:clean($('#sSchool').value), pass:toNum($('#sPass').value)??55, credit:clean($('#sCredit').value), bsd:$('#sBsd').checked };
+}
+function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function renderFiles(){
+  const box=$('#files'); box.innerHTML='';
+  $('#sampleBanner').hidden=!state.sample;
+  if(!state.files.length){ box.innerHTML='<div class="empty">עוד לא הועלו דוחות.</div>'; return; }
+  for(const f of state.files){
+    const m=f.mapping, mapped=FIELDS.filter(x=>m[x.id]>=0);
+    const hasName=m.name>=0||m.first>=0||m.last>=0;
+    const d=document.createElement('details'); d.className='file';
+    d.innerHTML=`<summary><span class="fname">${esc(f.name)}</span>
+      <span class="chip">${f.kind==='deck'?`מצגת · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:`${f.rows.length} שורות`}</span>
+      <span class="chip ${hasName?'ok':'bad'}">${hasName?mapped.length+' עמודות זוהו':'לא זוהתה עמודת שם'}</span>
+      <span class="grow"></span><span class="chip">התאמת עמודות</span>
+      <button class="btn small" type="button" data-del="${f.id}">הסרה</button></summary>
+      <div class="map"></div>`;
+    const map=d.querySelector('.map');
+    for(const fl of FIELDS){
+      const lab=document.createElement('label'); lab.textContent=fl.label;
+      const sel=document.createElement('select'); sel.id='map-'+f.id+'-'+fl.id;
+      sel.innerHTML='<option value="-1">— לא בקובץ —</option>'+f.headers.map((h,i)=>h?`<option value="${i}">${esc(h)}</option>`:'').join('');
+      sel.value=String(m[fl.id]); if(m[fl.id]>=0) sel.classList.add('mapped');
+      sel.onchange=()=>{ m[fl.id]=Number(sel.value); refresh(); };
+      lab.appendChild(sel); map.appendChild(lab);
+    }
+    if(!hasName) d.open=true;
+    d.querySelector('[data-del]').onclick=e=>{ e.preventDefault(); (f.photoKeys||[]).forEach(k=>{ if(state.photos[k]===f.photoData?.[k]) delete state.photos[k]; }); state.files=state.files.filter(x=>x.id!==f.id); refresh(); };
+    box.appendChild(d);
+  }
+}
+function renderChecks(){
+  const {students,conflicts,missing}=built;
+  const open=conflicts.filter(c=>!c.resolved).length;
+  const withPhoto=students.filter(s=>state.photos[s.key]).length;
+  $('#stats').innerHTML=`
+    <div class="stat"><b>${students.length}</b><span>תלמידים</span></div>
+    <div class="stat ${open?'bad':'good'}"><b>${open}</b><span>סתירות פתוחות</span></div>
+    <div class="stat ${missing.length?'warn':'good'}"><b>${missing.length}</b><span>חסרים בחלק מהדוחות</span></div>
+    <div class="stat"><b>${withPhoto}/${students.length}</b><span>עם תמונה</span></div>`;
+  const box=$('#issues'); box.innerHTML='';
+  if(!conflicts.length&&!missing.length){ box.innerHTML='<div class="empty">לא נמצאו סתירות בין הדוחות.</div>'; }
+  for(const c of conflicts){
+    const el=document.createElement('div'); el.className='issue'+(c.resolved?' done':'');
+    el.innerHTML=`<div class="issue-title">${esc(c.name)} · ${esc(FLABEL[c.field])}: ערכים שונים בדוחות</div><div class="opts"></div>`;
+    const opts=el.querySelector('.opts');
+    c.options.forEach((o,i)=>{
+      const id='c-'+btoa(unescape(encodeURIComponent(c.ck))).replace(/[^a-z0-9]/gi,'')+'-'+i;
+      const lab=document.createElement('label'); lab.className='opt';
+      lab.innerHTML=`<input type="radio" name="${esc(c.ck)}" id="${id}"> <b>${esc(o.val)}</b> <small>${esc(o.fileName)}</small>`;
+      const r=lab.querySelector('input'); r.checked=c.resolved&&c.value===o.val;
+      r.onchange=()=>{ state.choices[c.ck]=o.val; refresh(); };
+      opts.appendChild(lab);
+    });
+    box.appendChild(el);
+  }
+  for(const m of missing){
+    const el=document.createElement('div'); el.className='issue missing';
+    el.innerHTML=`<div class="issue-title">${esc(m.name)}: לא מופיע/ה ב${m.absent.map(esc).join(', ')}</div><span class="hint">בדקו אם השם כתוב אחרת בדוח. הנתונים מהדוח החסר יופיעו בשקף כ״—״.</span>`;
+    box.appendChild(el);
+  }
+}
+function initials(n){ const p=clean(n).split(' '); return (p[0]?.[0]||'')+(p[1]?.[0]||''); }
+function renderStudents(){
+  const pass=settings().pass, box=$('#students'); box.innerHTML='';
+  if(!built.students.length){ box.innerHTML='<div class="empty">אין עדיין תלמידים. העלו דוח עם עמודת שם.</div>'; return; }
+  const flagsBy={}; for(const c of built.conflicts) if(!c.resolved)(flagsBy[c.key] ||= []).push(FLABEL[c.field]);
+  for(const s of built.students){
+    const card=document.createElement('article'); card.className='card';
+    const ph=state.photos[s.key];
+    const bars=CORE.map(c=>{ const x=s[c], t=scoreTone(x,pass);
+      return `<div class="bar"><span>${FLABEL[c]}</span><span class="track"><span class="fill" style="width:${x??0}%;background:var(--${t==='none'?'line':t})"></span></span><span class="score" style="color:var(--${t==='none'?'ink-faint':t})">${x==null?'אין':fmt(x)}</span></div>`; }).join('');
+    const tags=[s.gMath&&`<span class="chip">מתמטיקה: ${esc(s.gMath)}</span>`, s.gEng&&`<span class="chip">אנגלית: ${esc(s.gEng)}</span>`].filter(Boolean).join('');
+    card.innerHTML=`<div class="card-top"><button class="ph" type="button" title="בחירת תמונה" aria-label="בחירת תמונה ל${esc(s.name)}">${ph?`<img src="${ph}" alt="">`:esc(initials(s.name))}</button>
+      <div class="who"><b>${esc(s.name)}</b><span>${esc(s.cls||'כיתה לא ידועה')}</span></div></div>
+      <div class="nums">
+        <div class="n"><b>${fmt(s.avg)}</b><span>ממוצע${s.avgSource==='computed'?'*':''}</span></div>
+        <div class="n"><b style="color:var(--${s.fails?'bad':'ink'})">${fmt(s.fails)}</b><span>נכשלים</span></div>
+        ${eventsOnly(s)?`<div class="n wide"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:`<div class="n"><b>${fmt(s.late)}</b><span>איחורים</span></div>
+        <div class="n"><b>${fmt(s.abs)}</b><span>חיסורים</span></div>`}</div>
+      <div class="bars">${bars}</div>
+      ${tags?`<div class="tags">${tags}</div>`:''}
+      ${flagsBy[s.key]?`<div class="flag">לבדיקה: ${flagsBy[s.key].map(esc).join(', ')}</div>`:''}
+      <details class="info"><summary>מידע כללי${INFO.some(f=>s[f])?' ✓':''}</summary><div class="info-fields"></div></details>`;
+    card.querySelector('.ph').onclick=()=>{
+      const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+      inp.onchange=async()=>{ const f=inp.files[0]; if(!f) return; const d=await shrink(await fileToDataURL(f)); if(d){ state.photos[s.key]=d; refresh(); } };
+      inp.click();
+    };
+    const inf=card.querySelector('.info-fields');
+    for(const f of INFO){
+      const lab=document.createElement('label'); lab.textContent=FLABEL[f];
+      const ta=document.createElement('textarea'); ta.id='info-'+f+'-'+s.key.replace(/\s/g,'_'); ta.value=s[f];
+      ta.oninput=()=>{ (state.overrides[s.key] ||= {})[f]=ta.value; const st=built.students.find(x=>x.key===s.key); if(st) st[f]=ta.value; };
+      lab.appendChild(ta); inf.appendChild(lab);
+    }
+    box.appendChild(card);
+  }
+  if(built.students.some(s=>s.avgSource==='computed')){
+    const n=document.createElement('p'); n.className='hint'; n.style.gridColumn='1/-1';
+    n.textContent='* לא נמצאה עמודת ממוצע בדוח, ולכן הממוצע חושב מכל עמודות הציונים שזוהו.'; box.appendChild(n);
+  }
+}
+function updateStatus(){
+  const open=built.conflicts.filter(c=>!c.resolved).length, n=built.students.length;
+  $('#bGen').disabled=!n;
+  $('#status').textContent = !n ? 'העלו דוחות כדי ליצור מצגת.'
+    : open ? `${n} שקפי תלמידים. ${open} סתירות לא הוכרעו: ייבחר הערך מהדוח האחרון והשדה יסומן בשקף ״לבדיקה״.`
+    : `${n} שקפי תלמידים מוכנים.`;
+}
+function refresh(){
+  built=buildStudents(state.files,{pass:settings().pass,choices:state.choices,overrides:state.overrides});
+  renderFiles(); renderChecks(); renderStudents(); updateStatus();
+  const c=settings().credit; $('#credit').textContent=c;
+}
+
+/* ---------- file reading ---------- */
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('script')); document.head.appendChild(s); }); }
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+async function ensurePdfJs(){
+  if(!window.pdfjsLib) await loadScript(PDFJS+'pdf.min.js');
+  if(!window.pdfjsWorker) await loadScript(PDFJS+'pdf.worker.min.js'); /* runs in the page, no separate worker needed */
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';
+}
+async function readPdf(file){
+  await ensurePdfJs();
+  const doc=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer()),cMapUrl:PDFJS+'cmaps/',cMapPacked:true,isEvalSupported:false}).promise;
+  const pages=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p); const tc=await page.getTextContent();
+    pages.push(tc.items.filter(i=>'str' in i).map(i=>({str:i.str,x:i.transform[4],y:i.transform[5],w:i.width,h:i.height||Math.hypot(i.transform[2],i.transform[3])})));
+  }
+  const textCount=pages.reduce((n,p)=>n+p.length,0);
+  if(!textCount) throw new Error('scanned');
+  return [{name:file.name, aoa:pdfItemsToAoa(pages)}];
+}
+async function readTable(file){
+  const buf=await file.arrayBuffer(); const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='pdf') return readPdf(file);
+  let wb;
+  if(ext==='csv'){
+    let txt=new TextDecoder('utf-8').decode(buf);
+    if(txt.includes('\uFFFD')) txt=new TextDecoder('windows-1255').decode(buf);
+    wb=XLSX.read(txt.replace(/^﻿/,''),{type:'string',raw:false});
+  } else wb=XLSX.read(buf,{type:'array',cellDates:false});
+  const out=[];
+  for(const sn of wb.SheetNames){
+    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
+    if(aoa.length) out.push({name: wb.SheetNames.length>1? `${file.name} · ${sn}` : file.name, aoa});
+  }
+  return out;
+}
+async function handleData(list){
+  const err=$('#fileErr'); err.hidden=true; const msgs=[];
+  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.sample=false; }
+  for(const f of list){
+    try{
+      const sheets=await readTable(f);
+      for(const s of sheets){ const fi=addFileFromAoa(s.name,s.aoa);
+        if(!(fi.mapping.name>=0||fi.mapping.first>=0||fi.mapping.last>=0)) msgs.push(`${s.name}: לא זוהתה עמודת שם. פתחו ״התאמת עמודות״ ובחרו אותה.`); }
+    }catch(e){
+      if(e?.message==='scanned') msgs.push(`${f.name}: ה-PDF הוא תמונה סרוקה בלי טקסט. הפיקו את הדוח מחדש מסמארט סקול.`);
+      else if(e?.message==='script') msgs.push(`${f.name}: רכיב קריאת ה-PDF לא נטען. בדקו את החיבור לאינטרנט ונסו שוב.`);
+      else msgs.push(`${f.name}: לא הצלחנו לקרוא את הקובץ. נסו להפיק אותו מחדש, או לייצא ל-Excel.`);
+    }
+  }
+  if(msgs.length){ err.innerHTML=msgs.map(esc).join('<br>'); err.hidden=false; }
+  refresh();
+}
+function fileToDataURL(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); }); }
+async function shrink(dataUrl){
+  return new Promise(res=>{ const img=new Image(); img.onload=()=>{ const s=400, c=document.createElement('canvas');
+    const k=Math.min(1,s/Math.max(img.width,img.height)); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',0.85)); }; img.onerror=()=>res(null); img.src=dataUrl; });
+}
+function matchPhoto(fname){
+  const base=fname.split('/').pop().replace(/\.[^.]+$/,'');
+  const k=nameKey(base); const keys=built.students.map(s=>s.key);
+  if(keys.includes(k)) return k;
+  const toks=k.split(' ').filter(t=>t.length>1);
+  const cands=keys.filter(key=>toks.length>=2&&toks.every(t=>key.split(' ').includes(t)));
+  return cands.length===1?cands[0]:null;
+}
+/* Smart School "אלפון תלמידים כיתתי עם תמונות" (report 61) saved as PDF: a table row per student with the photo in it */
+async function rosterPhotosFromPdf(file){
+  await ensurePdfJs();
+  const doc=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer()),cMapUrl:PDFJS+'cmaps/',cMapPacked:true,isEvalSupported:false}).promise;
+  const pages=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p), tc=await page.getTextContent();
+    let rects=[]; try{ rects=imageRects(await page.getOperatorList()); }catch(e){}
+    pages.push({page,items:tc.items.filter(i=>'str' in i).map(i=>({str:i.str,x:i.transform[4],y:i.transform[5],w:i.width,h:i.height||Math.hypot(i.transform[2],i.transform[3])})),rects});
+  }
+  const aoa=pdfItemsToAoa(pages.map(p=>p.items)), meta=aoa.meta||[];
+  const hr=findHeaderRow(aoa), headers=(aoa[hr]||[]).map(clean), fl={headers,mapping:autoMap(headers)};
+  const rows=[]; for(let i=hr+1;i<aoa.length;i++){ const nm=rowName(fl,aoa[i]); if(nm&&meta[i]) rows.push({name:nm,...meta[i]}); }
+  const out={}; let images=0;
+  for(const [pi,p] of pages.entries()){
+    const pr=rows.filter(r=>r.page===pi);
+    for(const r of p.rects){
+      const w=r.x2-r.x1, hgt=r.y2-r.y1; if(w<10||hgt<10||w/hgt>2.5||w/hgt<0.4) continue;
+      images++;
+      const cy=(r.y1+r.y2)/2;
+      const best=pr.filter(x=>x.y>=r.y1-x.h*2&&x.y<=r.y2+x.h*2).sort((a,b)=>Math.abs(a.y-cy)-Math.abs(b.y-cy))[0];
+      if(!best||out[nameKey(best.name)]) continue;
+      const d=await cropPdf(p.page,r); if(d) out[nameKey(best.name)]={name:best.name,photo:d};
+    }
+  }
+  return {photos:Object.values(out), rows:rows.length, images};
+}
+async function handlePhotos(list){
+  let ok=0, miss=[];
+  const items=[], notes=[];
+  for(const f of list){
+    if(/\.pdf$/i.test(f.name)){
+      try{
+        $('#photoInfo').textContent='קורא תמונות מה-PDF…';
+        const r=await rosterPhotosFromPdf(f);
+        for(const x of r.photos){ state.photos[nameKey(x.name)]=x.photo; ok++; }
+        if(!r.images) notes.push(`ב-${f.name} אין תמונות. ייתכן שהתמונות לא נטענו לפני השמירה כ-PDF, או שלא הועלו תמונות לסמארט סקול.`);
+      }catch(e){ console.error(e); notes.push(`לא הצלחנו לקרוא את ${f.name}.`); }
+      continue;
+    }
+    if(/\.zip$/i.test(f.name)){
+      const zip=await JSZip.loadAsync(await f.arrayBuffer());
+      for(const [p,entry] of Object.entries(zip.files)){ if(entry.dir||!/\.(jpe?g|png|webp|gif|heic)$/i.test(p)||p.includes('__MACOSX')) continue;
+        const ext=p.split('.').pop().toLowerCase(); const blob=new Blob([await entry.async('uint8array')],{type:'image/'+(ext==='jpg'?'jpeg':ext)}); items.push({name:p,blob}); }
+    } else items.push({name:f.name,blob:f});
+  }
+  for(const it of items){
+    const key=matchPhoto(it.name); if(!key){ miss.push(it.name.split('/').pop()); continue; }
+    const d=await shrink(await fileToDataURL(it.blob)); if(d){ state.photos[key]=d; ok++; } else miss.push(it.name.split('/').pop());
+  }
+  $('#photoInfo').textContent = notes.join(' ')+` שויכו ${ok} תמונות.` + (miss.length?` לא שויכו: ${miss.slice(0,6).join(', ')}${miss.length>6?'…':''} (שם הקובץ צריך להיות שם התלמיד).`:'');
+  refresh();
+}
+async function handleLogos(list){
+  for(const f of list){ const d=await fileToDataURL(f); state.logos.push(d); }
+  $('#logos').innerHTML=state.logos.map((l,i)=>`<img src="${l}" alt="לוגו ${i+1}">`).join('') + (state.logos.length?'<button class="btn small" type="button" id="clrLogos">הסרת לוגואים</button>':'');
+  const b=$('#clrLogos'); if(b) b.onclick=()=>{ state.logos=[]; handleLogos([]); };
+}
+
+/* ---------- existing decks ---------- */
+const RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+function tags(el,n){ return [...el.getElementsByTagNameNS('*',n)]; }
+function paraText(el){ return tags(el,'p').map(p=>tags(p,'t').map(t=>t.textContent).join('')).join('\n'); }
+function resolvePart(base,target){
+  if(target.startsWith('/')) return target.slice(1);
+  const parts=base.split('/'); parts.pop();
+  for(const seg of target.split('/')){ if(seg==='..') parts.pop(); else if(seg!=='.') parts.push(seg); }
+  return parts.join('/');
+}
+/* one slide's XML → its tables, text lines (with font size) and pictures */
+function parsePptxSlide(path, xml, relsXml){
+  const dp=new DOMParser(), doc=dp.parseFromString(xml,'application/xml');
+  const rels={};
+  if(relsXml){ const rd=dp.parseFromString(relsXml,'application/xml');
+    for(const r of tags(rd,'Relationship')) if(r.getAttribute('TargetMode')!=='External') rels[r.getAttribute('Id')]=resolvePart(path,r.getAttribute('Target')); }
+  const tables=tags(doc,'tbl').map(tbl=>tags(tbl,'tr').map(tr=>tags(tr,'tc').map(tc=>paraText(tc))));
+  const texts=[];
+  for(const sp of tags(doc,'sp')){
+    const tb=tags(sp,'txBody')[0]; if(!tb) continue;
+    const size=Math.max(0,...[...tags(tb,'rPr'),...tags(tb,'defRPr'),...tags(tb,'endParaRPr')].map(r=>Number(r.getAttribute('sz'))||0))/100;
+    for(const line of paraText(tb).split('\n')) if(line.trim()) texts.push({text:line,size});
+  }
+  for(const t of tables) for(const row of t) for(const c of row) for(const line of c.split('\n')) if(line.trim()) texts.push({text:line,size:0});
+  const pics=[];
+  for(const b of tags(doc,'blip')){
+    const id=b.getAttributeNS(RNS,'embed'); if(!id||!rels[id]) continue;
+    let host=b.parentNode; while(host&&host.localName!=='pic'&&host.localName!=='sp') host=host.parentNode;
+    let cx=0,cy=0;
+    if(host){ const ext=tags(host,'ext').find(e=>e.parentNode&&e.parentNode.localName==='xfrm'); if(ext){ cx=Number(ext.getAttribute('cx'))||0; cy=Number(ext.getAttribute('cy'))||0; } }
+    pics.push({target:rels[id],area:cx*cy,aspect:cy?cx/cy:0});
+  }
+  return {tables,texts,pics};
+}
+const IMG_EXT=/\.(png|jpe?g|gif|webp|bmp)$/i;
+function repeatedSet(lists){ /* things that show up on most slides = logos */
+  const n=lists.length, cnt={};
+  lists.forEach(l=>new Set(l).forEach(t=>cnt[t]=(cnt[t]||0)+1));
+  return new Set(Object.keys(cnt).filter(t=>n>=3&&cnt[t]>=Math.max(2,Math.ceil(n*0.5))));
+}
+function knownStudents(){ return built.students.filter(s=>s.files.some(id=>state.files.find(f=>f.id===id&&f.kind!=='deck'))).map(s=>({key:s.key,name:s.name})); }
+function deckEntry(name, info, known){
+  const hasInfo=Object.values(info).some(Boolean)||Object.keys(info).length>=2;
+  return {name, info, hasInfo, matched:known.some(k=>k.name===name)};
+}
+async function readPptxDeck(file){
+  const zip=await JSZip.loadAsync(await file.arrayBuffer());
+  const paths=Object.keys(zip.files).filter(p=>/^ppt\/slides\/slide\d+\.xml$/.test(p)).sort((a,b)=>+a.match(/\d+/)[0]-+b.match(/\d+/)[0]);
+  if(!paths.length) throw new Error('nodeck');
+  const slides=[];
+  for(const p of paths){
+    const rp=p.replace('slides/','slides/_rels/')+'.rels';
+    slides.push({num:slides.length+1, ...parsePptxSlide(p, await zip.file(p).async('string'), zip.file(rp)?await zip.file(rp).async('string'):'')});
+  }
+  const logos=repeatedSet(slides.map(s=>s.pics.map(x=>x.target)));
+  const known=knownStudents(), entries=[], skipped=[];
+  for(const s of slides){
+    const info={}; for(const t of s.tables) Object.assign(info, infoFromTableRows(t));
+    const name=pickName(s.texts, known);
+    const pic=s.pics.filter(x=>!logos.has(x.target)&&IMG_EXT.test(x.target)&&x.area>0&&x.aspect>=0.4&&x.aspect<=2.5).sort((a,b)=>b.area-a.area)[0];
+    const e=deckEntry(name, info, known);
+    if(!name){ if(e.hasInfo) skipped.push(s.num); continue; }
+    if(!(e.hasInfo||e.matched||pic)) continue;
+    if(pic){ const ext=pic.target.split('.').pop().toLowerCase(); const blob=new Blob([await zip.file(pic.target).async('uint8array')],{type:'image/'+(ext==='jpg'?'jpeg':ext)}); e.photo=await shrink(await fileToDataURL(blob)); }
+    entries.push(e);
+  }
+  return {entries, skipped};
+}
+function imageRects(opList){
+  const O=pdfjsLib.OPS, U=pdfjsLib.Util; let ctm=[1,0,0,1,0,0]; const st=[], out=[];
+  const paint=new Set([O.paintImageXObject,O.paintInlineImageXObject,O.paintImageXObjectRepeat,O.paintJpegXObject].filter(x=>x!=null));
+  opList.fnArray.forEach((fn,i)=>{
+    const a=opList.argsArray[i];
+    if(fn===O.save) st.push(ctm.slice());
+    else if(fn===O.restore) ctm=st.pop()||ctm;
+    else if(fn===O.transform) ctm=U.transform(ctm,a);
+    else if(fn===O.paintFormXObjectBegin){ st.push(ctm.slice()); if(a&&Array.isArray(a[0])&&a[0].length===6) ctm=U.transform(ctm,a[0]); }
+    else if(fn===O.paintFormXObjectEnd) ctm=st.pop()||ctm;
+    else if(paint.has(fn)){
+      const pts=[[0,0],[1,0],[0,1],[1,1]].map(([x,y])=>[ctm[0]*x+ctm[2]*y+ctm[4],ctm[1]*x+ctm[3]*y+ctm[5]]);
+      const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+      out.push({x1:Math.min(...xs),y1:Math.min(...ys),x2:Math.max(...xs),y2:Math.max(...ys)});
+    }
+  });
+  return out;
+}
+async function cropPdf(page, r){
+  const vp=page.getViewport({scale:2.5}), c=document.createElement('canvas');
+  c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height);
+  await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+  const [a,b,x,y]=vp.convertToViewportRectangle([r.x1,r.y1,r.x2,r.y2]);
+  const L=Math.max(0,Math.min(a,x)), T=Math.max(0,Math.min(b,y)), W=Math.min(c.width,Math.max(a,x))-L, H=Math.min(c.height,Math.max(b,y))-T;
+  if(W<8||H<8) return null;
+  const o=document.createElement('canvas'); o.width=Math.round(W); o.height=Math.round(H);
+  o.getContext('2d').drawImage(c,L,T,W,H,0,0,o.width,o.height);
+  return shrink(o.toDataURL('image/jpeg',0.9));
+}
+async function readPdfDeck(file){
+  await ensurePdfJs();
+  const doc=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer()),cMapUrl:PDFJS+'cmaps/',cMapPacked:true,isEvalSupported:false}).promise;
+  const pages=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p), tc=await page.getTextContent();
+    const items=tc.items.filter(i=>'str' in i).map(i=>({str:i.str,x:i.transform[4],y:i.transform[5],w:i.width,h:i.height||Math.hypot(i.transform[2],i.transform[3])}));
+    let rects=[]; try{ rects=imageRects(await page.getOperatorList()); }catch(e){}
+    const [vx1,vy1,vx2,vy2]=page.view;
+    pages.push({num:p,page,items,rects,area:(vx2-vx1)*(vy2-vy1)});
+  }
+  if(!pages.some(p=>p.items.length)) throw new Error('scanned');
+  const score=f=>pages.reduce((n,p)=>n+pdfDeckPage(p.items,f).starters,0);
+  const flip=score(true)>score(false);
+  const sig=r=>[r.x1,r.y1,r.x2,r.y2].map(v=>Math.round(v/4)).join(',');
+  const logos=repeatedSet(pages.map(p=>p.rects.map(sig)));
+  const known=knownStudents(), entries=[], skipped=[];
+  for(const p of pages){
+    const {info,cands}=pdfDeckPage(p.items,flip);
+    const name=pickName(cands, known);
+    const e=deckEntry(name, info, known);
+    const pic=p.rects.filter(r=>{ const w=r.x2-r.x1,h=r.y2-r.y1; return !logos.has(sig(r))&&w*h>p.area*0.005&&w/h>=0.4&&w/h<=2.5; }).sort((a,b)=>(b.x2-b.x1)*(b.y2-b.y1)-(a.x2-a.x1)*(a.y2-a.y1))[0];
+    if(!name){ if(e.hasInfo) skipped.push(p.num); continue; }
+    if(!(e.hasInfo||e.matched||pic)) continue;
+    if(pic){ try{ e.photo=await cropPdf(p.page,pic); }catch(err){} }
+    entries.push(e);
+  }
+  return {entries, skipped};
+}
+async function handleDeck(list){
+  const err=$('#fileErr'); err.hidden=true; const msgs=[], summary=[];
+  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.sample=false; refresh(); }
+  $('#deckInfo').textContent='קורא את המצגת…';
+  for(const f of list){
+    const ext=f.name.split('.').pop().toLowerCase();
+    try{
+      if(ext==='ppt'||ext==='key'){ msgs.push(`${f.name}: הקובץ בפורמט ישן. שמרו אותו כ-pptx או כ-PDF ונסו שוב.`); continue; }
+      const res = ext==='pdf' ? await readPdfDeck(f) : await readPptxDeck(f);
+      if(!res.entries.length){ msgs.push(`${f.name}: לא נמצאו בקובץ שקפים של תלמידים עם שם.`); continue; }
+      const file=addFileFromAoa(f.name, deckAoa(res.entries)); file.kind='deck'; file.photoKeys=[]; file.photoData={};
+      for(const e of res.entries) if(e.photo){ const k=nameKey(e.name); state.photos[k]=e.photo; file.photoKeys.push(k); file.photoData[k]=e.photo; }
+      const withInfo=res.entries.filter(e=>Object.values(e.info).some(Boolean)).length;
+      summary.push(`${f.name}: ${res.entries.length} תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות.`+(res.skipped.length?` לא זוהה שם תלמיד בשקפים ${res.skipped.join(', ')}.`:''));
+    }catch(e){
+      console.error(e);
+      if(e?.message==='scanned') msgs.push(`${f.name}: ה-PDF הוא תמונה סרוקה בלי טקסט.`);
+      else if(e?.message==='script') msgs.push(`${f.name}: רכיב קריאת ה-PDF לא נטען. בדקו את החיבור לאינטרנט ונסו שוב.`);
+      else msgs.push(`${f.name}: לא הצלחנו לקרוא את המצגת. נסו לשמור אותה מחדש כ-pptx או כ-PDF.`);
+    }
+  }
+  $('#deckInfo').textContent=summary.join(' ');
+  if(msgs.length){ err.innerHTML=msgs.map(esc).join('<br>'); err.hidden=false; }
+  refresh();
+}
+
+/* ---------- PowerPoint ---------- */
+const C={ink:'1E2A44',soft:'5A6785',faint:'9AA3B8',bg:'F3F5FA',white:'FFFFFF',line:'DDE3EF',band:'EEF3FC',
+  good:'15803D',warn:'B45309',bad:'B91C1C',blue:'2449B8',track:'E5E9F2'};
+const BARC={math:'2F5BD8',lang:'E07B24',eng:'C2367A',sci:'2E9B57'};
+const T=(o)=>Object.assign({fontFace:'Arial',color:C.ink,rtlMode:true,lang:'he-IL',align:'right',valign:'middle',margin:0},o);
+function imgSize(d){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res({w:i.width,h:i.height}); i.onerror=()=>res({w:1,h:1}); i.src=d; }); }
+
+async function generate(){
+  const s=settings(), pass=s.pass;
+  const pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE'; pptx.rtlMode=true; pptx.title='ישיבה פדגוגית '+(s.cls||'');
+  const dateTxt = s.date ? s.date.split('-').reverse().join('.') : '';
+  /* cover */
+  const cv=pptx.addSlide(); cv.background={color:C.ink};
+  if(s.bsd) cv.addText('בס״ד',T({x:11.6,y:0.2,w:1.4,h:0.35,fontSize:12,color:'BFC8DE'}));
+  let lx=0.6;
+  for(const l of state.logos){ const z=await imgSize(l); const h=0.8, w=Math.min(2.4,h*z.w/z.h);
+    cv.addShape(pptx.ShapeType.roundRect,{x:lx-0.08,y:0.32,w:w+0.16,h:h+0.16,fill:{color:'FFFFFF'},rectRadius:0.08,line:{color:'FFFFFF'}});
+    cv.addImage({data:l,x:lx,y:0.4,w,h}); lx+=w+0.4; }
+  if(s.school) cv.addText(s.school,T({x:0.9,y:2.2,w:11.5,h:0.5,fontSize:20,bold:true,color:'8FB0FF'}));
+  cv.addText('ישיבה פדגוגית',T({x:0.9,y:2.75,w:11.5,h:1.3,fontSize:60,bold:true,color:'F6F7FB'}));
+  const line=[s.cls&&('כיתה '+s.cls), s.teacher&&('מחנך/ת: '+s.teacher), dateTxt].filter(Boolean).join('  ·  ');
+  if(line) cv.addText(line,T({x:0.9,y:4.1,w:11.5,h:0.6,fontSize:24,color:'DCE3F2'}));
+  cv.addText(`${built.students.length} תלמידים`,T({x:0.9,y:4.75,w:11.5,h:0.45,fontSize:16,color:'BFC8DE'}));
+  if(s.credit) cv.addText(s.credit,T({x:0.6,y:6.95,w:7,h:0.3,fontSize:10,color:'7D89A6',align:'left'}));
+
+  const flagsBy={}; for(const c of built.conflicts) if(!c.resolved)(flagsBy[c.key] ||= []).push(`${FLABEL[c.field]} (${c.options.map(o=>o.val).join(' / ')})`);
+  for(const st of built.students){
+    const sl=pptx.addSlide(); sl.background={color:C.bg};
+    if(s.bsd) sl.addText('בס״ד',T({x:11.9,y:0.15,w:1.1,h:0.3,fontSize:11,color:C.soft}));
+    /* right: profile */
+    sl.addShape(pptx.ShapeType.roundRect,{x:10.5,y:0.6,w:2.5,h:6.25,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.12});
+    const ph=state.photos[st.key];
+    if(ph) sl.addImage({data:ph,x:11.05,y:0.9,w:1.4,h:1.4,rounding:true,sizing:{type:'cover',w:1.4,h:1.4}});
+    else { sl.addShape(pptx.ShapeType.ellipse,{x:11.05,y:0.9,w:1.4,h:1.4,fill:{color:'E3E9F7'},line:{color:'E3E9F7'}});
+      sl.addText(initials(st.name),T({x:11.05,y:0.9,w:1.4,h:1.4,fontSize:28,bold:true,color:'8A9BC4',align:'center'})); }
+    sl.addText(st.name,T({x:10.6,y:2.45,w:2.3,h:0.75,fontSize:20,bold:true,align:'center',fit:'shrink'}));
+    sl.addText(st.cls?('כיתה '+st.cls):'',T({x:10.6,y:3.2,w:2.3,h:0.35,fontSize:14,color:C.soft,align:'center'}));
+    sl.addShape(pptx.ShapeType.line,{x:10.85,y:3.7,w:1.8,h:0,line:{color:C.line,width:0.75}});
+    sl.addText('הקבצות',T({x:10.6,y:3.85,w:2.3,h:0.35,fontSize:12,bold:true,color:C.soft,align:'center'}));
+    const pills=[st.gMath&&{t:'מתמטיקה: '+st.gMath,f:'EDE7FB',c:'5B3BB5'}, st.gEng&&{t:'אנגלית: '+st.gEng,f:'EAF0FF',c:C.blue}].filter(Boolean);
+    if(!pills.length) sl.addText('אין הקבצות',T({x:10.6,y:4.3,w:2.3,h:0.4,fontSize:12,color:C.faint,align:'center'}));
+    pills.forEach((p,i)=>{ sl.addText(p.t,T({x:10.8,y:4.3+i*0.55,w:1.9,h:0.42,fontSize:12,color:p.c,align:'center',fill:{color:p.f},shape:pptx.ShapeType.roundRect,rectRadius:0.2})); });
+
+    /* middle: achievements */
+    sl.addText('הישגים לימודיים',T({x:5.5,y:0.6,w:4.75,h:0.45,fontSize:18,bold:true}));
+    const tile=(x,y,num,label,tone,fill,line,hh)=>{
+      const H=hh||1.15, top=y+(H-1.15)/2;
+      sl.addShape(pptx.ShapeType.roundRect,{x,y,w:2.3,h:H,fill:{color:fill},line:{color:line,width:0.75},rectRadius:0.1});
+      sl.addText(num,T({x,y:top+0.1,w:2.3,h:0.6,fontSize:30,bold:true,color:tone,align:'center'}));
+      sl.addText(label,T({x:x+0.1,y:top+0.7,w:2.1,h:0.35,fontSize:11,color:C.soft,align:'center',fit:'shrink'}));
+    };
+    const failLabel = st.fails ? ('נכשלים' + (st.failSubjects.length && st.failSubjects.length<=3 ? ': '+st.failSubjects.join(', ') : '')) : 'נכשלים';
+    tile(7.95,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':''),C.blue,'EAF0FF','C3D2F7');
+    tile(7.95,2.5,fmt(st.fails),failLabel,st.fails?C.bad:C.good,st.fails?'FDECEC':'E8F6EC',st.fails?'F2C2C2':'BFE3CB');
+    if(eventsOnly(st)){ tile(5.5,1.2,fmt(st.events),'אירועי שיעור',C.warn,'FFF4E5','F3D3A6',2.43); }
+    else { tile(5.5,1.2,fmt(st.late),'איחורים',C.warn,'FFF4E5','F3D3A6'); tile(5.5,2.5,fmt(st.abs),'חיסורים',C.warn,'FFF4E5','F3D3A6'); }
+    sl.addText('מקצועות ליבה',T({x:5.5,y:3.78,w:4.75,h:0.32,fontSize:12,bold:true,color:C.soft}));
+    CORE.forEach((c,i)=>{
+      const y=4.15+i*0.66, x=st[c], tone=scoreTone(x,pass);
+      sl.addShape(pptx.ShapeType.roundRect,{x:5.5,y,w:4.75,h:0.56,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.08});
+      sl.addText(FLABEL[c],T({x:8.95,y,w:1.15,h:0.56,fontSize:14,bold:true}));
+      sl.addShape(pptx.ShapeType.roundRect,{x:6.45,y:y+0.235,w:2.4,h:0.09,fill:{color:C.track},line:{color:C.track},rectRadius:0.04});
+      if(x!=null&&x>0){ const w=2.4*Math.min(100,x)/100; sl.addShape(pptx.ShapeType.roundRect,{x:6.45+2.4-w,y:y+0.235,w,h:0.09,fill:{color:BARC[c]},line:{color:BARC[c]},rectRadius:0.04}); }
+      sl.addText(x==null?'אין ציון':fmt(x),T({x:5.6,y,w:0.8,h:0.56,fontSize:x==null?11:18,bold:x!=null,color:tone==='none'?C.faint:C[tone],align:'center'}));
+    });
+
+    /* left: general info table */
+    sl.addShape(pptx.ShapeType.roundRect,{x:0.33,y:0.6,w:4.95,h:6.25,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.12});
+    sl.addText('מידע כללי',T({x:0.5,y:0.7,w:4.6,h:0.45,fontSize:16,bold:true}));
+    const rows=INFO.map((f,i)=>{ const fill={color:i%2?C.band:C.white};
+      return [ {text:st[f]||'',options:T({fontSize:11,fill,valign:'top',margin:[4,6,4,6]})},
+               {text:FLABEL[f],options:T({fontSize:11,bold:true,fill,valign:'top',margin:[4,6,4,6]})} ]; });
+    sl.addTable(rows,{x:0.5,y:1.25,w:4.6,colW:[3.25,1.35],rowH:[1.25,0.95,0.95,1.05,1.3],border:{type:'solid',pt:0.75,color:'C9D3E6'},autoPage:false});
+
+    if(flagsBy[st.key]) sl.addText('לבדיקה – ערכים שונים בדוחות: '+flagsBy[st.key].join(' · '),T({x:5.5,y:6.92,w:7.5,h:0.3,fontSize:10,color:C.bad,fit:'shrink'}));
+    if(s.credit) sl.addText(s.credit,T({x:0.33,y:6.95,w:5,h:0.3,fontSize:9,color:C.faint,align:'left'}));
+  }
+  const fname=`ישיבה פדגוגית ${s.cls||''} ${dateTxt}`.replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim();
+  const dl = window.claude?.use ? await window.claude.use('downloads') : null;
+  if(dl){
+    const blob = await pptx.write({outputType:'blob'});
+    try{ await dl.save({filename:fname+'.pptx', data:blob}); return 'saved'; }
+    catch(e){ return e?.code==='declined' ? 'declined' : 'failed'; }
+  }
+  await pptx.writeFile({fileName:fname+'.pptx'}); return 'saved';
+}
+
+/* ---------- wiring ---------- */
+function wireDrop(zone,input,handler){
+  zone.onclick=()=>input.click();
+  zone.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); input.click(); } };
+  zone.ondragover=e=>{ e.preventDefault(); zone.classList.add('over'); };
+  zone.ondragleave=()=>zone.classList.remove('over');
+  zone.ondrop=e=>{ e.preventDefault(); zone.classList.remove('over'); handler([...e.dataTransfer.files]); };
+  input.onchange=()=>{ handler([...input.files]); input.value=''; };
+}
+wireDrop($('#dropData'),$('#inData'),handleData);
+$('#bDeck').onclick=()=>$('#inDeck').click();
+$('#inDeck').onchange=e=>{ handleDeck([...e.target.files]); e.target.value=''; };
+$('#bPhotos').onclick=()=>$('#inPhotos').click();
+$('#inPhotos').onchange=e=>{ handlePhotos([...e.target.files]); e.target.value=''; };
+$('#bLogos').onclick=()=>$('#inLogos').click();
+$('#inLogos').onchange=e=>{ handleLogos([...e.target.files]); e.target.value=''; };
+['#sPass','#sCredit'].forEach(id=>$(id).addEventListener('input',refresh));
+$('#bGen').onclick=async()=>{
+  const b=$('#bGen'); b.disabled=true; const old=b.textContent; b.textContent='יוצר מצגת…';
+  try{ const r=await generate();
+    $('#status').textContent = r==='saved' ? 'המצגת נשמרה. פתחו אותה ב-PowerPoint.' : r==='declined' ? 'ההורדה בוטלה. לחצו שוב כדי לשמור את המצגת.' : 'לא הצלחנו לשמור את הקובץ. נסו שוב.'; }
+  catch(e){ console.error(e); $('#status').textContent='יצירת המצגת נכשלה. רעננו את הדף ונסו שוב.'; }
+  b.disabled=false; b.textContent=old;
+};
+loadSample();
+</script>
+</body>
+</html>
