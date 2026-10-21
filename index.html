@@ -182,6 +182,8 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
     <label>ציון נכשל: מתחת ל-<input type="number" id="sPass" value="55" min="0" max="100"></label>
     <label>שורת קרדיט בתחתית כל שקף<input type="text" id="sCredit" value="נבנה על ידי: אריק - @mathfun.with.arik"></label>
     <label class="check"><input type="checkbox" id="sBsd" checked> בס״ד בפינה הימנית העליונה</label>
+    <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה (מהסדין או מדוח 66)</label>
+    <label class="check"><input type="checkbox" id="sTop3"> שקף 3 התלמידים המצטיינים לפי ממוצע</label>
   </div>
   <div class="uploads">
     <button class="btn" id="bLogos" type="button">הוספת לוגואים לשקף הפתיחה</button>
@@ -202,7 +204,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 18:00</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 18:30</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -219,16 +221,23 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
 const FIELDS = [
   {id:'name', label:'שם מלא'}, {id:'first', label:'שם פרטי'}, {id:'last', label:'שם משפחה'},
   {id:'cls', label:'כיתה'}, {id:'avg', label:'ממוצע כללי'},
-  {id:'math', label:'מתמטיקה'}, {id:'lang', label:'לשון'}, {id:'eng', label:'אנגלית'}, {id:'sci', label:'מדעים'},
+  {id:'math', label:'מתמטיקה'}, {id:'lang', label:'עברית'}, {id:'eng', label:'אנגלית'}, {id:'sci', label:'מדעים'},
+  {id:'geo', label:'גאוגרפיה'}, {id:'hist', label:'היסטוריה'},
   {id:'fails', label:'מספר נכשלים'}, {id:'late', label:'איחורים'}, {id:'abs', label:'חיסורים'}, {id:'events', label:'אירועי שיעור'},
   {id:'gMath', label:'הקבצה במתמטיקה'}, {id:'gEng', label:'הקבצה באנגלית'},
   {id:'iGen', label:'כללי'}, {id:'iExc', label:'בעיות חריגות'}, {id:'iAtt', label:'ביקור סדיר'},
   {id:'iEmo', label:'קשיים רגשיים או אחרים'}, {id:'iAns', label:'מענים'}
 ];
 const FLABEL = Object.fromEntries(FIELDS.map(f=>[f.id,f.label]));
-const CORE = ['math','lang','eng','sci'];
+const CORE = ['math','lang','eng','sci','geo','hist'];
+/* core subjects by grade: ז = math, English, Hebrew, geography (+ science when graded); ח/ט = math, English, Hebrew, history, science */
+function coreFor(s, cls){
+  const g=(clean(cls||s.cls||'').match(/[\u05D0-\u05EA]/)||[''])[0];
+  if(g==='ז') return ['math','eng','lang','geo', ...(s.sci!=null?['sci']:[])];
+  return ['math','eng','lang','hist','sci'];
+}
 const INFO = ['iGen','iExc','iAtt','iEmo','iAns'];
-const NUMERIC = ['avg','math','lang','eng','sci','fails','late','abs','events'];
+const NUMERIC = ['avg','math','lang','eng','sci','geo','hist','fails','late','abs','events'];
 
 function clean(s){ return String(s==null?'':s).replace(/[‎‏‪-‮]/g,'').replace(/\s+/g,' ').trim(); }
 /* like clean, but keeps line breaks (for the general-info texts) */
@@ -258,6 +267,8 @@ function scoreHeader(field, h){
     case 'lang': return !grp&&!has('אולפן')&&(has('לשון')||has('עברית')||h==='שפה'||has('הבעה'))?10:0;
     case 'eng': return !grp&&has('אנגלית')?10:0;
     case 'sci': return !grp&&(has('מדעים')||h==='מדע'||has('מדע וטכנולוגיה'))?10:0;
+    case 'geo': return has('גאוגרפיה')||has('גיאוגרפיה')||has('ג״ג')||has('ג"ג')||has("ג''ג")?10:0;
+    case 'hist': return has('היסטוריה')||has('הסטוריה')?10:0;
     case 'fails': return has('נכשל')||has('שליליים')?10:0;
     case 'late': return has('איחור')?10:0;
     case 'events': return has('אירועי שיעור')||has('א.שיעור')?10:0;
@@ -420,7 +431,7 @@ function buildStudents(files, opts){
     students.push({
       key:st.key, name:st.name, cls:val.cls||'', avg, avgSource, fails, failSubjects,
       late:toNum(val.late), abs:toNum(val.abs), events:toNum(val.events),
-      math:toNum(val.math), lang:toNum(val.lang), eng:toNum(val.eng), sci:toNum(val.sci),
+      math:toNum(val.math), lang:toNum(val.lang), eng:toNum(val.eng), sci:toNum(val.sci), geo:toNum(val.geo), hist:toNum(val.hist),
       gMath:val.gMath||'', gEng:val.gEng||'',
       iGen:val.iGen||'', iExc:val.iExc||'', iAtt:val.iAtt||'', iEmo:val.iEmo||'', iAns:val.iAns||'',
       evs:st.evs||null,
@@ -598,9 +609,23 @@ function parseSadin(aoa){
     }
     out.push([name, cls, avg??'', fails??'', anyEv?ev:'', ...bases.map(b=>grade[b]??''), gM, gE]);
   }
-  return out.length>1 ? {aoa:out, cls} : null;
+  /* who teaches what: the teacher's name sits in parentheses under each subject */
+  const teachers=blocks.map(b=>{ const raw=String(head[b.from]); const t=sadinText((raw.match(/\(([^)]+)\)/)||['',''])[1]); return t?{subject:b.base,group:b.group,teacher:t}:null; }).filter(Boolean);
+  return out.length>1 ? {aoa:out, cls, teachers} : null;
 }
 
+/* ---------- a teachers list (e.g. Smart School report 66): columns teacher + subject ---------- */
+function parseTeachersReport(aoa){
+  for(let r=0;r<Math.min(aoa.length,30);r++){
+    const row=(aoa[r]||[]).map(clean);
+    const ti=row.findIndex(c=>/^(שם )?(ה)?מורה|מורים/.test(c)), si=row.findIndex(c=>/מקצוע/.test(c));
+    if(ti<0||si<0) continue;
+    const out=[];
+    for(let k=r+1;k<aoa.length;k++){ const t=sadinText((aoa[k]||[])[ti]), s=sadinText((aoa[k]||[])[si]); if(t&&s&&/[\u05D0-\u05EA]/.test(t)) out.push({subject:s.replace(/\s*\(.*\)$/,''),group:'',teacher:t}); }
+    return out.length?out:null;
+  }
+  return null;
+}
 /* ---------- Smart School report 42: "דוח מונה אירועים בשיעור לכיתה" ----------
    Header cells like "*חיסור\nסה''כ 2015", one column per event type, then total, class, name. */
 const EV_PREFIX='אירוע: ';
@@ -697,7 +722,7 @@ function pdfDeckPage(items, flip){
 function deckAoa(entries){
   return [['שם',...INFO.map(f=>INFO_HEAD[f])], ...entries.filter(e=>e.name).map(e=>[e.name,...INFO.map(f=>e.info[f]||'')])];
 }
-if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,pickName,infoFromTableRows,pdfDeckPage,deckAoa,infoLabelStart};
+if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,parseTeachersReport,pickName,infoFromTableRows,pdfDeckPage,deckAoa,infoLabelStart};
 </script>
 
 <script>
@@ -741,15 +766,20 @@ function autoClass(){
 function photoFor(s){ return state.photos[s.key] || (s.aliasKeys||[]).map(k=>state.photos[k]).find(Boolean) || (photoMap[s.key]&&state.photos[photoMap[s.key]]) || null; }
 let built={students:[],conflicts:[],missing:[],eventTypes:[]};
 let evHidden=new Set(); try{ evHidden=new Set(JSON.parse(localStorage.getItem('pm.evHidden')||'[]')); }catch(e){}
-function shownEvents(s){ return s.evs ? built.eventTypes.filter(t=>!evHidden.has(t)&&s.evs[t]!=null).map(t=>({t,n:s.evs[t],pos:POSITIVE_EV.test(t)})) : []; }
+/* types the teacher did not ask for are off unless switched on */
+const EV_OFF_DEFAULT=/לא התאמן|פלאפון|טלפון|פטפוט/;
+let evShown=new Set(); try{ evShown=new Set(JSON.parse(localStorage.getItem('pm.evShown')||'[]')); }catch(e){}
+function evIsHidden(t){ return evHidden.has(t)||(EV_OFF_DEFAULT.test(t)&&!evShown.has(t)); }
+function shownEvents(s){ return s.evs ? built.eventTypes.filter(t=>!evIsHidden(t)&&s.evs[t]!=null).map(t=>({t,n:s.evs[t],pos:POSITIVE_EV.test(t)})) : []; }
 function renderEvPick(){
   const box=$('#evPick'), types=built.eventTypes||[];
   box.hidden=!types.length; if(!types.length){ box.innerHTML=''; return; }
   box.innerHTML='<span class="hint">אירועי שיעור שיוצגו בשקף (מדוח 42):</span><div class="evpick-list"></div>';
   const list=box.querySelector('.evpick-list');
   types.forEach((t,i)=>{
-    const lab=document.createElement('label'); const cb=document.createElement('input'); cb.type='checkbox'; cb.id='ev-'+i; cb.checked=!evHidden.has(t);
-    cb.onchange=()=>{ cb.checked?evHidden.delete(t):evHidden.add(t); try{ localStorage.setItem('pm.evHidden',JSON.stringify([...evHidden])); }catch(e){} renderStudents(); };
+    const lab=document.createElement('label'); const cb=document.createElement('input'); cb.type='checkbox'; cb.id='ev-'+i; cb.checked=!evIsHidden(t);
+    cb.onchange=()=>{ if(cb.checked){ evHidden.delete(t); evShown.add(t); } else { evHidden.add(t); evShown.delete(t); }
+      try{ localStorage.setItem('pm.evHidden',JSON.stringify([...evHidden])); localStorage.setItem('pm.evShown',JSON.stringify([...evShown])); }catch(e){} renderStudents(); };
     lab.append(cb, document.createTextNode(t)); list.appendChild(lab);
   });
 }
@@ -757,6 +787,8 @@ function renderEvPick(){
 function addFileFromAoa(name, aoa){
   const sadin=parseSadin(aoa), evRep=sadin?null:parseEventsReport(aoa);
   if(sadin) aoa=sadin.aoa;
+  const tRep=(sadin||evRep)?null:parseTeachersReport(aoa);
+  if(tRep){ const file={id:'f'+(state.nextId++), name, headers:[], rows:[], mapping:{}, kind:'teachers', teachers:tRep}; state.files.push(file); return file; }
   if(evRep) aoa=evRep.aoa;
   const hr=findHeaderRow(aoa);
   const headers=(aoa[hr]||[]).map(clean);
@@ -764,7 +796,7 @@ function addFileFromAoa(name, aoa){
   const safeHeaders=headers.map(h=>SENSITIVE_COL.test(h)?'':h); /* ID numbers, phones etc. are never read */
   const mapping=autoMap(safeHeaders);
   if(mapping.cls>=0){ const vals=rows.map(r=>clean(r[mapping.cls])).filter(Boolean); if(vals.length&&vals.filter(v=>/\d{5,}/.test(v)).length>vals.length/3) mapping.cls=-1; }
-  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':undefined};
+  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':undefined, teachers:sadin?sadin.teachers:undefined};
   state.files.push(file); return file;
 }
 function loadSample(){
@@ -796,7 +828,7 @@ function loadSample(){
 }
 function settings(){
   return { cls:clean($('#sClass').value), teacher:clean($('#sTeacher').value), date:$('#sDate').value,
-    school:clean($('#sSchool').value), pass:toNum($('#sPass').value)??55, credit:clean($('#sCredit').value), bsd:$('#sBsd').checked };
+    school:clean($('#sSchool').value), showTeachers:$('#sTeachers').checked, showTop3:$('#sTop3').checked, pass:toNum($('#sPass').value)??55, credit:clean($('#sCredit').value), bsd:$('#sBsd').checked };
 }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -806,10 +838,10 @@ function renderFiles(){
   if(!state.files.length){ box.innerHTML='<div class="empty">עוד לא הועלו דוחות.</div>'; return; }
   for(const f of state.files){
     const m=f.mapping, mapped=FIELDS.filter(x=>m[x.id]>=0);
-    const hasName=m.name>=0||m.first>=0||m.last>=0;
+    const hasName=m.name>=0||m.first>=0||m.last>=0||f.kind==='teachers';
     const d=document.createElement('details'); d.className='file';
     d.innerHTML=`<summary><span class="fname">${esc(f.name)}</span>
-      <span class="chip">${f.kind==='deck'?`מצגת · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:`${f.rows.length} שורות`}</span>
+      <span class="chip">${f.kind==='deck'?`מצגת · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:f.kind==='teachers'?`מורי הכיתה · ${f.teachers.length}`:`${f.rows.length} שורות`}</span>
       <span class="chip ${hasName?'ok':'bad'}">${hasName?mapped.length+' עמודות זוהו':'לא זוהתה עמודת שם'}</span>
       <span class="grow"></span><span class="chip">התאמת עמודות</span>
       <button class="btn small" type="button" data-del="${f.id}">הסרה</button></summary>
@@ -901,7 +933,7 @@ function renderStudents(){
   for(const s of built.students){
     const card=document.createElement('article'); card.className='card';
     const ph=photoFor(s);
-    const bars=CORE.map(c=>{ const x=s[c], t=scoreTone(x,pass);
+    const bars=coreFor(s,settings().cls).map(c=>{ const x=s[c], t=scoreTone(x,pass);
       return `<div class="bar"><span>${FLABEL[c]}</span><span class="track"><span class="fill" style="width:${x??0}%;background:var(--${t==='none'?'line':t})"></span></span><span class="score" style="color:var(--${t==='none'?'ink-faint':t})">${x==null?'אין':fmt(x)}</span></div>`; }).join('');
     const tags=[s.gMath&&`<span class="chip">מתמטיקה: ${esc(s.gMath)}</span>`, s.gEng&&`<span class="chip">אנגלית: ${esc(s.gEng)}</span>`].filter(Boolean).join('');
     card.innerHTML=`<div class="card-top"><button class="ph" type="button" title="בחירת תמונה" aria-label="בחירת תמונה ל${esc(s.name)}">${ph?`<img src="${ph}" alt="">`:esc(initials(s.name))}</button>
@@ -909,7 +941,7 @@ function renderStudents(){
       <div class="nums">
         <div class="n"><b>${fmt(s.avg)}</b><span>ממוצע${s.avgSource==='computed'?'*':''}</span></div>
         <div class="n"><b style="color:var(--${s.fails?'bad':'ink'})">${fmt(s.fails)}</b><span>נכשלים</span></div>
-        ${shownEvents(s).some(e=>e.pos)?`<div class="n"><b style="color:var(--good)">${shownEvents(s).filter(e=>e.pos).reduce((a,e)=>a+e.n,0)}</b><span>${esc(shownEvents(s).filter(e=>e.pos).map(e=>e.t).join(' + '))}</span></div><div class="n"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:eventsOnly(s)?`<div class="n wide"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:`<div class="n"><b>${fmt(s.late)}</b><span>איחורים</span></div>
+        ${shownEvents(s).some(e=>e.pos)?`<div class="n"><b style="color:var(--good)">${shownEvents(s).filter(e=>e.pos).reduce((a,e)=>a+e.n,0)}</b><span>${esc(shownEvents(s).filter(e=>e.pos).map(e=>e.t).join(' + '))}</span></div>`:eventsOnly(s)?`<div class="n wide"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:`<div class="n"><b>${fmt(s.late)}</b><span>איחורים</span></div>
         <div class="n"><b>${fmt(s.abs)}</b><span>חיסורים</span></div>`}</div>
       ${shownEvents(s).some(e=>!e.pos)?`<div class="evs">${shownEvents(s).filter(e=>!e.pos).map(e=>`<span class="ev${e.pos?' pos':''}">${esc(e.t)} <b>${e.n}</b></span>`).join('')}</div>`:''}
       <div class="bars">${bars}</div>
@@ -1279,6 +1311,7 @@ function pdfError(f,e){
   return `${f.name}: לא הצלחנו לקרוא את הקובץ. נסו להפיק אותו מחדש, או לייצא ל-Excel.`;
 }
 function noteData(fi,msgs,notes){
+  if(fi.kind==='teachers'){ notes.push(`${fi.name}: רשימת מורים, ${fi.teachers.length} מקצועות.`); return; }
   if(!(fi.mapping.name>=0||fi.mapping.first>=0||fi.mapping.last>=0)) msgs.push(`${fi.name}: לא זוהתה עמודת שם. פתחו ״התאמת עמודות״ ובחרו אותה.`);
   else notes.push(`${fi.name}: ${fi.kind==='sadin'?'סדין ציונים':fi.kind==='events'?'מונה אירועי שיעור':'דוח'}, ${fi.rows.length} שורות.`);
 }
@@ -1322,7 +1355,7 @@ async function handleDeck(list){
 /* ---------- PowerPoint ---------- */
 const C={ink:'1E2A44',soft:'5A6785',faint:'9AA3B8',bg:'F3F5FA',white:'FFFFFF',line:'DDE3EF',band:'EEF3FC',
   good:'15803D',warn:'B45309',bad:'B91C1C',blue:'2449B8',track:'E5E9F2'};
-const BARC={math:'2F5BD8',lang:'E07B24',eng:'C2367A',sci:'2E9B57'};
+const BARC={math:'2F5BD8',lang:'E07B24',eng:'C2367A',sci:'2E9B57',geo:'0E8A8A',hist:'8A5A2B'};
 const T=(o)=>Object.assign({fontFace:'Arial',color:C.ink,rtlMode:true,lang:'he-IL',align:'right',valign:'middle',margin:0},o);
 function imgSize(d){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res({w:i.width,h:i.height}); i.onerror=()=>res({w:1,h:1}); i.src=d; }); }
 
@@ -1330,19 +1363,80 @@ async function generate(){
   const s=settings(), pass=s.pass;
   const pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE'; pptx.rtlMode=true; pptx.title='ישיבה פדגוגית '+(s.cls||'');
   const dateTxt = s.date ? s.date.split('-').reverse().join('.') : '';
-  /* cover */
-  const cv=pptx.addSlide(); cv.background={color:C.ink};
-  if(s.bsd) cv.addText('בס״ד',T({x:11.6,y:0.2,w:1.4,h:0.35,fontSize:12,color:'BFC8DE'}));
+  const ACC='2F5BD8', PAGE='F6F8FC';
+  const avgs=built.students.map(x=>x.avg).filter(x=>x!=null);
+  const classAvg=avgs.length?avgs.reduce((a,b)=>a+b,0)/avgs.length:null;
+  const credit=(sl)=>{ if(s.credit) sl.addText(s.credit,T({x:0.4,y:7.08,w:6,h:0.28,fontSize:9,color:C.faint,align:'left'})); };
+  const bsd=(sl)=>{ if(s.bsd) sl.addText('בס״ד',T({x:11.9,y:0.18,w:1.1,h:0.3,fontSize:11,color:C.soft})); };
+
+  /* cover: light, one accent, the class and its numbers */
+  const cv=pptx.addSlide(); cv.background={color:PAGE};
+  cv.addShape(pptx.ShapeType.ellipse,{x:-1.6,y:3.4,w:5.6,h:5.6,fill:{color:'E6EDFF'},line:{color:'E6EDFF'}});
+  cv.addShape(pptx.ShapeType.ellipse,{x:2.2,y:-1.7,w:3.4,h:3.4,fill:{color:'EEF3FC'},line:{color:'EEF3FC'}});
+  cv.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
+  bsd(cv);
   let lx=0.6;
-  for(const l of state.logos){ const z=await imgSize(l); const h=0.8, w=Math.min(2.4,h*z.w/z.h);
-    cv.addShape(pptx.ShapeType.roundRect,{x:lx-0.08,y:0.32,w:w+0.16,h:h+0.16,fill:{color:'FFFFFF'},rectRadius:0.08,line:{color:'FFFFFF'}});
-    cv.addImage({data:l,x:lx,y:0.4,w,h}); lx+=w+0.4; }
-  if(s.school) cv.addText(s.school,T({x:0.9,y:2.2,w:11.5,h:0.5,fontSize:20,bold:true,color:'8FB0FF'}));
-  cv.addText('ישיבה פדגוגית',T({x:0.9,y:2.75,w:11.5,h:1.3,fontSize:60,bold:true,color:'F6F7FB'}));
-  const line=[s.cls&&('כיתה '+s.cls), s.teacher&&('מחנך/ת: '+s.teacher), dateTxt].filter(Boolean).join('  ·  ');
-  if(line) cv.addText(line,T({x:0.9,y:4.1,w:11.5,h:0.6,fontSize:24,color:'DCE3F2'}));
-  cv.addText(`${built.students.length} תלמידים`,T({x:0.9,y:4.75,w:11.5,h:0.45,fontSize:16,color:'BFC8DE'}));
-  if(s.credit) cv.addText(s.credit,T({x:0.6,y:6.95,w:7,h:0.3,fontSize:10,color:'7D89A6',align:'left'}));
+  for(const l of state.logos){ const z=await imgSize(l); const hh=0.75, w=Math.min(2.2,hh*z.w/z.h);
+    cv.addShape(pptx.ShapeType.roundRect,{x:lx-0.1,y:0.35,w:w+0.2,h:hh+0.2,fill:{color:'FFFFFF'},rectRadius:0.08,line:{color:C.line,width:0.75}});
+    cv.addImage({data:l,x:lx,y:0.45,w,h:hh}); lx+=w+0.4; }
+  if(s.school) cv.addText(s.school,T({x:4.6,y:1.75,w:7.9,h:0.45,fontSize:18,bold:true,color:C.soft}));
+  cv.addText('ישיבה פדגוגית',T({x:4.6,y:2.2,w:7.9,h:1.1,fontSize:54,bold:true,color:C.ink}));
+  if(s.cls) cv.addText('כיתה '+s.cls,T({x:4.6,y:3.3,w:7.9,h:0.7,fontSize:32,bold:true,color:ACC}));
+  const sub=[s.teacher&&('מחנך/ת: '+s.teacher), dateTxt].filter(Boolean).join('   ·   ');
+  if(sub) cv.addText(sub,T({x:4.6,y:4.0,w:7.9,h:0.45,fontSize:18,color:C.soft}));
+  cv.addShape(pptx.ShapeType.rect,{x:11.3,y:4.65,w:1.2,h:0.06,fill:{color:ACC},line:{color:ACC}});
+  const stats=[[String(built.students.length),'תלמידים'], classAvg!=null?[fmt(classAvg),'ממוצע כיתתי']:null, [String(built.students.filter(x=>x.fails).length),'תלמידים עם נכשלים']].filter(Boolean);
+  stats.forEach(([n,l],i)=>{ const x=12.5-(i+1)*2.25+0.15;
+    cv.addShape(pptx.ShapeType.roundRect,{x,y:5.05,w:2.1,h:1.15,fill:{color:'FFFFFF'},line:{color:C.line,width:0.75},rectRadius:0.1});
+    cv.addText(n,T({x,y:5.12,w:2.1,h:0.62,fontSize:28,bold:true,color:C.ink,align:'center'}));
+    cv.addText(l,T({x,y:5.72,w:2.1,h:0.36,fontSize:12,color:C.soft,align:'center'})); });
+  credit(cv);
+
+  /* who teaches the class */
+  const tList=state.files.flatMap(f=>f.teachers||[]);
+  if(s.showTeachers&&tList.length){
+    const by={}; for(const t of tList){ const k=t.subject; (by[k] ||= new Set()).add((t.group?t.group+': ':'')+t.teacher); }
+    const subj=Object.entries(by);
+    const ts=pptx.addSlide(); ts.background={color:PAGE}; bsd(ts);
+    ts.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
+    ts.addText('צוות המורים'+(s.cls?' · כיתה '+s.cls:''),T({x:0.6,y:0.45,w:11.9,h:0.7,fontSize:30,bold:true}));
+    if(s.teacher) ts.addText('מחנך/ת הכיתה: '+s.teacher,T({x:0.6,y:1.1,w:11.9,h:0.4,fontSize:16,color:ACC,bold:true}));
+    const cols=3, cw=3.85, gx=0.18, top=1.7, avail=6.85-top, rows=Math.ceil(subj.length/cols), chh=Math.min(1.3,(avail-(rows-1)*0.14)/rows);
+    subj.forEach(([name,set],i)=>{
+      const r=Math.floor(i/cols), k=i%cols, x=12.5-(k+1)*cw-k*gx, y=top+r*(chh+0.14);
+      ts.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:chh,fill:{color:'FFFFFF'},line:{color:C.line,width:0.75},rectRadius:0.08});
+      ts.addText(name,T({x:x+0.15,y:y+0.06,w:cw-0.3,h:Math.min(0.45,chh*0.42),fontSize:17,bold:true,color:C.ink,fit:'shrink'}));
+      ts.addText([...set].join('\n'),T({x:x+0.15,y:y+Math.min(0.5,chh*0.42),w:cw-0.3,h:chh-Math.min(0.54,chh*0.44),fontSize:13,color:C.soft,valign:'top',fit:'shrink'}));
+    });
+    credit(ts);
+  }
+
+  /* top three by overall average */
+  const ranked=built.students.filter(x=>x.avg!=null).sort((a,b)=>b.avg-a.avg).slice(0,3);
+  if(s.showTop3&&ranked.length){
+    const tp=pptx.addSlide(); tp.background={color:PAGE}; bsd(tp);
+    tp.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
+    tp.addText('המצטיינים בכיתה',T({x:0.6,y:0.45,w:11.9,h:0.7,fontSize:30,bold:true}));
+    tp.addText('שלושת הממוצעים הכלליים הגבוהים'+(s.cls?' בכיתה '+s.cls:''),T({x:0.6,y:1.1,w:11.9,h:0.4,fontSize:16,color:C.soft}));
+    /* podium: 1st in the middle, 2nd on the right, 3rd on the left */
+    const place=[{i:1,x:4.85,hgt:2.5,col:'F2C94C',ring:'D9A400'},{i:0,x:8.35,hgt:1.95,col:'D5DBE4',ring:'9AA5B8'},{i:2,x:1.35,hgt:1.55,col:'E8B98A',ring:'B9783F'}];
+    const baseY=6.6, pw=3.1;
+    for(const p of place){
+      const st=ranked[p.i===1?0:p.i===0?1:2]; if(!st) continue;
+      const rank=p.i===1?1:p.i===0?2:3, topY=baseY-p.hgt;
+      tp.addShape(pptx.ShapeType.roundRect,{x:p.x,y:topY,w:pw,h:p.hgt,fill:{color:p.col},line:{color:p.col},rectRadius:0.08});
+      tp.addText(String(rank),T({x:p.x,y:topY+0.1,w:pw,h:0.7,fontSize:36,bold:true,color:C.ink,align:'center'}));
+      tp.addText(fmt(st.avg),T({x:p.x,y:topY+0.75,w:pw,h:0.5,fontSize:24,bold:true,color:C.ink,align:'center'}));
+      tp.addText('ממוצע',T({x:p.x,y:topY+1.2,w:pw,h:0.3,fontSize:11,color:C.ink,align:'center'}));
+      const ph=photoFor(st), d=1.35, cx=p.x+(pw-d)/2, cy=topY-2.15;
+      tp.addShape(pptx.ShapeType.ellipse,{x:cx-0.06,y:cy-0.06,w:d+0.12,h:d+0.12,fill:{color:p.ring},line:{color:p.ring}});
+      if(ph) tp.addImage({data:ph,x:cx,y:cy,w:d,h:d,rounding:true,sizing:{type:'cover',w:d,h:d}});
+      else { tp.addShape(pptx.ShapeType.ellipse,{x:cx,y:cy,w:d,h:d,fill:{color:'E3E9F7'},line:{color:'E3E9F7'}});
+        tp.addText(initials(st.name),T({x:cx,y:cy,w:d,h:d,fontSize:26,bold:true,color:'8A9BC4',align:'center'})); }
+      tp.addText(st.name,T({x:p.x-0.2,y:cy+d+0.1,w:pw+0.4,h:0.5,fontSize:18,bold:true,color:C.ink,align:'center',fit:'shrink'}));
+    }
+    credit(tp);
+  }
 
   const flagsBy={}; for(const c of built.conflicts) if(!c.resolved)(flagsBy[c.key] ||= []).push(`${FLABEL[c.field]} (${c.options.map(o=>o.val).join(' / ')})`);
   for(const st of built.students){
@@ -1363,7 +1457,7 @@ async function generate(){
     pills.forEach((p,i)=>{ sl.addText(p.t,T({x:10.8,y:4.3+i*0.55,w:1.9,h:0.42,fontSize:12,color:p.c,align:'center',fill:{color:p.f},shape:pptx.ShapeType.roundRect,rectRadius:0.2})); });
 
     /* middle: achievements */
-    sl.addText('הישגים לימודיים',T({x:5.5,y:0.6,w:4.75,h:0.45,fontSize:18,bold:true}));
+    sl.addText('פדגוגיה',T({x:5.5,y:0.6,w:4.75,h:0.45,fontSize:18,bold:true}));
     const tile=(x,y,num,label,tone,fill,line,hh,ww)=>{
       const H=hh||1.15, W=ww||2.3, top=y+(H-1.15)/2;
       sl.addShape(pptx.ShapeType.roundRect,{x,y,w:W,h:H,fill:{color:fill},line:{color:line,width:0.75},rectRadius:0.1});
@@ -1381,8 +1475,7 @@ async function generate(){
       tile(5.5+4.75-2*tw-tg,1.2,fmt(st.fails),failLabel,st.fails?C.bad:C.good,st.fails?'FDECEC':'E8F6EC',st.fails?'F2C2C2':'BFE3CB',1.0,tw);
       if(posEv.length) tile(5.5,1.2,String(posEv.reduce((a,e)=>a+e.n,0)),posEv.map(e=>e.t).join(' + '),C.good,'E8F6EC','BFE3CB',1.0,tw);
       evList.splice(0,evList.length,...evList.filter(e=>!e.pos));
-      const tot=st.events!=null?st.events:null;
-      sl.addText('אירועי שיעור'+(tot!=null?` (סה״כ ${fmt(tot)})`:''),T({x:5.5,y:2.3,w:4.75,h:0.3,fontSize:12,bold:true,color:C.soft}));
+      sl.addText('אירועי שיעור',T({x:5.5,y:2.3,w:4.75,h:0.3,fontSize:12,bold:true,color:C.soft}));
       const cw=1.53, ch=0.3, gx=0.08, gy=0.06, cols=3;
       evList.forEach((e,i)=>{
         const r=Math.floor(i/cols), k=i%cols, x=5.5+4.75-(k+1)*cw-k*gx, y=2.64+r*(ch+gy);
@@ -1399,8 +1492,9 @@ async function generate(){
     else { tile(5.5,1.2,fmt(st.late),'איחורים',C.warn,'FFF4E5','F3D3A6'); tile(5.5,2.5,fmt(st.abs),'חיסורים',C.warn,'FFF4E5','F3D3A6'); }
     }
     sl.addText('מקצועות ליבה',T({x:5.5,y:coreTitleY,w:4.75,h:0.32,fontSize:12,bold:true,color:C.soft}));
-    const step=Math.min(0.66,(6.82-(coreTitleY+0.37))/4), rh=Math.min(0.56,step-0.06);
-    CORE.forEach((c,i)=>{
+    const core=coreFor(st,s.cls);
+    const step=Math.min(0.66,(6.82-(coreTitleY+0.37))/core.length), rh=Math.min(0.56,step-0.06);
+    core.forEach((c,i)=>{
       const y=coreTitleY+0.37+i*step, x=st[c], tone=scoreTone(x,pass);
       sl.addShape(pptx.ShapeType.roundRect,{x:5.5,y,w:4.75,h:rh,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.08});
       sl.addText(FLABEL[c],T({x:8.95,y,w:1.15,h:rh,fontSize:14,bold:true}));
