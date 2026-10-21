@@ -98,6 +98,10 @@ textarea{resize:vertical;min-height:56px}
 .ph img{width:100%;height:100%;object-fit:cover}
 button.ph{border:2px dashed transparent;cursor:pointer;padding:0;font-size:inherit}
 button.ph:hover{border-color:var(--accent)}
+.lost-ph{display:flex;flex-direction:column;gap:8px}
+.lp{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.lp img{width:40px;height:40px;border-radius:50%;object-fit:cover}
+.lp select{width:auto;min-width:180px}
 .evpick{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:16px}
 .evpick-list{display:flex;flex-wrap:wrap;gap:8px}
 .evpick label{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:15px;cursor:pointer;background:var(--surface)}
@@ -198,7 +202,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 11:20</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 13:15</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -669,8 +673,25 @@ if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,bui
 <script>
 /* ---------- app ---------- */
 const $=s=>document.querySelector(s);
-const state={ files:[], photos:{}, logos:[], choices:{}, overrides:{}, links:{}, noLink:{}, sample:true, nextId:1 };
-function photoFor(s){ return state.photos[s.key] || (s.aliasKeys||[]).map(k=>state.photos[k]).find(Boolean) || null; }
+const state={ files:[], photos:{}, photoNames:{}, photoLinks:{}, logos:[], choices:{}, overrides:{}, links:{}, noLink:{}, sample:true, nextId:1 };
+function setPhoto(name,data){ const k=nameKey(name); state.photos[k]=data; state.photoNames[k]=name; return k; }
+/* photos whose name is not exactly a student's: fuzzy match (typo, reversed letters from a PDF), else listed for the teacher */
+let photoMap={}, lostPhotos=[];
+function revKey(k){ return k.split(' ').map(t=>[...t].reverse().join('')).sort().join(' '); }
+function matchPhotos(){
+  photoMap={}; lostPhotos=[];
+  const keys=new Set(built.students.flatMap(s=>[s.key,...(s.aliasKeys||[])]));
+  const owner={}; for(const s of built.students){ owner[s.key]=s.key; for(const a of s.aliasKeys||[]) owner[a]=s.key; }
+  const studentKeys=built.students.map(s=>s.key);
+  for(const k of Object.keys(state.photos)){
+    if(state.photoLinks[k]){ photoMap[state.photoLinks[k]]=k; continue; }
+    if(keys.has(k)){ photoMap[owner[k]] ||= k; continue; }
+    const rk=revKey(k); if(keys.has(rk)){ photoMap[owner[rk]] ||= k; continue; }
+    const f=fuzzyFind(k,studentKeys)||fuzzyFind(rk,studentKeys);
+    if(f&&!photoMap[f]) photoMap[f]=k; else if(built.students.length) lostPhotos.push(k);
+  }
+}
+function photoFor(s){ return state.photos[s.key] || (s.aliasKeys||[]).map(k=>state.photos[k]).find(Boolean) || (photoMap[s.key]&&state.photos[photoMap[s.key]]) || null; }
 let built={students:[],conflicts:[],missing:[],eventTypes:[]};
 let evHidden=new Set(); try{ evHidden=new Set(JSON.parse(localStorage.getItem('pm.evHidden')||'[]')); }catch(e){}
 function shownEvents(s){ return s.evs ? built.eventTypes.filter(t=>!evHidden.has(t)&&s.evs[t]!=null).map(t=>({t,n:s.evs[t],pos:POSITIVE_EV.test(t)})) : []; }
@@ -767,6 +788,19 @@ function renderChecks(){
     <div class="stat ${missing.length?'warn':'good'}"><b>${missing.length}</b><span>חסרים בחלק מהדוחות</span></div>
     <div class="stat"><b>${withPhoto}/${students.length}</b><span>עם תמונה</span></div>`;
   const box=$('#issues'); box.innerHTML='';
+  if(lostPhotos.length){
+    const el=document.createElement('div'); el.className='issue missing';
+    el.innerHTML=`<div class="issue-title">${lostPhotos.length} תמונות לא שויכו לתלמיד. בחרו לכל אחת את התלמיד/ה:</div><div class="lost-ph"></div>`;
+    const box2=el.querySelector('.lost-ph');
+    for(const k of lostPhotos){
+      const row=document.createElement('div'); row.className='lp';
+      const id='ph-'+k.replace(/\s/g,'_');
+      row.innerHTML=`<img src="${state.photos[k]}" alt=""><label for="${id}">${esc(state.photoNames[k]||k)}</label><select id="${id}"><option value="">—</option>${built.students.map(s=>`<option value="${esc(s.key)}">${esc(s.name)}</option>`).join('')}</select>`;
+      row.querySelector('select').onchange=e=>{ if(e.target.value) state.photoLinks[k]=e.target.value; else delete state.photoLinks[k]; refresh(); };
+      box2.appendChild(row);
+    }
+    box.appendChild(el);
+  }
   for(const l of links){
     const el=document.createElement('div'); el.className='issue done';
     el.innerHTML=`<div class="issue-title">״${esc(l.rawName)}״ מ${esc(l.file)} אוחד/ה עם ״${esc(l.toName)}״ מהדוחות</div><div class="opts"><button class="btn small" type="button">זה לא אותו תלמיד</button></div>`;
@@ -782,7 +816,7 @@ function renderChecks(){
     sel.onchange=()=>{ if(sel.value){ state.links[u.key]=sel.value; delete state.noLink[u.key]; } else { delete state.links[u.key]; state.noLink[u.key]=true; } refresh(); };
     box.appendChild(el);
   }
-  if(!conflicts.length&&!missing.length&&!links.length&&!lost.length){ box.innerHTML='<div class="empty">לא נמצאו סתירות בין הדוחות.</div>'; }
+  if(!conflicts.length&&!missing.length&&!links.length&&!lost.length&&!lostPhotos.length){ box.innerHTML='<div class="empty">לא נמצאו סתירות בין הדוחות.</div>'; }
   for(const c of conflicts){
     const el=document.createElement('div'); el.className='issue'+(c.resolved?' done':'');
     el.innerHTML=`<div class="issue-title">${esc(c.name)} · ${esc(FLABEL[c.field])}: ${INFO.includes(c.field)?'טקסט שונה בקבצים, חוברו יחד. אפשר לבחור אחד מהם':'ערכים שונים בדוחות'}</div><div class="opts"></div>`;
@@ -858,6 +892,7 @@ function updateStatus(){
 }
 function refresh(){
   built=buildStudents(state.files,{pass:settings().pass,choices:state.choices,overrides:state.overrides,links:state.links,noLink:state.noLink});
+  matchPhotos();
   renderFiles(); renderChecks(); renderEvPick(); renderStudents(); updateStatus();
   const c=settings().credit; $('#credit').textContent=c;
 }
@@ -958,7 +993,7 @@ async function handlePhotos(list,outNotes){
       try{
         $('#photoInfo').textContent='קורא תמונות מה-PDF…';
         const r=await rosterPhotosFromPdf(f);
-        for(const x of r.photos){ state.photos[nameKey(x.name)]=x.photo; ok++; }
+        for(const x of r.photos){ setPhoto(x.name,x.photo); ok++; }
         if(!r.images) notes.push(`ב-${f.name} אין תמונות. ייתכן שהתמונות לא נטענו לפני השמירה כ-PDF, או שלא הועלו תמונות לסמארט סקול.`);
       }catch(e){ console.error(e); notes.push(`לא הצלחנו לקרוא את ${f.name}.`); }
       continue;
@@ -1133,7 +1168,7 @@ async function handleAny(list){
 }
 async function handleAnyInner(list){
   const err=$('#fileErr'); err.hidden=true;
-  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.links={}; state.noLink={}; state.sample=false; refresh(); }
+  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.photoNames={}; state.photoLinks={}; state.links={}; state.noLink={}; state.sample=false; refresh(); }
   const ext=f=>f.name.split('.').pop().toLowerCase();
   const data=list.filter(f=>/^(xlsx|xls|csv|htm|html)$/.test(ext(f)));
   const decks=list.filter(f=>/^(pptx|ppt|key)$/.test(ext(f)));
@@ -1147,7 +1182,7 @@ async function handleAnyInner(list){
     busy(`בודק מה יש ב-${f.name}…`);
     try{
       const ro=await rosterPhotosFromPdf(f);
-      if(ro.photos.length&&ro.rows>=3){ for(const x of ro.photos) state.photos[nameKey(x.name)]=x.photo; notes.push(`${f.name}: אלפון תמונות, שויכו ${ro.photos.length} תמונות.`); continue; }
+      if(ro.photos.length&&ro.rows>=3){ for(const x of ro.photos) setPhoto(x.name,x.photo); notes.push(`${f.name}: אלפון תמונות, שויכו ${ro.photos.length} תמונות.`); continue; }
       const dk=await readPdfDeck(f);
       if(dk.entries.some(e=>Object.values(e.info).some(Boolean))){ addDeck(f.name,dk,notes); refresh(); continue; }
       const sheets=await readPdf(f);
@@ -1180,7 +1215,7 @@ function noteData(fi,msgs,notes){
 function addDeck(name,res,notes,msgs){
   if(!res.entries.length){ (msgs||notes).push(`${name}: לא נמצאו בקובץ שקפים של תלמידים עם שם.`); return; }
   const file=addFileFromAoa(name, deckAoa(res.entries)); file.kind='deck'; file.photoKeys=[]; file.photoData={};
-  for(const e of res.entries) if(e.photo){ const k=nameKey(e.name); state.photos[k]=e.photo; file.photoKeys.push(k); file.photoData[k]=e.photo; }
+  for(const e of res.entries) if(e.photo){ const k=setPhoto(e.name,e.photo); file.photoKeys.push(k); file.photoData[k]=e.photo; }
   const withInfo=res.entries.filter(e=>Object.values(e.info).some(Boolean)).length;
   notes.push(`${name}: מצגת, ${res.entries.length} תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות.`+(res.skipped.length?` לא זוהה שם תלמיד בשקפים ${res.skipped.join(', ')}.`:''));
 }
@@ -1194,12 +1229,12 @@ async function handleDeck(list){
       if(ext==='ppt'||ext==='key'){ msgs.push(`${f.name}: הקובץ בפורמט ישן. שמרו אותו כ-pptx או כ-PDF ונסו שוב.`); continue; }
       if(ext==='pdf'){ /* a photo roster (Smart School report 61) uploaded here: take its photos */
         const ro=await rosterPhotosFromPdf(f);
-        if(ro.photos.length){ for(const x of ro.photos) state.photos[nameKey(x.name)]=x.photo; summary.push(`${f.name}: אלפון עם תמונות, שויכו ${ro.photos.length} תמונות.`); continue; }
+        if(ro.photos.length){ for(const x of ro.photos) setPhoto(x.name,x.photo); summary.push(`${f.name}: אלפון עם תמונות, שויכו ${ro.photos.length} תמונות.`); continue; }
       }
       const res = ext==='pdf' ? await readPdfDeck(f) : await readPptxDeck(f);
       if(!res.entries.length){ msgs.push(`${f.name}: לא נמצאו בקובץ שקפים של תלמידים עם שם, ולא תמונות בטבלה של תלמידים.`); continue; }
       const file=addFileFromAoa(f.name, deckAoa(res.entries)); file.kind='deck'; file.photoKeys=[]; file.photoData={};
-      for(const e of res.entries) if(e.photo){ const k=nameKey(e.name); state.photos[k]=e.photo; file.photoKeys.push(k); file.photoData[k]=e.photo; }
+      for(const e of res.entries) if(e.photo){ const k=setPhoto(e.name,e.photo); file.photoKeys.push(k); file.photoData[k]=e.photo; }
       const withInfo=res.entries.filter(e=>Object.values(e.info).some(Boolean)).length;
       summary.push(`${f.name}: ${res.entries.length} תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות.`+(res.skipped.length?` לא זוהה שם תלמיד בשקפים ${res.skipped.join(', ')}.`:''));
     }catch(e){
