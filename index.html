@@ -202,7 +202,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 17:40</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 17:50</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -719,6 +719,14 @@ function matchPhotos(){
     if(f&&!photoMap[f]) photoMap[f]=k; else if(built.students.length) lostPhotos.push(k);
   }
 }
+/* the class name comes from the reports, unless the teacher typed one */
+function prettyClass(c){ const m=clean(c).replace(/["״]/g,'').match(/^([\u05D0-\u05EA]{1,2})\s*['׳]?\s*(\d{1,2})$/); return m?`${m[1]}׳${m[2]}`:clean(c); }
+function autoClass(){
+  const inp=$('#sClass'); if(!(state.clsAuto||!clean(inp.value))) return;
+  const cnt={}; for(const s of built.students){ if(s.cls&&!/\d{5,}/.test(s.cls)){ const c=prettyClass(s.cls); cnt[c]=(cnt[c]||0)+1; } }
+  const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+  if(top){ inp.value=top[0]; state.clsAuto=true; }
+}
 function photoFor(s){ return state.photos[s.key] || (s.aliasKeys||[]).map(k=>state.photos[k]).find(Boolean) || (photoMap[s.key]&&state.photos[photoMap[s.key]]) || null; }
 let built={students:[],conflicts:[],missing:[],eventTypes:[]};
 let evHidden=new Set(); try{ evHidden=new Set(JSON.parse(localStorage.getItem('pm.evHidden')||'[]')); }catch(e){}
@@ -737,7 +745,7 @@ function renderEvPick(){
 
 function addFileFromAoa(name, aoa){
   const sadin=parseSadin(aoa), evRep=sadin?null:parseEventsReport(aoa);
-  if(sadin){ aoa=sadin.aoa; if(sadin.cls&&!clean($('#sClass').value)) $('#sClass').value=sadin.cls; }
+  if(sadin) aoa=sadin.aoa;
   if(evRep) aoa=evRep.aoa;
   const hr=findHeaderRow(aoa);
   const headers=(aoa[hr]||[]).map(clean);
@@ -771,7 +779,7 @@ function loadSample(){
     ['מאיה אברהם','שקטה בכיתה, חברה טובה.','','חיסורים רבים','','שיחה עם יועצת. מעקב נוכחות שבועי.'],
     ['דניאל ביטון','','מפריע בשיעורים','איחורים רבים','','שיחה עם האב. חוזה התנהגות.']
   ]);
-  $('#sClass').value='ח׳3'; $('#sTeacher').value='';
+  $('#sClass').value='ח׳3'; state.clsAuto=true; $('#sTeacher').value='';
   try{ $('#sDate').valueAsDate=new Date(); }catch(e){}
   refresh();
 }
@@ -932,6 +940,7 @@ function updateStatus(){
 function refresh(){
   built=buildStudents(state.files,{pass:settings().pass,choices:state.choices,overrides:state.overrides,links:state.links,noLink:state.noLink});
   matchPhotos();
+  autoClass();
   renderFiles(); renderChecks(); renderEvPick(); renderStudents(); updateStatus();
   const c=settings().credit; $('#credit').textContent=c;
 }
@@ -1423,6 +1432,7 @@ wireDrop($('#dropData'),$('#inData'),handleAny);
 $('#bLogos').onclick=()=>$('#inLogos').click();
 $('#inLogos').onchange=e=>{ handleLogos([...e.target.files]); e.target.value=''; };
 ['#sPass','#sCredit'].forEach(id=>$(id).addEventListener('input',refresh));
+$('#sClass').addEventListener('input',()=>{ state.clsAuto=false; });
 $('#bGen').onclick=async()=>{
   const b=$('#bGen'); b.disabled=true; const old=b.textContent; b.textContent='יוצר מצגת…';
   try{ const r=await generate();
