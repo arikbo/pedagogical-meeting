@@ -158,8 +158,8 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="files" id="files"></div>
   <div class="deck">
     <div class="deck-text">
-      <h3>העלאת מידע ותמונות ממצגת קיימת</h3>
-      <p class="hint">מצגת PowerPoint או PDF מישיבה קודמת. לכל תלמיד יישלפו טבלת המידע הכללי (כללי, בעיות חריגות, ביקור סדיר, קשיים רגשיים או אחרים, מענים) והתמונה שלו. אחר כך אפשר לערוך את הטקסט בכרטיס התלמיד.</p>
+      <h3>העלאת מידע ותמונות ממצגת קיימת או מאלפון</h3>
+      <p class="hint">מצגת PowerPoint או PDF מישיבה קודמת, או דוח 61 מסמארט סקול (אלפון עם תמונות). לכל תלמיד יישלפו טבלת המידע הכללי (כללי, בעיות חריגות, ביקור סדיר, קשיים רגשיים או אחרים, מענים) והתמונה שלו. אחר כך אפשר לערוך את הטקסט בכרטיס התלמיד.</p>
       <span class="hint" id="deckInfo"></span>
     </div>
     <button class="btn" id="bDeck" type="button">בחירת קובץ</button>
@@ -1025,8 +1025,12 @@ async function handleDeck(list){
     const ext=f.name.split('.').pop().toLowerCase();
     try{
       if(ext==='ppt'||ext==='key'){ msgs.push(`${f.name}: הקובץ בפורמט ישן. שמרו אותו כ-pptx או כ-PDF ונסו שוב.`); continue; }
+      if(ext==='pdf'){ /* a photo roster (Smart School report 61) uploaded here: take its photos */
+        const ro=await rosterPhotosFromPdf(f);
+        if(ro.photos.length){ for(const x of ro.photos) state.photos[nameKey(x.name)]=x.photo; summary.push(`${f.name}: אלפון עם תמונות, שויכו ${ro.photos.length} תמונות.`); continue; }
+      }
       const res = ext==='pdf' ? await readPdfDeck(f) : await readPptxDeck(f);
-      if(!res.entries.length){ msgs.push(`${f.name}: לא נמצאו בקובץ שקפים של תלמידים עם שם.`); continue; }
+      if(!res.entries.length){ msgs.push(`${f.name}: לא נמצאו בקובץ שקפים של תלמידים עם שם, ולא תמונות בטבלה של תלמידים.`); continue; }
       const file=addFileFromAoa(f.name, deckAoa(res.entries)); file.kind='deck'; file.photoKeys=[]; file.photoData={};
       for(const e of res.entries) if(e.photo){ const k=nameKey(e.name); state.photos[k]=e.photo; file.photoKeys.push(k); file.photoData[k]=e.photo; }
       const withInfo=res.entries.filter(e=>Object.values(e.info).some(Boolean)).length;
