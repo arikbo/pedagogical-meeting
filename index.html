@@ -202,7 +202,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 15:30</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 17:15</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -474,7 +474,8 @@ function rowCells(row,gapFactor){
   const cells=[], gf=gapFactor||0.8;
   for(const it of its){
     const last=cells[cells.length-1];
-    if(last && (last.x-(it.x+it.w)) < it.h*gf){ last.str=clean(last.str+' '+it.str); last.x=Math.min(last.x,it.x); }
+    const gap=last?last.x-(it.x+it.w):0;
+    if(last && gap < it.h*gf){ last.str=clean(last.str+(gap<it.h*0.15?'':' ')+it.str); last.x=Math.min(last.x,it.x); } /* letters drawn one by one join without a space */
     else cells.push({str:it.str,x:it.x,right:it.x+it.w,h:it.h});
   }
   cells.forEach(c=>{ c.cx=(c.x+c.right)/2; });
@@ -503,9 +504,10 @@ function assignCols(row,cols){
   const vals=cols.map(()=>[]);
   for(const it of [...row.items].sort((x,y)=>(y.x+y.w)-(x.x+x.w))){
     const cx=it.x+it.w/2; let k=cols.findIndex(c=>cx>=c.lo&&cx<c.hi); if(k<0) k=cols.length-1;
-    vals[k].push(it.str);
+    vals[k].push(it);
   }
-  return vals.map(v=>clean(v.join(' ')));
+  /* pieces of one word (some PDFs draw each letter separately) join without a space */
+  return vals.map(v=>clean(v.map((it,i)=>{ if(!i) return it.str; const prev=v[i-1], gap=prev.x-(it.x+it.w); return (gap<it.h*0.15?'':' ')+it.str; }).join('')));
 }
 function pdfItemsToAoa(pages){
   const a=pdfRows(pages,false), b=pdfRows(pages,true);
