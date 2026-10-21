@@ -824,19 +824,23 @@ async function rosterPhotosFromPdf(file){
   const aoa=pdfItemsToAoa(pages.map(p=>p.items)), meta=aoa.meta||[];
   const hr=findHeaderRow(aoa), headers=(aoa[hr]||[]).map(clean), fl={headers,mapping:autoMap(headers)};
   const rows=[]; for(let i=hr+1;i<aoa.length;i++){ const nm=rowName(fl,aoa[i]); if(nm&&meta[i]) rows.push({name:nm,...meta[i]}); }
-  const out={}; let images=0;
+  const out={}; let images=0, done=0;
+  const total=pages.reduce((n,p)=>n+p.rects.length,0);
   for(const [pi,p] of pages.entries()){
     const pr=rows.filter(r=>r.page===pi);
+    const jobs=[];
     for(const r of p.rects){
       const w=r.x2-r.x1, hgt=r.y2-r.y1; if(w<10||hgt<10||w/hgt>2.5||w/hgt<0.4) continue;
       images++;
       const cy=(r.y1+r.y2)/2;
       const best=pr.filter(x=>x.y>=r.y1-x.h*2&&x.y<=r.y2+x.h*2).sort((a,b)=>Math.abs(a.y-cy)-Math.abs(b.y-cy))[0];
-      if(!best||out[nameKey(best.name)]) continue;
-      const d=await cropPdf(p.page,r); if(d) out[nameKey(best.name)]={name:best.name,photo:d};
+      if(best&&!out[nameKey(best.name)]){ out[nameKey(best.name)]={name:best.name}; jobs.push({r,k:nameKey(best.name)}); }
     }
+    if(!jobs.length) continue;
+    const rendered=await renderPdfPage(p.page,4); /* one render per page, all photos cut from it */
+    for(const j of jobs){ const d=await cropPdf(p.page,j.r,rendered); if(d) out[j.k].photo=d; else delete out[j.k]; done++; $('#photoInfo').textContent=`קורא תמונות מה-PDF… ${done}/${total}`; }
   }
-  return {photos:Object.values(out), rows:rows.length, images};
+  return {photos:Object.values(out).filter(x=>x.photo), rows:rows.length, images};
 }
 async function handlePhotos(list){
   let ok=0, miss=[];
@@ -956,10 +960,14 @@ function imageRects(opList){
   });
   return out;
 }
-async function cropPdf(page, r){
-  const vp=page.getViewport({scale:2.5}), c=document.createElement('canvas');
+async function renderPdfPage(page, scale){
+  const vp=page.getViewport({scale}), c=document.createElement('canvas');
   c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height);
   await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+  return {c,vp};
+}
+async function cropPdf(page, r, rendered){
+  const {c,vp}=rendered||await renderPdfPage(page,2.5);
   const [a,b,x,y]=vp.convertToViewportRectangle([r.x1,r.y1,r.x2,r.y2]);
   const L=Math.max(0,Math.min(a,x)), T=Math.max(0,Math.min(b,y)), W=Math.min(c.width,Math.max(a,x))-L, H=Math.min(c.height,Math.max(b,y))-T;
   if(W<8||H<8) return null;
