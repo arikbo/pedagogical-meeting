@@ -202,7 +202,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 13:15</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 15:30</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -601,6 +601,12 @@ function parseEventsReport(aoa){
   }
   return out.length>1?{aoa:out}:null;
 }
+/* a class roster (אלפון): ID numbers, phones, addresses — used only for photos, never as student data */
+function isRosterHeaders(headers){
+  const hs=headers.map(clean).join(' | ');
+  return /תעודת|זהות/.test(hs)&&/טלפון|דוא|מיקוד|רחוב|תאריך לידה|קפסולה|תמונה/.test(hs);
+}
+const SENSITIVE_COL=/תעודת|זהות|ת\.ז|טלפון|נייד|דוא"?ל|מייל|מיקוד|רחוב|כתובת|תאריך לידה|הורה|אב |אם /;
 const POSITIVE_EV=/צל.?.?ש|חיזוק|מחמאה|הצטיינות|שבח|חיובי/;
 
 /* ---------- existing decks: general-info table + student name ---------- */
@@ -714,7 +720,10 @@ function addFileFromAoa(name, aoa){
   const hr=findHeaderRow(aoa);
   const headers=(aoa[hr]||[]).map(clean);
   const rows=aoa.slice(hr+1).filter(r=>r&&r.some(c=>clean(c)!==''));
-  const file={id:'f'+(state.nextId++), name, headers, rows, mapping:autoMap(headers), kind:sadin?'sadin':evRep?'events':undefined};
+  const safeHeaders=headers.map(h=>SENSITIVE_COL.test(h)?'':h); /* ID numbers, phones etc. are never read */
+  const mapping=autoMap(safeHeaders);
+  if(mapping.cls>=0){ const vals=rows.map(r=>clean(r[mapping.cls])).filter(Boolean); if(vals.length&&vals.filter(v=>/\d{5,}/.test(v)).length>vals.length/3) mapping.cls=-1; }
+  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':undefined};
   state.files.push(file); return file;
 }
 function loadSample(){
@@ -853,9 +862,9 @@ function renderStudents(){
       <div class="nums">
         <div class="n"><b>${fmt(s.avg)}</b><span>ממוצע${s.avgSource==='computed'?'*':''}</span></div>
         <div class="n"><b style="color:var(--${s.fails?'bad':'ink'})">${fmt(s.fails)}</b><span>נכשלים</span></div>
-        ${eventsOnly(s)?`<div class="n wide"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:`<div class="n"><b>${fmt(s.late)}</b><span>איחורים</span></div>
+        ${shownEvents(s).some(e=>e.pos)?`<div class="n"><b style="color:var(--good)">${shownEvents(s).filter(e=>e.pos).reduce((a,e)=>a+e.n,0)}</b><span>${esc(shownEvents(s).filter(e=>e.pos).map(e=>e.t).join(' + '))}</span></div><div class="n"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:eventsOnly(s)?`<div class="n wide"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:`<div class="n"><b>${fmt(s.late)}</b><span>איחורים</span></div>
         <div class="n"><b>${fmt(s.abs)}</b><span>חיסורים</span></div>`}</div>
-      ${shownEvents(s).length?`<div class="evs">${shownEvents(s).map(e=>`<span class="ev${e.pos?' pos':''}">${esc(e.t)} <b>${e.n}</b></span>`).join('')}</div>`:''}
+      ${shownEvents(s).some(e=>!e.pos)?`<div class="evs">${shownEvents(s).filter(e=>!e.pos).map(e=>`<span class="ev${e.pos?' pos':''}">${esc(e.t)} <b>${e.n}</b></span>`).join('')}</div>`:''}
       <div class="bars">${bars}</div>
       ${tags?`<div class="tags">${tags}</div>`:''}
       ${flagsBy[s.key]?`<div class="flag">לבדיקה: ${flagsBy[s.key].map(esc).join(', ')}</div>`:''}
@@ -966,7 +975,8 @@ async function rosterPhotosFromPdf(file){
   }
   const aoa=pdfItemsToAoa(pages.map(p=>p.items)), meta=aoa.meta||[];
   const hr=findHeaderRow(aoa), headers=(aoa[hr]||[]).map(clean), fl={headers,mapping:autoMap(headers)};
-  const rows=[]; for(let i=hr+1;i<aoa.length;i++){ const nm=rowName(fl,aoa[i]); if(nm&&meta[i]) rows.push({name:nm,...meta[i]}); }
+  const rows=[]; for(let i=hr+1;i<aoa.length;i++){ const nm=rowName(fl,aoa[i]); if(nm&&meta[i]&&!/תלמידים|עמוד/.test(nm)) rows.push({name:nm,...meta[i]}); }
+  const isRoster=isRosterHeaders(headers);
   const out={}; let images=0, done=0;
   const total=pages.reduce((n,p)=>n+p.rects.length,0);
   for(const [pi,p] of pages.entries()){
@@ -979,11 +989,17 @@ async function rosterPhotosFromPdf(file){
       const best=pr.filter(x=>x.y>=r.y1-x.h*2&&x.y<=r.y2+x.h*2).sort((a,b)=>Math.abs(a.y-cy)-Math.abs(b.y-cy))[0];
       if(best&&!out[nameKey(best.name)]){ out[nameKey(best.name)]={name:best.name}; jobs.push({r,k:nameKey(best.name)}); }
     }
+    /* fallback: same number of photos and names on the page, both top to bottom */
+    const pics=p.rects.filter(r=>{ const w=r.x2-r.x1,hg=r.y2-r.y1; return w>=10&&hg>=10&&w/hg<=2.5&&w/hg>=0.4; });
+    if(!jobs.length&&pics.length&&pics.length===pr.length){
+      const ps=[...pics].sort((a,b)=>b.y2-a.y2), rs=[...pr].sort((a,b)=>b.y-a.y);
+      ps.forEach((r,i)=>{ const k=nameKey(rs[i].name); if(!out[k]){ out[k]={name:rs[i].name}; jobs.push({r,k}); } });
+    }
     if(!jobs.length) continue;
     const rendered=await renderPdfPage(p.page,4); /* one render per page, all photos cut from it */
     for(const j of jobs){ const d=await cropPdf(p.page,j.r,rendered); if(d) out[j.k].photo=d; else delete out[j.k]; done++; $('#photoInfo').textContent=`קורא תמונות מה-PDF… ${done}/${total}`; }
   }
-  return {photos:Object.values(out).filter(x=>x.photo), rows:rows.length, images};
+  return {photos:Object.values(out).filter(x=>x.photo), rows:rows.length, images, isRoster};
 }
 async function handlePhotos(list,outNotes){
   let ok=0, miss=[];
@@ -1182,7 +1198,8 @@ async function handleAnyInner(list){
     busy(`בודק מה יש ב-${f.name}…`);
     try{
       const ro=await rosterPhotosFromPdf(f);
-      if(ro.photos.length&&ro.rows>=3){ for(const x of ro.photos) setPhoto(x.name,x.photo); notes.push(`${f.name}: אלפון תמונות, שויכו ${ro.photos.length} תמונות.`); continue; }
+      if(ro.photos.length&&ro.rows>=3){ for(const x of ro.photos) setPhoto(x.name,x.photo); notes.push(`${f.name}: אלפון תמונות, נקראו ${ro.photos.length} תמונות.`); continue; }
+      if(ro.isRoster){ msgs.push(`${f.name}: זה אלפון תלמידים, אבל לא נמצאו בו תמונות. שמרו אותו שוב כ-PDF כשהתמונות מופיעות במסך (פריסה לרוחב, התאמה לעמוד).`); continue; }
       const dk=await readPdfDeck(f);
       if(dk.entries.some(e=>Object.values(e.info).some(Boolean))){ addDeck(f.name,dk,notes); refresh(); continue; }
       const sheets=await readPdf(f);
@@ -1294,19 +1311,23 @@ async function generate(){
 
     /* middle: achievements */
     sl.addText('הישגים לימודיים',T({x:5.5,y:0.6,w:4.75,h:0.45,fontSize:18,bold:true}));
-    const tile=(x,y,num,label,tone,fill,line,hh)=>{
-      const H=hh||1.15, top=y+(H-1.15)/2;
-      sl.addShape(pptx.ShapeType.roundRect,{x,y,w:2.3,h:H,fill:{color:fill},line:{color:line,width:0.75},rectRadius:0.1});
-      sl.addText(num,T({x,y:top+0.1,w:2.3,h:0.6,fontSize:30,bold:true,color:tone,align:'center'}));
-      sl.addText(label,T({x:x+0.1,y:top+0.7,w:2.1,h:0.35,fontSize:11,color:C.soft,align:'center',fit:'shrink'}));
+    const tile=(x,y,num,label,tone,fill,line,hh,ww)=>{
+      const H=hh||1.15, W=ww||2.3, top=y+(H-1.15)/2;
+      sl.addShape(pptx.ShapeType.roundRect,{x,y,w:W,h:H,fill:{color:fill},line:{color:line,width:0.75},rectRadius:0.1});
+      sl.addText(num,T({x,y:top+0.1,w:W,h:0.6,fontSize:30,bold:true,color:tone,align:'center'}));
+      sl.addText(label,T({x:x+0.1,y:top+0.7,w:W-0.2,h:0.35,fontSize:11,color:C.soft,align:'center',fit:'shrink'}));
     };
     const failLabel = st.fails ? ('נכשלים' + (st.failSubjects.length && st.failSubjects.length<=3 ? ': '+st.failSubjects.join(', ') : '')) : 'נכשלים';
     const evList=shownEvents(st);
     let coreTitleY=3.78;
     if(evList.length){
       /* avg + fails on one row, then every chosen event type as a small cell */
-      tile(7.95,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':''),C.blue,'EAF0FF','C3D2F7',1.0);
-      tile(5.5,1.2,fmt(st.fails),failLabel,st.fails?C.bad:C.good,st.fails?'FDECEC':'E8F6EC',st.fails?'F2C2C2':'BFE3CB',1.0);
+      /* top row: average, fails, and the positive events (צל״ש) as their own tile */
+      const posEv=evList.filter(e=>e.pos), tw=posEv.length?1.5:2.3, tg=posEv.length?0.125:0.15;
+      tile(5.5+4.75-tw,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':''),C.blue,'EAF0FF','C3D2F7',1.0,tw);
+      tile(5.5+4.75-2*tw-tg,1.2,fmt(st.fails),failLabel,st.fails?C.bad:C.good,st.fails?'FDECEC':'E8F6EC',st.fails?'F2C2C2':'BFE3CB',1.0,tw);
+      if(posEv.length) tile(5.5,1.2,String(posEv.reduce((a,e)=>a+e.n,0)),posEv.map(e=>e.t).join(' + '),C.good,'E8F6EC','BFE3CB',1.0,tw);
+      evList.splice(0,evList.length,...evList.filter(e=>!e.pos));
       const tot=st.events!=null?st.events:null;
       sl.addText('אירועי שיעור'+(tot!=null?` (סה״כ ${fmt(tot)})`:''),T({x:5.5,y:2.3,w:4.75,h:0.3,fontSize:12,bold:true,color:C.soft}));
       const cw=1.53, ch=0.3, gx=0.08, gy=0.06, cols=3;
