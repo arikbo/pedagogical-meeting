@@ -198,7 +198,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer id="credit"></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 11:20</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -845,10 +845,14 @@ function renderStudents(){
     n.textContent='* לא נמצאה עמודת ממוצע בדוח, ולכן הממוצע חושב מכל עמודות הציונים שזוהו.'; box.appendChild(n);
   }
 }
+let busyCount=0;
 function updateStatus(){
   const open=built.conflicts.filter(c=>!c.resolved).length, n=built.students.length;
-  $('#bGen').disabled=!n;
-  $('#status').textContent = !n ? 'העלו דוחות כדי ליצור מצגת.'
+  const ph=built.students.filter(s=>photoFor(s)).length;
+  $('#bGen').disabled=!n||busyCount>0;
+  $('#status').textContent = busyCount>0 ? 'קורא את הקבצים… המצגת תהיה זמינה בעוד רגע.'
+    : !n ? 'העלו דוחות כדי ליצור מצגת.'
+    : (ph<n&&!state.sample) ? `${n} שקפי תלמידים, ${ph} עם תמונה. ${n-ph} תלמידים יופיעו בלי תמונה.`+(open?` ${open} סתירות לא הוכרעו.`:'')
     : open ? `${n} שקפי תלמידים. ${open} סתירות לא הוכרעו: ייבחר הערך מהדוח האחרון והשדה יסומן בשקף ״לבדיקה״.`
     : `${n} שקפי תלמידים מוכנים.`;
 }
@@ -1124,6 +1128,10 @@ async function readPdfDeck(file){
 }
 /* one drop zone: decide per file whether it is a report, an old deck or photos */
 async function handleAny(list){
+  busyCount++; updateStatus();
+  try{ await handleAnyInner(list); } finally { busyCount--; refresh(); }
+}
+async function handleAnyInner(list){
   const err=$('#fileErr'); err.hidden=true;
   if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.links={}; state.noLink={}; state.sample=false; refresh(); }
   const ext=f=>f.name.split('.').pop().toLowerCase();
