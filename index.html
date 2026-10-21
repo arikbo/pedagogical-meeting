@@ -421,9 +421,13 @@ function headerScore(rows){
 }
 /* columns = runs of x that the data rows cover, separated by empty gaps (more reliable than header positions) */
 function colIntervals(rows,hdr){
-  const iv=rows.filter(r=>rowCells(r,0.5).length>=2).flatMap(r=>r.items.map(t=>({l:t.x,r:t.x+t.w,h:t.h}))).sort((p,q)=>p.l-q.l);
+  /* x positions covered by text in at least 2 rows (1 for short tables), so a lone footer or title cannot bridge columns */
+  const rs=rows.filter(r=>rowCells(r,0.5).length>=2), thr=rs.length>=5?2:1, cnt=new Map();
+  const hs=rs.flatMap(r=>r.items.map(t=>t.h)).sort((a,b)=>a-b), mh=hs.length?hs[hs.length>>1]:8;
+  for(const r of rs){ const seen=new Set(); for(const t of r.items) for(let x=Math.floor(t.x);x<=Math.ceil(t.x+t.w);x++) seen.add(x); for(const x of seen) cnt.set(x,(cnt.get(x)||0)+1); }
+  const xs=[...cnt.keys()].filter(x=>cnt.get(x)>=thr).sort((a,b)=>a-b);
   const out=[];
-  for(const t of iv){ const last=out[out.length-1]; if(last&&t.l<=last.r+Math.max(2,t.h*0.5)) last.r=Math.max(last.r,t.r); else out.push({l:t.l,r:t.r}); }
+  for(const x of xs){ const last=out[out.length-1]; if(last&&x<=last.r+Math.max(2,mh*0.5)) last.r=x; else out.push({l:x,r:x}); }
   /* a header over a column that is empty in these rows still gets its own column */
   if(hdr) for(const c of rowCells(hdr)) if(!out.some(o=>c.x<o.r&&c.right>o.l)) out.push({l:c.x,r:c.right});
   out.sort((p,q)=>q.r-p.r); /* right to left */
