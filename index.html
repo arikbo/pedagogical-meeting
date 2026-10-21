@@ -121,6 +121,8 @@ button.ph:hover{border-color:var(--accent)}
 .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 14px}
 .n{text-align:center;background:var(--surface-2);border-radius:8px;padding:6px 2px}
 .n.wide{grid-column:span 2}
+.n.fail{background:var(--bad-bg)} .n.fail b{color:var(--bad)}
+.n.pos{background:var(--good-bg);outline:2px solid var(--good);outline-offset:-2px} .n.pos b{color:var(--good);font-size:24px} .n.pos span{color:var(--good);font-weight:700}
 .n b{display:block;font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums}
 .n span{font-size:12px;color:var(--ink-soft)}
 .bars{display:flex;flex-direction:column;gap:6px;padding:12px 14px}
@@ -204,7 +206,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 19:15</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 19:25</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -957,8 +959,8 @@ function renderStudents(){
       <div class="who"><b>${esc(s.name)}</b><span>${esc(s.cls||'כיתה לא ידועה')}</span></div></div>
       <div class="nums">
         <div class="n"><b>${fmt(s.avg)}</b><span>ממוצע${s.avgSource==='computed'?'*':''}</span></div>
-        <div class="n"><b style="color:var(--${s.fails?'bad':'ink'})">${fmt(s.fails)}</b><span>נכשלים</span></div>
-        ${shownEvents(s).some(e=>e.pos)?`<div class="n"><b style="color:var(--good)">${shownEvents(s).filter(e=>e.pos).reduce((a,e)=>a+e.n,0)}</b><span>${esc(shownEvents(s).filter(e=>e.pos).map(e=>e.t).join(' + '))}</span></div>`:eventsOnly(s)?`<div class="n wide"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:`<div class="n"><b>${fmt(s.late)}</b><span>איחורים</span></div>
+        <div class="n fail"><b>${fmt(s.fails)}</b><span>נכשלים</span></div>
+        ${shownEvents(s).some(e=>e.pos)?`<div class="n pos"><b>${shownEvents(s).filter(e=>e.pos).reduce((a,e)=>a+e.n,0)}</b><span>${esc(shownEvents(s).filter(e=>e.pos).map(e=>e.t).join(' + '))}</span></div>`:eventsOnly(s)?`<div class="n wide"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:`<div class="n"><b>${fmt(s.late)}</b><span>איחורים</span></div>
         <div class="n"><b>${fmt(s.abs)}</b><span>חיסורים</span></div>`}</div>
       ${shownEvents(s).some(e=>!e.pos)?`<div class="evs">${shownEvents(s).filter(e=>!e.pos).map(e=>`<span class="ev${e.pos?' pos':''}">${esc(e.t)} <b>${e.n}</b></span>`).join('')}</div>`:''}
       <div class="bars">${bars}</div>
@@ -1503,11 +1505,11 @@ async function generate(){
 
     /* middle: achievements */
     sl.addText('פדגוגיה',T({x:5.5,y:0.6,w:4.75,h:0.45,fontSize:18,bold:true}));
-    const tile=(x,y,num,label,tone,fill,line,hh,ww)=>{
+    const tile=(x,y,num,label,tone,fill,line,hh,ww,big)=>{
       const H=hh||1.15, W=ww||2.3, top=y+(H-1.15)/2;
-      sl.addShape(pptx.ShapeType.roundRect,{x,y,w:W,h:H,fill:{color:fill},line:{color:line,width:0.75},rectRadius:0.1});
-      sl.addText(num,T({x,y:top+0.1,w:W,h:0.6,fontSize:30,bold:true,color:tone,align:'center'}));
-      sl.addText(label,T({x:x+0.1,y:top+0.7,w:W-0.2,h:0.35,fontSize:11,color:C.soft,align:'center',fit:'shrink'}));
+      sl.addShape(pptx.ShapeType.roundRect,{x,y,w:W,h:H,fill:{color:fill},line:{color:line,width:big?2:0.75},rectRadius:0.1});
+      sl.addText(num,T({x,y:top+0.05,w:W,h:0.68,fontSize:big?40:30,bold:true,color:tone,align:'center'}));
+      sl.addText(label,T({x:x+0.1,y:top+0.7,w:W-0.2,h:0.35,fontSize:big?13:11,bold:!!big,color:big?tone:C.soft,align:'center',fit:'shrink'}));
     };
     const failLabel = st.fails ? ('נכשלים' + (st.failSubjects.length && st.failSubjects.length<=3 ? ': '+st.failSubjects.join(', ') : '')) : 'נכשלים';
     const evList=shownEvents(st);
@@ -1517,8 +1519,8 @@ async function generate(){
       /* top row: average, fails, and the positive events (צל״ש) as their own tile */
       const posEv=evList.filter(e=>e.pos), tw=posEv.length?1.5:2.3, tg=posEv.length?0.125:0.15;
       tile(5.5+4.75-tw,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':''),C.blue,'EAF0FF','C3D2F7',1.0,tw);
-      tile(5.5+4.75-2*tw-tg,1.2,fmt(st.fails),failLabel,st.fails?C.bad:C.good,st.fails?'FDECEC':'E8F6EC',st.fails?'F2C2C2':'BFE3CB',1.0,tw);
-      if(posEv.length) tile(5.5,1.2,String(posEv.reduce((a,e)=>a+e.n,0)),posEv.map(e=>e.t).join(' + '),C.good,'E8F6EC','BFE3CB',1.0,tw);
+      tile(5.5+4.75-2*tw-tg,1.2,fmt(st.fails),failLabel,C.bad,'FDECEC','F2C2C2',1.0,tw);
+      if(posEv.length) tile(5.5,1.2,String(posEv.reduce((a,e)=>a+e.n,0)),posEv.map(e=>e.t).join(' + '),C.good,'E8F6EC','15803D',1.0,tw,true);
       evList.splice(0,evList.length,...evList.filter(e=>!e.pos));
       sl.addText('אירועי שיעור',T({x:5.5,y:2.3,w:4.75,h:0.3,fontSize:12,bold:true,color:C.soft}));
       const cw=1.53, ch=0.3, gx=0.08, gy=0.06, cols=3;
@@ -1532,7 +1534,7 @@ async function generate(){
       coreTitleY=2.64+Math.ceil(evList.length/cols)*(ch+gy)+0.08;
     } else {
     tile(7.95,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':''),C.blue,'EAF0FF','C3D2F7');
-    tile(7.95,2.5,fmt(st.fails),failLabel,st.fails?C.bad:C.good,st.fails?'FDECEC':'E8F6EC',st.fails?'F2C2C2':'BFE3CB');
+    tile(7.95,2.5,fmt(st.fails),failLabel,C.bad,'FDECEC','F2C2C2');
     if(eventsOnly(st)){ tile(5.5,1.2,fmt(st.events),'אירועי שיעור',C.warn,'FFF4E5','F3D3A6',2.43); }
     else { tile(5.5,1.2,fmt(st.late),'איחורים',C.warn,'FFF4E5','F3D3A6'); tile(5.5,2.5,fmt(st.abs),'חיסורים',C.warn,'FFF4E5','F3D3A6'); }
     }
