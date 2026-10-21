@@ -202,7 +202,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 17:30</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 17:40</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -692,8 +692,8 @@ if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,bui
 <script>
 /* ---------- app ---------- */
 const $=s=>document.querySelector(s);
-const state={ files:[], photos:{}, photoNames:{}, photoLinks:{}, logos:[], choices:{}, overrides:{}, links:{}, noLink:{}, sample:true, nextId:1 };
-function setPhoto(name,data){ const k=nameKey(name); state.photos[k]=data; state.photoNames[k]=name; return k; }
+const state={ files:[], photos:{}, photoNames:{}, photoText:{}, photoLinks:{}, logos:[], choices:{}, overrides:{}, links:{}, noLink:{}, sample:true, nextId:1 };
+function setPhoto(name,data,text){ const k=nameKey(name); state.photos[k]=data; state.photoNames[k]=name; if(text) state.photoText[k]=text; return k; }
 /* photos whose name is not exactly a student's: fuzzy match (typo, reversed letters from a PDF), else listed for the teacher */
 let photoMap={}, lostPhotos=[];
 function revKey(k){ return k.split(' ').map(t=>[...t].reverse().join('')).sort().join(' '); }
@@ -706,7 +706,16 @@ function matchPhotos(){
     if(state.photoLinks[k]){ photoMap[state.photoLinks[k]]=k; continue; }
     if(keys.has(k)){ photoMap[owner[k]] ||= k; continue; }
     const rk=revKey(k); if(keys.has(rk)){ photoMap[owner[rk]] ||= k; continue; }
-    const f=fuzzyFind(k,studentKeys)||fuzzyFind(rk,studentKeys);
+    let f=fuzzyFind(k,studentKeys)||fuzzyFind(rk,studentKeys);
+    if(!f){ /* the student's whole name appears on the photo's row (name columns not split right) */
+      const words=new Set(nameKey(state.photoText[k]||state.photoNames[k]||k).split(' '));
+      const hits=built.students.filter(s=>{ const t=s.key.split(' '); return t.length>=2&&t.every(w=>words.has(w)); });
+      if(hits.length===1) f=hits[0].key;
+    }
+    if(!f){ /* only a first name: unique in the class */
+      const t=k.split(' ');
+      if(t.length===1){ const hits=built.students.filter(s=>s.key.split(' ').includes(t[0])); if(hits.length===1) f=hits[0].key; }
+    }
     if(f&&!photoMap[f]) photoMap[f]=k; else if(built.students.length) lostPhotos.push(k);
   }
 }
@@ -996,7 +1005,10 @@ async function rosterPhotosFromPdf(file){
   }
   const aoa=pdfItemsToAoa(pages.map(p=>p.items)), meta=aoa.meta||[];
   const hr=findHeaderRow(aoa), headers=(aoa[hr]||[]).map(clean), fl={headers,mapping:autoMap(headers)};
-  const rows=[]; for(let i=hr+1;i<aoa.length;i++){ const nm=rowName(fl,aoa[i]); if(nm&&meta[i]&&!/תלמידים|עמוד/.test(nm)) rows.push({name:nm,...meta[i]}); }
+  const rows=[]; for(let i=hr+1;i<aoa.length;i++){
+    const text=stripNum((aoa[i]||[]).join(' ')); /* every word on the row, in case the name columns were not found */
+    const nm=rowName(fl,aoa[i])||text;
+    if(nm&&meta[i]&&/[\u05D0-\u05EA]/.test(nm)&&!/תלמידים|עמוד/.test(nm)) rows.push({name:nm,text,...meta[i]}); }
   const isRoster=isRosterHeaders(headers);
   const out={}; let images=0, done=0;
   const total=pages.reduce((n,p)=>n+p.rects.length,0);
@@ -1008,13 +1020,13 @@ async function rosterPhotosFromPdf(file){
       images++;
       const cy=(r.y1+r.y2)/2;
       const best=pr.filter(x=>x.y>=r.y1-x.h*2&&x.y<=r.y2+x.h*2).sort((a,b)=>Math.abs(a.y-cy)-Math.abs(b.y-cy))[0];
-      if(best&&!out[nameKey(best.name)]){ out[nameKey(best.name)]={name:best.name}; jobs.push({r,k:nameKey(best.name)}); }
+      if(best&&!out[nameKey(best.name)]){ out[nameKey(best.name)]={name:best.name,text:best.text}; jobs.push({r,k:nameKey(best.name)}); }
     }
     /* fallback: same number of photos and names on the page, both top to bottom */
     const pics=p.rects.filter(r=>{ const w=r.x2-r.x1,hg=r.y2-r.y1; return w>=10&&hg>=10&&w/hg<=2.5&&w/hg>=0.4; });
     if(!jobs.length&&pics.length&&pics.length===pr.length){
       const ps=[...pics].sort((a,b)=>b.y2-a.y2), rs=[...pr].sort((a,b)=>b.y-a.y);
-      ps.forEach((r,i)=>{ const k=nameKey(rs[i].name); if(!out[k]){ out[k]={name:rs[i].name}; jobs.push({r,k}); } });
+      ps.forEach((r,i)=>{ const k=nameKey(rs[i].name); if(!out[k]){ out[k]={name:rs[i].name,text:rs[i].text}; jobs.push({r,k}); } });
     }
     if(!jobs.length) continue;
     const rendered=await renderPdfPage(p.page,4); /* one render per page, all photos cut from it */
@@ -1205,7 +1217,7 @@ async function handleAny(list){
 }
 async function handleAnyInner(list){
   const err=$('#fileErr'); err.hidden=true;
-  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.photoNames={}; state.photoLinks={}; state.links={}; state.noLink={}; state.sample=false; refresh(); }
+  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.photoNames={}; state.photoText={}; state.photoLinks={}; state.links={}; state.noLink={}; state.sample=false; refresh(); }
   const ext=f=>f.name.split('.').pop().toLowerCase();
   const data=list.filter(f=>/^(xlsx|xls|csv|htm|html)$/.test(ext(f)));
   const decks=list.filter(f=>/^(pptx|ppt|key)$/.test(ext(f)));
@@ -1219,7 +1231,7 @@ async function handleAnyInner(list){
     busy(`בודק מה יש ב-${f.name}…`);
     try{
       const ro=await rosterPhotosFromPdf(f);
-      if(ro.photos.length&&ro.rows>=3){ for(const x of ro.photos) setPhoto(x.name,x.photo); notes.push(`${f.name}: אלפון תמונות, נקראו ${ro.photos.length} תמונות.`); continue; }
+      if(ro.photos.length&&ro.rows>=3){ for(const x of ro.photos) setPhoto(x.name,x.photo,x.text); notes.push(`${f.name}: אלפון תמונות, נקראו ${ro.photos.length} תמונות.`); continue; }
       if(ro.isRoster){ msgs.push(`${f.name}: זה אלפון תלמידים, אבל לא נמצאו בו תמונות. שמרו אותו שוב כ-PDF כשהתמונות מופיעות במסך (פריסה לרוחב, התאמה לעמוד).`); continue; }
       const dk=await readPdfDeck(f);
       if(dk.entries.some(e=>Object.values(e.info).some(Boolean))){ addDeck(f.name,dk,notes); refresh(); continue; }
@@ -1267,7 +1279,7 @@ async function handleDeck(list){
       if(ext==='ppt'||ext==='key'){ msgs.push(`${f.name}: הקובץ בפורמט ישן. שמרו אותו כ-pptx או כ-PDF ונסו שוב.`); continue; }
       if(ext==='pdf'){ /* a photo roster (Smart School report 61) uploaded here: take its photos */
         const ro=await rosterPhotosFromPdf(f);
-        if(ro.photos.length){ for(const x of ro.photos) setPhoto(x.name,x.photo); summary.push(`${f.name}: אלפון עם תמונות, שויכו ${ro.photos.length} תמונות.`); continue; }
+        if(ro.photos.length){ for(const x of ro.photos) setPhoto(x.name,x.photo,x.text); summary.push(`${f.name}: אלפון עם תמונות, שויכו ${ro.photos.length} תמונות.`); continue; }
       }
       const res = ext==='pdf' ? await readPdfDeck(f) : await readPptxDeck(f);
       if(!res.entries.length){ msgs.push(`${f.name}: לא נמצאו בקובץ שקפים של תלמידים עם שם, ולא תמונות בטבלה של תלמידים.`); continue; }
