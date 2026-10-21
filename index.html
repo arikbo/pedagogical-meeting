@@ -118,7 +118,7 @@ button.ph:hover{border-color:var(--accent)}
 .who{display:flex;flex-direction:column;min-width:0}
 .who b{font-family:var(--display);font-size:18px;overflow-wrap:anywhere}
 .who span{font-size:14px;color:var(--ink-soft)}
-.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 14px}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 14px}
 .n{text-align:center;background:var(--surface-2);border-radius:8px;padding:6px 2px}
 .n.wide{grid-column:span 2}
 .n.fail{background:var(--bad-bg)} .n.fail b{color:var(--bad)}
@@ -206,7 +206,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 19:25</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 19:40</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -363,12 +363,14 @@ function buildStudents(files, opts){
   const pass = opts.pass ?? 55;
   const byKey=new Map(), eventTypes=[];
   const dataFiles=files.filter(f=>f.mapping&&(f.mapping.name>=0||f.mapping.first>=0||f.mapping.last>=0))
-    .sort((a,b)=>(a.kind==='deck')-(b.kind==='deck')); /* Smart School reports first: their spelling is the reference */
-  const anchors=new Set();
-  if(dataFiles.some(f=>f.kind==='deck')) for(const f of dataFiles) if(f.kind!=='deck') for(const row of f.rows){ const nm=rowName(f,row); if(nm&&nm.length>=2) anchors.add(nameKey(nm)); }
+    .sort((a,b)=>(b.kind==='sadin')-(a.kind==='sadin')||(a.kind==='deck')-(b.kind==='deck')); /* the reference spelling first */
+  /* reference spelling: the סדין when there is one, else all Smart School reports (decks are typed by hand) */
+  const anchorFiles=dataFiles.some(f=>f.kind==='sadin')?dataFiles.filter(f=>f.kind==='sadin'):dataFiles.filter(f=>f.kind!=='deck');
+  const anchorIds=new Set(anchorFiles.map(f=>f.id)), anchors=new Set();
+  if(dataFiles.length>anchorFiles.length) for(const f of anchorFiles) for(const row of f.rows){ const nm=rowName(f,row); if(nm&&nm.length>=2) anchors.add(nameKey(nm)); }
   const autoLinks=[], unmatched=new Map(), aliasOf={};
   const resolveKey=(file,k,nm)=>{
-    if(file.kind!=='deck'||!anchors.size||anchors.has(k)) return k;
+    if(anchorIds.has(file.id)||!anchors.size||anchors.has(k)) return k;
     const man=opts.links?.[k]; if(man&&anchors.has(man)){ aliasOf[k]=man; return man; }
     if(!opts.noLink?.[k]){ const f=fuzzyFind(k,anchors); if(f){ autoLinks.push({raw:k,rawName:nm,to:f,file:file.name}); aliasOf[k]=f; return f; } }
     unmatched.set(k,{key:k,name:nm,file:file.name}); return k;
@@ -778,6 +780,10 @@ let evHidden=new Set(); try{ evHidden=new Set(JSON.parse(localStorage.getItem('p
 const EV_OFF_DEFAULT=/לא התאמן|פלאפון|טלפון|פטפוט/;
 let evShown=new Set(); try{ evShown=new Set(JSON.parse(localStorage.getItem('pm.evShown')||'[]')); }catch(e){}
 function evIsHidden(t){ return evHidden.has(t)||(EV_OFF_DEFAULT.test(t)&&!evShown.has(t)); }
+function posTypes(){ return (built.eventTypes||[]).filter(t=>POSITIVE_EV.test(t)&&!evIsHidden(t)); }
+function negTypes(){ return (built.eventTypes||[]).filter(t=>!POSITIVE_EV.test(t)&&!evIsHidden(t)); }
+function posSum(s){ const v=posTypes().map(t=>s.evs?.[t]).filter(x=>x!=null); const n=v.reduce((a,b)=>a+b,0); return n>0?n:null; }
+function posLabel(){ return posTypes().join(' + ')||'צל״ש'; }
 function shownEvents(s){ return s.evs ? built.eventTypes.filter(t=>!evIsHidden(t)&&s.evs[t]!=null).map(t=>({t,n:s.evs[t],pos:POSITIVE_EV.test(t)})) : []; }
 function renderEvPick(){
   const box=$('#evPick'), types=built.eventTypes||[];
@@ -960,9 +966,8 @@ function renderStudents(){
       <div class="nums">
         <div class="n"><b>${fmt(s.avg)}</b><span>ממוצע${s.avgSource==='computed'?'*':''}</span></div>
         <div class="n fail"><b>${fmt(s.fails)}</b><span>נכשלים</span></div>
-        ${shownEvents(s).some(e=>e.pos)?`<div class="n pos"><b>${shownEvents(s).filter(e=>e.pos).reduce((a,e)=>a+e.n,0)}</b><span>${esc(shownEvents(s).filter(e=>e.pos).map(e=>e.t).join(' + '))}</span></div>`:eventsOnly(s)?`<div class="n wide"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:`<div class="n"><b>${fmt(s.late)}</b><span>איחורים</span></div>
-        <div class="n"><b>${fmt(s.abs)}</b><span>חיסורים</span></div>`}</div>
-      ${shownEvents(s).some(e=>!e.pos)?`<div class="evs">${shownEvents(s).filter(e=>!e.pos).map(e=>`<span class="ev${e.pos?' pos':''}">${esc(e.t)} <b>${e.n}</b></span>`).join('')}</div>`:''}
+        <div class="n pos"><b>${posSum(s)??'&nbsp;'}</b><span>${esc(posLabel())}</span></div></div>
+      ${negTypes().length?`<div class="evs">${negTypes().map(t=>`<span class="ev">${esc(t)} <b>${s.evs?.[t]??'–'}</b></span>`).join('')}</div>`:''}
       <div class="bars">${bars}</div>
       ${tags?`<div class="tags">${tags}</div>`:''}
       ${flagsBy[s.key]?`<div class="flag">לבדיקה: ${flagsBy[s.key].map(esc).join(', ')}</div>`:''}
@@ -1512,31 +1517,23 @@ async function generate(){
       sl.addText(label,T({x:x+0.1,y:top+0.7,w:W-0.2,h:0.35,fontSize:big?13:11,bold:!!big,color:big?tone:C.soft,align:'center',fit:'shrink'}));
     };
     const failLabel = st.fails ? ('נכשלים' + (st.failSubjects.length && st.failSubjects.length<=3 ? ': '+st.failSubjects.join(', ') : '')) : 'נכשלים';
-    const evList=shownEvents(st);
-    let coreTitleY=3.78;
-    if(evList.length){
-      /* avg + fails on one row, then every chosen event type as a small cell */
-      /* top row: average, fails, and the positive events (צל״ש) as their own tile */
-      const posEv=evList.filter(e=>e.pos), tw=posEv.length?1.5:2.3, tg=posEv.length?0.125:0.15;
-      tile(5.5+4.75-tw,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':''),C.blue,'EAF0FF','C3D2F7',1.0,tw);
-      tile(5.5+4.75-2*tw-tg,1.2,fmt(st.fails),failLabel,C.bad,'FDECEC','F2C2C2',1.0,tw);
-      if(posEv.length) tile(5.5,1.2,String(posEv.reduce((a,e)=>a+e.n,0)),posEv.map(e=>e.t).join(' + '),C.good,'E8F6EC','15803D',1.0,tw,true);
-      evList.splice(0,evList.length,...evList.filter(e=>!e.pos));
+    /* the same top row for everyone: average, fails, צל״ש (empty when there are none) */
+    const tw=1.5, tg=0.125, pos=posSum(st);
+    tile(5.5+4.75-tw,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':''),C.blue,'EAF0FF','C3D2F7',1.0,tw);
+    tile(5.5+4.75-2*tw-tg,1.2,fmt(st.fails),failLabel,C.bad,'FDECEC','F2C2C2',1.0,tw);
+    tile(5.5,1.2,pos?String(pos):'',posLabel(),C.good,'E8F6EC','15803D',1.0,tw,true);
+    let coreTitleY=2.36;
+    const neg=negTypes();
+    if(neg.length){
       sl.addText('אירועי שיעור',T({x:5.5,y:2.3,w:4.75,h:0.3,fontSize:12,bold:true,color:C.soft}));
       const cw=1.53, ch=0.3, gx=0.08, gy=0.06, cols=3;
-      evList.forEach((e,i)=>{
-        const r=Math.floor(i/cols), k=i%cols, x=5.5+4.75-(k+1)*cw-k*gx, y=2.64+r*(ch+gy);
-        const fill=e.pos?'E8F6EC':'FFF4E5', col=e.pos?C.good:C.warn;
-        sl.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:ch,fill:{color:fill},line:{color:fill},rectRadius:0.06});
-        sl.addText(e.t,T({x:x+0.42,y,w:cw-0.48,h:ch,fontSize:9,color:C.ink,fit:'shrink'}));
-        sl.addText(String(e.n),T({x:x+0.04,y,w:0.4,h:ch,fontSize:11,bold:true,color:col,align:'left'}));
+      neg.forEach((t,i)=>{
+        const r=Math.floor(i/cols), k=i%cols, x=5.5+4.75-(k+1)*cw-k*gx, y=2.64+r*(ch+gy), n=st.evs?.[t];
+        sl.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:ch,fill:{color:'FFF4E5'},line:{color:'FFF4E5'},rectRadius:0.06});
+        sl.addText(t,T({x:x+0.42,y,w:cw-0.48,h:ch,fontSize:9,color:C.ink,fit:'shrink'}));
+        sl.addText(n==null?'–':String(n),T({x:x+0.04,y,w:0.4,h:ch,fontSize:11,bold:true,color:C.warn,align:'left'}));
       });
-      coreTitleY=2.64+Math.ceil(evList.length/cols)*(ch+gy)+0.08;
-    } else {
-    tile(7.95,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':''),C.blue,'EAF0FF','C3D2F7');
-    tile(7.95,2.5,fmt(st.fails),failLabel,C.bad,'FDECEC','F2C2C2');
-    if(eventsOnly(st)){ tile(5.5,1.2,fmt(st.events),'אירועי שיעור',C.warn,'FFF4E5','F3D3A6',2.43); }
-    else { tile(5.5,1.2,fmt(st.late),'איחורים',C.warn,'FFF4E5','F3D3A6'); tile(5.5,2.5,fmt(st.abs),'חיסורים',C.warn,'FFF4E5','F3D3A6'); }
+      coreTitleY=2.64+Math.ceil(neg.length/cols)*(ch+gy)+0.08;
     }
     sl.addText('מקצועות ליבה',T({x:5.5,y:coreTitleY,w:4.75,h:0.32,fontSize:12,bold:true,color:C.soft}));
     const core=coreFor(st,s.cls);
