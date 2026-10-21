@@ -204,7 +204,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 19:00</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 19:15</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -535,7 +535,7 @@ function assignCols(row,cols){
 function pdfItemsToAoa(pages){
   const a=pdfRows(pages,false), b=pdfRows(pages,true);
   const rows = headerScore(b)>headerScore(a) ? b : a;
-  const isHeaderRow=r=>{ const cells=rowCells(r); return cells.length>=2&&cells.some(c=>isNameHeader(c.str)); };
+  const isHeaderRow=r=>{ const cells=rowCells(r); return cells.length>=2&&(cells.some(c=>isNameHeader(c.str))||(cells.some(c=>/מורה/.test(c.str))&&cells.some(c=>/מקצוע/.test(c.str)))); };
   const segs=[]; let cur=null;
   rows.forEach((r,i)=>{
     if(isHeaderRow(r)){
@@ -623,7 +623,11 @@ function parseTeachersReport(aoa){
     const ti=row.findIndex(c=>/^(שם )?(ה)?מורה|מורים/.test(c)), si=row.findIndex(c=>/מקצוע/.test(c));
     if(ti<0||si<0) continue;
     const out=[];
-    for(let k=r+1;k<aoa.length;k++){ const t=sadinText((aoa[k]||[])[ti]), s=sadinText((aoa[k]||[])[si]); if(t&&s&&/[\u05D0-\u05EA]/.test(t)) out.push({subject:s.replace(/\s*\(.*\)$/,''),group:'',teacher:t}); }
+    for(let k=r+1;k<aoa.length;k++){
+      const t=sadinText((aoa[k]||[])[ti]), s=sadinText((aoa[k]||[])[si]).replace(/\s*\(.*\)$/,'');
+      if(t&&s&&/[\u05D0-\u05EA]/.test(t)&&!/\d|:|הופק/.test(t)) out.push({subject:s,group:'',teacher:t});
+      else if(!t&&s&&out.length&&/^[\u05D0-\u05EA\s"״׳'-]+$/.test(s)) out[out.length-1].subject+=' '+s; /* a subject on two lines */
+    }
     return out.length?out:null;
   }
   return null;
@@ -1460,12 +1464,14 @@ async function generate(){
   const t66=state.files.filter(f=>f.kind==='teachers').flatMap(f=>f.teachers);
   const tList=t66.length?t66:state.files.flatMap(f=>f.teachers||[]); /* the סדין lists only teachers who entered grades */
   if(s.showTeachers&&tList.length){
-    const by={}; for(const t of tList){ const k=t.subject; (by[k] ||= new Set()).add((t.group?t.group+': ':'')+t.teacher); }
-    const subj=Object.entries(by);
+    /* one card per teacher, with every subject they teach in the class */
+    const by={}; for(const t of tList){ if(/^חינוך$/.test(t.subject)) continue; (by[t.teacher] ||= new Set()).add(t.subject+(t.group?' ('+t.group+')':'')); }
+    const subj=Object.entries(by).sort((a,b)=>a[0].localeCompare(b[0],'he')).map(([teacher,set])=>[teacher,new Set([[...set].join(' · ')])]);
     const ts=pptx.addSlide(); ts.background={color:PAGE}; bsd(ts);
     ts.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
     ts.addText('צוות המורים'+(s.cls?' · כיתה '+s.cls:''),T({x:0.6,y:0.45,w:11.9,h:0.7,fontSize:30,bold:true}));
-    if(s.teacher) ts.addText('מחנך/ת הכיתה: '+s.teacher,T({x:0.6,y:1.1,w:11.9,h:0.4,fontSize:16,color:ACC,bold:true}));
+    const homeroom=s.teacher||(tList.find(t=>/^חינוך$/.test(t.subject))||{}).teacher;
+    if(homeroom) ts.addText('מחנך/ת הכיתה: '+homeroom,T({x:0.6,y:1.1,w:11.9,h:0.4,fontSize:16,color:ACC,bold:true}));
     const cols=3, cw=3.85, gx=0.18, top=1.7, avail=6.85-top, rows=Math.ceil(subj.length/cols), chh=Math.min(1.3,(avail-(rows-1)*0.14)/rows);
     subj.forEach(([name,set],i)=>{
       const r=Math.floor(i/cols), k=i%cols, x=12.5-(k+1)*cw-k*gx, y=top+r*(chh+0.14);
