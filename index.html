@@ -98,6 +98,14 @@ textarea{resize:vertical;min-height:56px}
 .ph img{width:100%;height:100%;object-fit:cover}
 button.ph{border:2px dashed transparent;cursor:pointer;padding:0;font-size:inherit}
 button.ph:hover{border-color:var(--accent)}
+.evpick{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:16px}
+.evpick-list{display:flex;flex-wrap:wrap;gap:8px}
+.evpick label{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:15px;cursor:pointer;background:var(--surface)}
+.evpick label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.evs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0}
+.ev{font-size:13px;border-radius:999px;padding:2px 10px;background:var(--warn-bg);color:var(--warn);white-space:nowrap}
+.ev.pos{background:var(--good-bg);color:var(--good)}
+.ev b{font-variant-numeric:tabular-nums}
 .deck{display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
 .deck-text{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}
 .deck h3{font-family:var(--display);font-size:19px;margin:0}
@@ -186,6 +194,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
     <span class="hint" id="photoInfo">תמונות: דוח 61 מסמארט סקול (אלפון עם תמונות) כ-PDF, קובץ לכל תלמיד בשם התלמיד (למשל ״נועה לוי.jpg״), או קובץ ZIP. אפשר גם ללחוץ על העיגול בכרטיס של תלמיד ולבחור לו תמונה.</span>
   </div>
   <div class="logos" id="logos"></div>
+  <div class="evpick" id="evPick" hidden></div>
 </section>
 
 <section class="step" aria-labelledby="h-check">
@@ -311,7 +320,7 @@ function sameVal(field,a,b){
 /* merge all files → students + conflicts + missing */
 function buildStudents(files, opts){
   const pass = opts.pass ?? 55;
-  const byKey=new Map();
+  const byKey=new Map(), eventTypes=[];
   const dataFiles=files.filter(f=>f.mapping&&(f.mapping.name>=0||f.mapping.first>=0||f.mapping.last>=0));
   for(const file of dataFiles){
     const gcols=gradeColumns(file);
@@ -329,6 +338,8 @@ function buildStudents(files, opts){
         (st.src[f.id] ||= []).push({file:file.id,fileName:file.name,val:v});
       }
       for(const ci of gcols){ const x=toNum(row[ci]); if(x!=null) st.grades.push({subject:clean(file.headers[ci]),val:x,file:file.id}); }
+      file.headers.forEach((hd,ci)=>{ if(!hd.startsWith(EV_PREFIX)) return; const t=hd.slice(EV_PREFIX.length), x=toNum(row[ci]);
+        if(!eventTypes.includes(t)) eventTypes.push(t); if(x!=null) (st.evs ||= {})[t]=x; });
     }
   }
   const conflicts=[], students=[];
@@ -372,6 +383,7 @@ function buildStudents(files, opts){
       math:toNum(val.math), lang:toNum(val.lang), eng:toNum(val.eng), sci:toNum(val.sci),
       gMath:val.gMath||'', gEng:val.gEng||'',
       iGen:val.iGen||'', iExc:val.iExc||'', iAtt:val.iAtt||'', iEmo:val.iEmo||'', iAns:val.iAns||'',
+      evs:st.evs||null,
       files:[...st.files]
     });
   }
@@ -381,7 +393,10 @@ function buildStudents(files, opts){
     const absent=dataFiles.filter(f=>!s.files.includes(f.id)).map(f=>f.name);
     if(absent.length) missing.push({name:s.name,key:s.key,absent});
   }
-  return {students,conflicts,missing};
+  /* absences and lateness first, positive events (צל״ש) last */
+  const evRank=t=>/חיסור/.test(t)?0:/איחור/.test(t)?1:POSITIVE_EV.test(t)?3:2;
+  eventTypes.sort((a,b)=>evRank(a)-evRank(b));
+  return {students,conflicts,missing,eventTypes};
 }
 /* report 98 gives one lesson-event total instead of separate lateness / absences */
 function eventsOnly(s){ return s.late==null&&s.abs==null&&s.events!=null; }
@@ -525,6 +540,28 @@ function parseSadin(aoa){
   return out.length>1 ? {aoa:out, cls} : null;
 }
 
+/* ---------- Smart School report 42: "דוח מונה אירועים בשיעור לכיתה" ----------
+   Header cells like "*חיסור\nסה''כ 2015", one column per event type, then total, class, name. */
+const EV_PREFIX='אירוע: ';
+function parseEventsReport(aoa){
+  const isEv=c=>/סה.{1,3}כ\s*\d+/.test(clean(c));
+  let hr=-1;
+  for(let r=0;r<Math.min(aoa.length,40);r++){ const row=aoa[r]||[]; if(row.some(c=>/שם התלמיד/.test(clean(c)))&&row.filter(isEv).length>=2){ hr=r; break; } }
+  if(hr<0) return null;
+  const head=aoa[hr];
+  const nameCol=head.findIndex(c=>/שם התלמיד/.test(clean(c))), clsCol=head.findIndex(c=>clean(c)==='כיתה'), totCol=head.findIndex(c=>/א\.?\s*שיעור/.test(clean(c)));
+  const evCols=[]; head.forEach((c,i)=>{ if(isEv(c)) evCols.push({i,type:sadinText(String(c).split('\n')[0]).replace(/^\*+/,'').trim()}); });
+  const out=[['שם התלמיד','כיתה','סה"כ אירועי שיעור',...evCols.map(e=>EV_PREFIX+e.type)]];
+  for(let r=hr+1;r<aoa.length;r++){
+    const row=aoa[r]||[]; let name=sadinText(row[nameCol]);
+    if(!/[א-ת]/.test(name)) name=row.slice(nameCol).map(sadinText).find(s=>/[א-ת]/.test(s))||'';
+    if(!name||/^סה/.test(name)) continue;
+    out.push([name, clsCol>=0?sadinText(row[clsCol]):'', totCol>=0?(toNum(row[totCol])??''):'', ...evCols.map(e=>toNum(row[e.i])??'')]);
+  }
+  return out.length>1?{aoa:out}:null;
+}
+const POSITIVE_EV=/צל.?.?ש|חיזוק|מחמאה|הצטיינות|שבח|חיובי/;
+
 /* ---------- existing decks: general-info table + student name ---------- */
 const INFO_HEAD={iGen:'כללי',iExc:'בעיות חריגות',iAtt:'ביקור סדיר',iEmo:'קשיים רגשיים או אחרים',iAns:'מענים'};
 /* a label cell of the general-info table → field id (short text that starts with the label word) */
@@ -589,22 +626,36 @@ function pdfDeckPage(items, flip){
 function deckAoa(entries){
   return [['שם',...INFO.map(f=>INFO_HEAD[f])], ...entries.filter(e=>e.name).map(e=>[e.name,...INFO.map(f=>e.info[f]||'')])];
 }
-if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,pickName,infoFromTableRows,pdfDeckPage,deckAoa,infoLabelStart};
+if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,pickName,infoFromTableRows,pdfDeckPage,deckAoa,infoLabelStart};
 </script>
 
 <script>
 /* ---------- app ---------- */
 const $=s=>document.querySelector(s);
 const state={ files:[], photos:{}, logos:[], choices:{}, overrides:{}, sample:true, nextId:1 };
-let built={students:[],conflicts:[],missing:[]};
+let built={students:[],conflicts:[],missing:[],eventTypes:[]};
+let evHidden=new Set(); try{ evHidden=new Set(JSON.parse(localStorage.getItem('pm.evHidden')||'[]')); }catch(e){}
+function shownEvents(s){ return s.evs ? built.eventTypes.filter(t=>!evHidden.has(t)&&s.evs[t]!=null).map(t=>({t,n:s.evs[t],pos:POSITIVE_EV.test(t)})) : []; }
+function renderEvPick(){
+  const box=$('#evPick'), types=built.eventTypes||[];
+  box.hidden=!types.length; if(!types.length){ box.innerHTML=''; return; }
+  box.innerHTML='<span class="hint">אירועי שיעור שיוצגו בשקף (מדוח 42):</span><div class="evpick-list"></div>';
+  const list=box.querySelector('.evpick-list');
+  types.forEach((t,i)=>{
+    const lab=document.createElement('label'); const cb=document.createElement('input'); cb.type='checkbox'; cb.id='ev-'+i; cb.checked=!evHidden.has(t);
+    cb.onchange=()=>{ cb.checked?evHidden.delete(t):evHidden.add(t); try{ localStorage.setItem('pm.evHidden',JSON.stringify([...evHidden])); }catch(e){} renderStudents(); };
+    lab.append(cb, document.createTextNode(t)); list.appendChild(lab);
+  });
+}
 
 function addFileFromAoa(name, aoa){
-  const sadin=parseSadin(aoa);
+  const sadin=parseSadin(aoa), evRep=sadin?null:parseEventsReport(aoa);
   if(sadin){ aoa=sadin.aoa; if(sadin.cls&&!clean($('#sClass').value)) $('#sClass').value=sadin.cls; }
+  if(evRep) aoa=evRep.aoa;
   const hr=findHeaderRow(aoa);
   const headers=(aoa[hr]||[]).map(clean);
   const rows=aoa.slice(hr+1).filter(r=>r&&r.some(c=>clean(c)!==''));
-  const file={id:'f'+(state.nextId++), name, headers, rows, mapping:autoMap(headers), kind:sadin?'sadin':undefined};
+  const file={id:'f'+(state.nextId++), name, headers, rows, mapping:autoMap(headers), kind:sadin?'sadin':evRep?'events':undefined};
   state.files.push(file); return file;
 }
 function loadSample(){
@@ -649,7 +700,7 @@ function renderFiles(){
     const hasName=m.name>=0||m.first>=0||m.last>=0;
     const d=document.createElement('details'); d.className='file';
     d.innerHTML=`<summary><span class="fname">${esc(f.name)}</span>
-      <span class="chip">${f.kind==='deck'?`מצגת · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:`${f.rows.length} שורות`}</span>
+      <span class="chip">${f.kind==='deck'?`מצגת · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:`${f.rows.length} שורות`}</span>
       <span class="chip ${hasName?'ok':'bad'}">${hasName?mapped.length+' עמודות זוהו':'לא זוהתה עמודת שם'}</span>
       <span class="grow"></span><span class="chip">התאמת עמודות</span>
       <button class="btn small" type="button" data-del="${f.id}">הסרה</button></summary>
@@ -717,6 +768,7 @@ function renderStudents(){
         <div class="n"><b style="color:var(--${s.fails?'bad':'ink'})">${fmt(s.fails)}</b><span>נכשלים</span></div>
         ${eventsOnly(s)?`<div class="n wide"><b>${fmt(s.events)}</b><span>אירועי שיעור</span></div>`:`<div class="n"><b>${fmt(s.late)}</b><span>איחורים</span></div>
         <div class="n"><b>${fmt(s.abs)}</b><span>חיסורים</span></div>`}</div>
+      ${shownEvents(s).length?`<div class="evs">${shownEvents(s).map(e=>`<span class="ev${e.pos?' pos':''}">${esc(e.t)} <b>${e.n}</b></span>`).join('')}</div>`:''}
       <div class="bars">${bars}</div>
       ${tags?`<div class="tags">${tags}</div>`:''}
       ${flagsBy[s.key]?`<div class="flag">לבדיקה: ${flagsBy[s.key].map(esc).join(', ')}</div>`:''}
@@ -749,7 +801,7 @@ function updateStatus(){
 }
 function refresh(){
   built=buildStudents(state.files,{pass:settings().pass,choices:state.choices,overrides:state.overrides});
-  renderFiles(); renderChecks(); renderStudents(); updateStatus();
+  renderFiles(); renderChecks(); renderEvPick(); renderStudents(); updateStatus();
   const c=settings().credit; $('#credit').textContent=c;
 }
 
@@ -1108,18 +1160,38 @@ async function generate(){
       sl.addText(label,T({x:x+0.1,y:top+0.7,w:2.1,h:0.35,fontSize:11,color:C.soft,align:'center',fit:'shrink'}));
     };
     const failLabel = st.fails ? ('נכשלים' + (st.failSubjects.length && st.failSubjects.length<=3 ? ': '+st.failSubjects.join(', ') : '')) : 'נכשלים';
+    const evList=shownEvents(st);
+    let coreTitleY=3.78;
+    if(evList.length){
+      /* avg + fails on one row, then every chosen event type as a small cell */
+      tile(7.95,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':''),C.blue,'EAF0FF','C3D2F7',1.0);
+      tile(5.5,1.2,fmt(st.fails),failLabel,st.fails?C.bad:C.good,st.fails?'FDECEC':'E8F6EC',st.fails?'F2C2C2':'BFE3CB',1.0);
+      const tot=st.events!=null?st.events:null;
+      sl.addText('אירועי שיעור'+(tot!=null?` (סה״כ ${fmt(tot)})`:''),T({x:5.5,y:2.3,w:4.75,h:0.3,fontSize:12,bold:true,color:C.soft}));
+      const cw=1.53, ch=0.3, gx=0.08, gy=0.06, cols=3;
+      evList.forEach((e,i)=>{
+        const r=Math.floor(i/cols), k=i%cols, x=5.5+4.75-(k+1)*cw-k*gx, y=2.64+r*(ch+gy);
+        const fill=e.pos?'E8F6EC':'FFF4E5', col=e.pos?C.good:C.warn;
+        sl.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:ch,fill:{color:fill},line:{color:fill},rectRadius:0.06});
+        sl.addText(e.t,T({x:x+0.42,y,w:cw-0.48,h:ch,fontSize:9,color:C.ink,fit:'shrink'}));
+        sl.addText(String(e.n),T({x:x+0.04,y,w:0.4,h:ch,fontSize:11,bold:true,color:col,align:'left'}));
+      });
+      coreTitleY=2.64+Math.ceil(evList.length/cols)*(ch+gy)+0.08;
+    } else {
     tile(7.95,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':''),C.blue,'EAF0FF','C3D2F7');
     tile(7.95,2.5,fmt(st.fails),failLabel,st.fails?C.bad:C.good,st.fails?'FDECEC':'E8F6EC',st.fails?'F2C2C2':'BFE3CB');
     if(eventsOnly(st)){ tile(5.5,1.2,fmt(st.events),'אירועי שיעור',C.warn,'FFF4E5','F3D3A6',2.43); }
     else { tile(5.5,1.2,fmt(st.late),'איחורים',C.warn,'FFF4E5','F3D3A6'); tile(5.5,2.5,fmt(st.abs),'חיסורים',C.warn,'FFF4E5','F3D3A6'); }
-    sl.addText('מקצועות ליבה',T({x:5.5,y:3.78,w:4.75,h:0.32,fontSize:12,bold:true,color:C.soft}));
+    }
+    sl.addText('מקצועות ליבה',T({x:5.5,y:coreTitleY,w:4.75,h:0.32,fontSize:12,bold:true,color:C.soft}));
+    const step=Math.min(0.66,(6.82-(coreTitleY+0.37))/4), rh=Math.min(0.56,step-0.06);
     CORE.forEach((c,i)=>{
-      const y=4.15+i*0.66, x=st[c], tone=scoreTone(x,pass);
-      sl.addShape(pptx.ShapeType.roundRect,{x:5.5,y,w:4.75,h:0.56,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.08});
-      sl.addText(FLABEL[c],T({x:8.95,y,w:1.15,h:0.56,fontSize:14,bold:true}));
-      sl.addShape(pptx.ShapeType.roundRect,{x:6.45,y:y+0.235,w:2.4,h:0.09,fill:{color:C.track},line:{color:C.track},rectRadius:0.04});
-      if(x!=null&&x>0){ const w=2.4*Math.min(100,x)/100; sl.addShape(pptx.ShapeType.roundRect,{x:6.45+2.4-w,y:y+0.235,w,h:0.09,fill:{color:BARC[c]},line:{color:BARC[c]},rectRadius:0.04}); }
-      sl.addText(x==null?'אין ציון':fmt(x),T({x:5.6,y,w:0.8,h:0.56,fontSize:x==null?11:18,bold:x!=null,color:tone==='none'?C.faint:C[tone],align:'center'}));
+      const y=coreTitleY+0.37+i*step, x=st[c], tone=scoreTone(x,pass);
+      sl.addShape(pptx.ShapeType.roundRect,{x:5.5,y,w:4.75,h:rh,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.08});
+      sl.addText(FLABEL[c],T({x:8.95,y,w:1.15,h:rh,fontSize:14,bold:true}));
+      sl.addShape(pptx.ShapeType.roundRect,{x:6.45,y:y+rh/2-0.045,w:2.4,h:0.09,fill:{color:C.track},line:{color:C.track},rectRadius:0.04});
+      if(x!=null&&x>0){ const w=2.4*Math.min(100,x)/100; sl.addShape(pptx.ShapeType.roundRect,{x:6.45+2.4-w,y:y+rh/2-0.045,w,h:0.09,fill:{color:BARC[c]},line:{color:BARC[c]},rectRadius:0.04}); }
+      sl.addText(x==null?'אין ציון':fmt(x),T({x:5.6,y,w:0.8,h:rh,fontSize:x==null?11:18,bold:x!=null,color:tone==='none'?C.faint:C[tone],align:'center'}));
     });
 
     /* left: general info table */
