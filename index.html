@@ -337,7 +337,16 @@ function buildStudents(files, opts){
     for(const [fid,list] of Object.entries(st.src)){
       const distinct=[]; for(const e of list){ if(!distinct.some(d=>sameVal(fid,d.val,e.val))) distinct.push(e); }
       const ck=st.key+'|'+fid;
-      if(distinct.length>1){
+      if(distinct.length>1&&INFO.includes(fid)){
+        /* general-info texts from several files (a deck + a PDF): keep them all, joined; the teacher can still pick one */
+        const longest=distinct.reduce((a,b)=>b.val.length>a.val.length?b:a);
+        if(distinct.every(d=>longest.val.includes(d.val))){ val[fid]=longest.val; continue; }
+        const both={file:'*',fileName:'שניהם יחד',val:distinct.map(d=>d.val).join('\n')};
+        const options=[...distinct,both], chosen=opts.choices?.[ck];
+        const pick = chosen!=null && options.some(d=>d.val===chosen) ? chosen : both.val;
+        conflicts.push({key:st.key,name:st.name,field:fid,options,ck,resolved:true,value:pick});
+        val[fid]=pick;
+      } else if(distinct.length>1){
         const chosen = opts.choices?.[ck];
         const pick = chosen!=null && distinct.some(d=>d.val===chosen) ? chosen : distinct[distinct.length-1].val;
         conflicts.push({key:st.key,name:st.name,field:fid,options:distinct,ck,resolved:chosen!=null,value:pick});
@@ -672,7 +681,7 @@ function renderChecks(){
   if(!conflicts.length&&!missing.length){ box.innerHTML='<div class="empty">לא נמצאו סתירות בין הדוחות.</div>'; }
   for(const c of conflicts){
     const el=document.createElement('div'); el.className='issue'+(c.resolved?' done':'');
-    el.innerHTML=`<div class="issue-title">${esc(c.name)} · ${esc(FLABEL[c.field])}: ערכים שונים בדוחות</div><div class="opts"></div>`;
+    el.innerHTML=`<div class="issue-title">${esc(c.name)} · ${esc(FLABEL[c.field])}: ${INFO.includes(c.field)?'טקסט שונה בקבצים, חוברו יחד. אפשר לבחור אחד מהם':'ערכים שונים בדוחות'}</div><div class="opts"></div>`;
     const opts=el.querySelector('.opts');
     c.options.forEach((o,i)=>{
       const id='c-'+btoa(unescape(encodeURIComponent(c.ck))).replace(/[^a-z0-9]/gi,'')+'-'+i;
