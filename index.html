@@ -202,7 +202,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 17:15</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 17:30</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -302,11 +302,13 @@ function gradeColumns(file){
   });
   return out;
 }
+/* serial numbers next to a name ("11 כהן דנה") are not part of it */
+function stripNum(s){ return clean(String(s??'').replace(/(^|\s)\d+(?=\s|$)/g,' ')); }
 function rowName(file,row){
   const m=file.mapping;
-  if(m.name>=0) return clean(row[m.name]);
+  if(m.name>=0) return stripNum(row[m.name]);
   const f=m.first>=0?clean(row[m.first]):'', l=m.last>=0?clean(row[m.last]):'';
-  return clean(f+' '+l);
+  return stripNum(f+' '+l);
 }
 /* ---------- names typed by hand (old decks) vs names from Smart School ---------- */
 function lev(a,b){
@@ -361,7 +363,7 @@ function buildStudents(files, opts){
     const gcols=gradeColumns(file);
     for(const row of file.rows){
       const nm=rowName(file,row); if(!nm||nm.length<2) continue;
-      if(/^(סה"כ|סה״כ|ממוצע|סיכום)/.test(nm)) continue;
+      if(/^(סה"כ|סה״כ|ממוצע|סיכום)/.test(nm)||/הופק|:/.test(nm)) continue;
       if(scoreHeader('name',nm)>0||scoreHeader('first',nm)>0||scoreHeader('last',nm)>0) continue; /* repeated header row */
       const key=resolveKey(file,nameKey(nm),nm);
       if(!byKey.has(key)) byKey.set(key,{key,name:nm,src:{},files:new Set(),grades:[]});
@@ -434,7 +436,12 @@ function buildStudents(files, opts){
   const evRank=t=>/חיסור/.test(t)?0:/איחור/.test(t)?1:POSITIVE_EV.test(t)?3:2;
   eventTypes.sort((a,b)=>evRank(a)-evRank(b));
   const nameOf=k=>byKey.get(k)?.name||k;
-  return {students,conflicts,missing,eventTypes,
+  /* which class each report is for: reports of different classes must not be mixed */
+  const classes=[];
+  for(const f of dataFiles){ if(f.kind==='deck'||f.mapping.cls<0) continue;
+    const cnt={}; for(const row of f.rows){ const c=clean(row[f.mapping.cls]).replace(/["'״׳\s]/g,''); if(c&&!/\d{5,}/.test(c)) cnt[c]=(cnt[c]||0)+1; }
+    const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]; if(top) classes.push({file:f.name,cls:top[0]}); }
+  return {students,conflicts,missing,eventTypes,classes,
     autoLinks:autoLinks.map(l=>({...l,toName:nameOf(l.to)})),
     unmatched:[...unmatched.values()],
     roster:[...anchors].map(k=>({key:k,name:nameOf(k)})).sort((a,b)=>a.name.localeCompare(b.name,'he'))};
@@ -593,12 +600,16 @@ function parseEventsReport(aoa){
   if(hr<0) return null;
   const head=aoa[hr];
   const nameCol=head.findIndex(c=>/שם התלמיד/.test(clean(c))), clsCol=head.findIndex(c=>clean(c)==='כיתה'), totCol=head.findIndex(c=>/א\.?\s*שיעור/.test(clean(c)));
-  const evCols=[]; head.forEach((c,i)=>{ if(isEv(c)) evCols.push({i,type:sadinText(String(c).split('\n')[0]).replace(/^\*+/,'').trim()}); });
+  const evCols=[]; head.forEach((c,i)=>{ if(!isEv(c)) return;
+    let type=sadinText(String(c).split('\n')[0]).replace(/^\*+/,'').replace(/סה.{1,3}כ\s*\d+/,'').trim();
+    for(let r=hr-1;!type&&r>=Math.max(0,hr-3);r--) type=sadinText((aoa[r]||[])[i]).replace(/^\*+/,'').trim(); /* name on the row above */
+    evCols.push({i,type:type||('אירוע '+(evCols.length+1))}); });
   const out=[['שם התלמיד','כיתה','סה"כ אירועי שיעור',...evCols.map(e=>EV_PREFIX+e.type)]];
   for(let r=hr+1;r<aoa.length;r++){
     const row=aoa[r]||[]; let name=sadinText(row[nameCol]);
     if(!/[א-ת]/.test(name)) name=row.slice(nameCol).map(sadinText).find(s=>/[א-ת]/.test(s))||'';
-    if(!name||/^סה/.test(name)) continue;
+    name=stripNum(name);
+    if(!name||/^סה|הופק|דוח|עמוד|:/.test(name)) continue;
     out.push([name, clsCol>=0?sadinText(row[clsCol]):'', totCol>=0?(toNum(row[totCol])??''):'', ...evCols.map(e=>toNum(row[e.i])??'')]);
   }
   return out.length>1?{aoa:out}:null;
@@ -799,6 +810,12 @@ function renderChecks(){
     <div class="stat ${missing.length?'warn':'good'}"><b>${missing.length}</b><span>חסרים בחלק מהדוחות</span></div>
     <div class="stat"><b>${withPhoto}/${students.length}</b><span>עם תמונה</span></div>`;
   const box=$('#issues'); box.innerHTML='';
+  const clsSet=[...new Set((built.classes||[]).map(c=>c.cls))];
+  if(clsSet.length>1){
+    const el=document.createElement('div'); el.className='issue';
+    el.innerHTML=`<div class="issue-title">הדוחות שייכים לכיתות שונות: ${(built.classes||[]).map(c=>`${esc(c.file)} – ${esc(c.cls)}`).join(' · ')}</div><span class="hint">לכן יש יותר שקפים מתלמידים. הסירו את הדוח של הכיתה האחרת (״הסרה״ ליד שם הקובץ), או הפיקו את כל הדוחות לאותה כיתה ולאותה תקופה.</span>`;
+    box.appendChild(el);
+  }
   if(lostPhotos.length){
     const el=document.createElement('div'); el.className='issue missing';
     el.innerHTML=`<div class="issue-title">${lostPhotos.length} תמונות לא שויכו לתלמיד. בחרו לכל אחת את התלמיד/ה:</div><div class="lost-ph"></div>`;
@@ -827,7 +844,7 @@ function renderChecks(){
     sel.onchange=()=>{ if(sel.value){ state.links[u.key]=sel.value; delete state.noLink[u.key]; } else { delete state.links[u.key]; state.noLink[u.key]=true; } refresh(); };
     box.appendChild(el);
   }
-  if(!conflicts.length&&!missing.length&&!links.length&&!lost.length&&!lostPhotos.length){ box.innerHTML='<div class="empty">לא נמצאו סתירות בין הדוחות.</div>'; }
+  if(!conflicts.length&&!missing.length&&!links.length&&!lost.length&&!lostPhotos.length&&clsSet.length<2){ box.innerHTML='<div class="empty">לא נמצאו סתירות בין הדוחות.</div>'; }
   for(const c of conflicts){
     const el=document.createElement('div'); el.className='issue'+(c.resolved?' done':'');
     el.innerHTML=`<div class="issue-title">${esc(c.name)} · ${esc(FLABEL[c.field])}: ${INFO.includes(c.field)?'טקסט שונה בקבצים, חוברו יחד. אפשר לבחור אחד מהם':'ערכים שונים בדוחות'}</div><div class="opts"></div>`;
@@ -895,7 +912,9 @@ function updateStatus(){
   const open=built.conflicts.filter(c=>!c.resolved).length, n=built.students.length;
   const ph=built.students.filter(s=>photoFor(s)).length;
   $('#bGen').disabled=!n||busyCount>0;
+  const mixed=new Set((built.classes||[]).map(c=>c.cls)).size>1;
   $('#status').textContent = busyCount>0 ? 'קורא את הקבצים… המצגת תהיה זמינה בעוד רגע.'
+    : mixed ? 'שימו לב: הדוחות שייכים לכיתות שונות. ראו ״בדיקת נתונים״.'
     : !n ? 'העלו דוחות כדי ליצור מצגת.'
     : (ph<n&&!state.sample) ? `${n} שקפי תלמידים, ${ph} עם תמונה. ${n-ph} תלמידים יופיעו בלי תמונה.`+(open?` ${open} סתירות לא הוכרעו.`:'')
     : open ? `${n} שקפי תלמידים. ${open} סתירות לא הוכרעו: ייבחר הערך מהדוח האחרון והשדה יסומן בשקף ״לבדיקה״.`
