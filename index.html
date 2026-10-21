@@ -973,7 +973,20 @@ async function cropPdf(page, r, rendered){
   if(W<8||H<8) return null;
   const o=document.createElement('canvas'); o.width=Math.round(W); o.height=Math.round(H);
   o.getContext('2d').drawImage(c,L,T,W,H,0,0,o.width,o.height);
-  return shrink(o.toDataURL('image/jpeg',0.9));
+  return shrink(trimWhite(o).toDataURL('image/jpeg',0.9));
+}
+/* photos often sit in white padding inside their box: cut the white margins away */
+function trimWhite(c){
+  const x=c.getContext('2d'), {width:w,height:h}=c, d=x.getImageData(0,0,w,h).data;
+  const ink=(i)=>d[i]<235||d[i+1]<235||d[i+2]<235;
+  const colInk=(cx)=>{ let n=0; for(let y=0;y<h;y++) if(ink((y*w+cx)*4)) n++; return n>h*0.02; };
+  const rowInk=(cy)=>{ let n=0; for(let xx=0;xx<w;xx++) if(ink((cy*w+xx)*4)) n++; return n>w*0.02; };
+  let l=0,r=w-1,t=0,b=h-1;
+  while(l<r&&!colInk(l)) l++; while(r>l&&!colInk(r)) r--; while(t<b&&!rowInk(t)) t++; while(b>t&&!rowInk(b)) b--;
+  if(r-l<w*0.2||b-t<h*0.2||(l===0&&t===0&&r===w-1&&b===h-1)) return c;
+  const o=document.createElement('canvas'); o.width=r-l+1; o.height=b-t+1;
+  o.getContext('2d').drawImage(c,l,t,o.width,o.height,0,0,o.width,o.height);
+  return o;
 }
 async function readPdfDeck(file){
   await ensurePdfJs();
