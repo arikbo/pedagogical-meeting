@@ -124,6 +124,7 @@ button.ph:hover{border-color:var(--accent)}
 .rep b{grid-row:span 2;font-family:var(--display);font-size:44px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
 .rep span{font-weight:700;font-size:16px;line-height:1.3}
 .rep em{font-style:normal;font-size:13px;color:var(--ink-soft)}
+.rep.opt{border-style:dashed;background:var(--surface)}
 .rep em strong{display:block;color:var(--bad);font-size:14px;margin-top:2px}
 .deck{display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
 .deck-text{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}
@@ -182,6 +183,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
     <div class="rep"><b>98</b><span>סדין ציונים למועצות פדגוגיות</span><em>Excel</em></div>
     <div class="rep"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel · <strong>לסמן: רק אירועים לא מוצדקים</strong></em></div>
     <div class="rep"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF</em></div>
+    <div class="rep opt"><b>34</b><span>ציונים שוטפים (לא חובה)</span><em>Excel · ללחיצה על מקצוע במצגת</em></div>
     <div class="rep"><b>66</b><span>רשימת מורי הכיתה</span><em>Excel או PDF</em></div>
   </div>
   <p class="hint">כל הדוחות לאותה כיתה ולאותה תקופה. אפשר להוסיף גם מצגת מהישיבה הקודמת (PowerPoint או PDF) כדי להעתיק את המידע הכללי.</p>
@@ -239,7 +241,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 07:20</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 07:40</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -249,7 +251,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
 
 <script id="logic">
 /* ---------- pure logic (no DOM) ---------- */
@@ -339,7 +341,7 @@ function findHeaderRow(aoa){
 }
 /* columns that look like subject grades: mostly numbers in 0..100, header not an id/attendance/meta column */
 function gradeColumns(file){
-  const skip=/אירוע|ת\.?ז|תעודת|זהות|מספר|מס'|טלפון|חיסור|איחור|היעדר|העדר|נכשל|ממוצע|כיתה|שם|הקבצ|סה"כ|סה״כ|קוד|מזהה|גיל|שנת/;
+  const skip=/הערכה#|אירוע|ת\.?ז|תעודת|זהות|מספר|מס'|טלפון|חיסור|איחור|היעדר|העדר|נכשל|ממוצע|כיתה|שם|הקבצ|סה"כ|סה״כ|קוד|מזהה|גיל|שנת/;
   const mappedNonGrade=new Set(Object.entries(file.mapping).filter(([k,v])=>v>=0&&!CORE.includes(k)).map(([k,v])=>v));
   const out=[];
   file.headers.forEach((h,i)=>{
@@ -425,6 +427,7 @@ function buildStudents(files, opts){
         (st.src[f.id] ||= []).push({file:file.id,fileName:file.name,val:v});
       }
       for(const ci of gcols){ const x=toNum(row[ci]); if(x!=null) st.grades.push({subject:clean(file.headers[ci]),val:x,file:file.id}); }
+      if(file.assessCols) file.headers.forEach((hd,ci)=>{ const m=hd.match(/^הערכה#(\d+)$/); if(!m) return; const x=toNum(row[ci]); if(x!=null) (st.assess ||= []).push({...file.assessCols[+m[1]],grade:x}); });
       file.headers.forEach((hd,ci)=>{ if(!hd.startsWith(EV_PREFIX)) return; const t=hd.slice(EV_PREFIX.length), x=toNum(row[ci]);
         if(!eventTypes.includes(t)) eventTypes.push(t); if(x!=null) (st.evs ||= {})[t]=x; });
     }
@@ -473,7 +476,7 @@ function buildStudents(files, opts){
       math:toNum(val.math), lang:toNum(val.lang), eng:toNum(val.eng), sci:toNum(val.sci), geo:toNum(val.geo), hist:toNum(val.hist),
       gMath:val.gMath||'', gEng:val.gEng||'',
       iGen:val.iGen||'', iStr:val.iStr||'', iExc:val.iExc||'', iAtt:val.iAtt||'', iEmo:val.iEmo||'', iAns:val.iAns||'',
-      evs:st.evs||null,
+      evs:st.evs||null, assess:st.assess||null,
       gender:(()=>{ const g=clean(val.gender); return /^(ז|זכר|בן|m|male)/i.test(g)?'m':/^(נ|נקבה|בת|f|female)/i.test(g)?'f':null; })(),
       aliasKeys:Object.keys(aliasOf).filter(k=>aliasOf[k]===st.key),
       files:[...st.files]
@@ -618,7 +621,7 @@ function pdfItemsToAoa(pages){
 function sadinText(s){ return clean(String(s??'').replace(/``/g,'״').replace(/`/g,'׳')); }
 function parseSadin(aoa){
   let hr=-1, nameCol=-1;
-  for(let r=0;r<Math.min(aoa.length,40);r++){ const k=(aoa[r]||[]).findIndex(c=>/שם התלמיד\s*\//.test(clean(c))); if(k>=0){ hr=r; nameCol=k; break; } }
+  for(let r=0;r<Math.min(aoa.length,40);r++){ const k=(aoa[r]||[]).findIndex(c=>/שם התלמיד\s*\//.test(clean(c))&&/ממוצע/.test(clean(c))); if(k>=0){ hr=r; nameCol=k; break; } }
   if(hr<0) return null;
   const head=aoa[hr], starts=[];
   head.forEach((c,i)=>{ if(i<nameCol&&clean(c)) starts.push(i); });
@@ -654,6 +657,30 @@ function parseSadin(aoa){
   return out.length>1 ? {aoa:out, cls, teachers} : null;
 }
 
+/* ---------- ongoing grades: "דוח סדין אירועי הערכה לכיתה" ----------
+   Header row: one column per assessment ("עברית \n(teacher)"), then period, assessment name, "שליליים N". */
+function parseAssessReport(aoa){
+  let hr=-1, nameCol=-1;
+  for(let r=0;r<Math.min(aoa.length,40);r++){ const k=(aoa[r]||[]).findIndex(c=>/שם התלמיד\s*\/\s*ציונים שליליים/.test(clean(c))); if(k>=0){ hr=r; nameCol=k; break; } }
+  if(hr<0) return null;
+  const head=aoa[hr]||[], per=aoa[hr+1]||[], ev=aoa[hr+2]||[], cols=[];
+  let last='';
+  for(let i=0;i<nameCol;i++){
+    let subj=sadinText(String(head[i]??'').split('\n')[0]);
+    if(!subj&&clean(ev[i])) subj=last; if(!subj) continue; last=subj;
+    const m=subj.match(/^(.*?)\s+((?:הקבצה|מצוינות|מצויינות|רמה|מואץ|מקבץ|מגמה)(?:\s.*)?)$/);
+    cols.push({i, subject:(m?m[1]:subj).trim(), group:m?m[2].trim():'', event:sadinText(ev[i]).replace(/^\*+/,''), period:sadinText(per[i])});
+  }
+  if(!cols.length) return null;
+  const out=[['שם התלמיד',...cols.map((c,j)=>'הערכה#'+j)]];
+  for(let r=hr+3;r<aoa.length;r++){
+    const row=aoa[r]||[]; if(row.some(c=>/שליליים/.test(clean(c)))) continue;
+    const name=stripNum(row.slice(nameCol).map(sadinText).find(s=>/[\u05D0-\u05EA]/.test(s))||'');
+    if(!name||/הופק|:/.test(name)) continue;
+    out.push([name,...cols.map(c=>toNum(row[c.i])??'')]);
+  }
+  return out.length>1?{aoa:out,cols}:null;
+}
 /* ---------- a teachers list (e.g. Smart School report 66): columns teacher + subject ---------- */
 function parseTeachersReport(aoa){
   for(let r=0;r<Math.min(aoa.length,30);r++){
@@ -767,7 +794,7 @@ function pdfDeckPage(items, flip){
 function deckAoa(entries){
   return [['שם',...INFO.map(f=>INFO_HEAD[f])], ...entries.filter(e=>e.name).map(e=>[e.name,...INFO.map(f=>e.info[f]||'')])];
 }
-if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,parseTeachersReport,pickName,infoFromTableRows,pdfDeckPage,deckAoa,infoLabelStart};
+if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,parseTeachersReport,parseAssessReport,pickName,infoFromTableRows,pdfDeckPage,deckAoa,infoLabelStart};
 </script>
 
 <script>
@@ -821,6 +848,7 @@ let evHidden=new Set(); try{ evHidden=new Set(JSON.parse(localStorage.getItem('p
 const EV_OFF_DEFAULT=/לא התאמן|פלאפון|טלפון|פטפוט/;
 let evShown=new Set(); try{ evShown=new Set(JSON.parse(localStorage.getItem('pm.evShown')||'[]')); }catch(e){}
 function evIsHidden(t){ return evHidden.has(t)||(EV_OFF_DEFAULT.test(t)&&!evShown.has(t)); }
+function assessFor(s,field){ return (s.assess||[]).filter(a=>scoreHeader(field,a.subject)>0); }
 function absencesOf(s){ const t=(built.eventTypes||[]).find(x=>/חיסור/.test(x)); const v=t?s.evs?.[t]:null; return v!=null?v:(s.abs!=null?s.abs:null); }
 function posTypes(){ return (built.eventTypes||[]).filter(t=>POSITIVE_EV.test(t)&&!evIsHidden(t)); }
 function negTypes(){ return (built.eventTypes||[]).filter(t=>!POSITIVE_EV.test(t)&&!evIsHidden(t)); }
@@ -873,9 +901,10 @@ function renderEvPick(){
 }
 
 function addFileFromAoa(name, aoa){
-  const sadin=parseSadin(aoa), evRep=sadin?null:parseEventsReport(aoa);
+  const sadin=parseSadin(aoa), evRep=sadin?null:parseEventsReport(aoa), asRep=(sadin||evRep)?null:parseAssessReport(aoa);
+  if(asRep) aoa=asRep.aoa;
   if(sadin) aoa=sadin.aoa;
-  const tRep=(sadin||evRep)?null:parseTeachersReport(aoa);
+  const tRep=(sadin||evRep||asRep)?null:parseTeachersReport(aoa);
   if(tRep){ const file={id:'f'+(state.nextId++), name, headers:[], rows:[], mapping:{}, kind:'teachers', teachers:tRep}; state.files.push(file); return file; }
   if(evRep) aoa=evRep.aoa;
   const hr=findHeaderRow(aoa);
@@ -884,7 +913,7 @@ function addFileFromAoa(name, aoa){
   const safeHeaders=headers.map(h=>SENSITIVE_COL.test(h)?'':h); /* ID numbers, phones etc. are never read */
   const mapping=autoMap(safeHeaders);
   if(mapping.cls>=0){ const vals=rows.map(r=>clean(r[mapping.cls])).filter(Boolean); if(vals.length&&vals.filter(v=>/\d{5,}/.test(v)).length>vals.length/3) mapping.cls=-1; }
-  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':undefined, teachers:sadin?sadin.teachers:undefined};
+  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':asRep?'assess':undefined, teachers:sadin?sadin.teachers:undefined, assessCols:asRep?asRep.cols:undefined};
   state.files.push(file); return file;
 }
 function loadSample(){
@@ -929,7 +958,7 @@ function renderFiles(){
     const hasName=m.name>=0||m.first>=0||m.last>=0||f.kind==='teachers';
     const d=document.createElement('details'); d.className='file';
     d.innerHTML=`<summary><span class="fname">${esc(f.name)}</span>
-      <span class="chip">${f.kind==='deck'?`מצגת · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:f.kind==='teachers'?`מורי הכיתה · ${f.teachers.length}`:`${f.rows.length} שורות`}</span>
+      <span class="chip">${f.kind==='deck'?`מצגת · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:f.kind==='teachers'?`מורי הכיתה · ${f.teachers.length}`:f.kind==='assess'?`ציונים שוטפים · ${f.assessCols.length} הערכות`:`${f.rows.length} שורות`}</span>
       <span class="chip ${hasName?'ok':'bad'}">${hasName?mapped.length+' עמודות זוהו':'לא זוהתה עמודת שם'}</span>
       <span class="grow"></span><span class="chip">התאמת עמודות</span>
       <button class="btn small" type="button" data-del="${f.id}">הסרה</button></summary>
@@ -1419,7 +1448,7 @@ function pdfError(f,e){
 function noteData(fi,msgs,notes){
   if(fi.kind==='teachers'){ notes.push(`${fi.name}: רשימת מורים, ${fi.teachers.length} מקצועות.`); return; }
   if(!(fi.mapping.name>=0||fi.mapping.first>=0||fi.mapping.last>=0)) msgs.push(`${fi.name}: לא זוהתה עמודת שם. פתחו ״התאמת עמודות״ ובחרו אותה.`);
-  else notes.push(`${fi.name}: ${fi.kind==='sadin'?'סדין ציונים':fi.kind==='events'?'מונה אירועי שיעור':'דוח'}, ${fi.rows.length} שורות.`);
+  else notes.push(`${fi.name}: ${fi.kind==='sadin'?'סדין ציונים':fi.kind==='events'?'מונה אירועי שיעור':fi.kind==='assess'?'ציונים שוטפים':'דוח'}, ${fi.rows.length} שורות.`);
 }
 function addDeck(name,res,notes,msgs){
   if(!res.entries.length){ (msgs||notes).push(`${name}: לא נמצאו בקובץ שקפים של תלמידים עם שם.`); return; }
@@ -1639,16 +1668,22 @@ async function generate(){
       });
       coreTitleY=2.64+Math.ceil(neg.length/cols)*(ch+gy)+0.08;
     }
-    sl.addText('מקצועות ליבה',T({x:5.5,y:coreTitleY,w:4.75,h:0.32,fontSize:12,bold:true,color:C.soft}));
+    /* subjects with ongoing grades link to a hidden slide right after this one */
+    const S=sl._slideNum, detail=coreFor(st,s.cls).filter(c=>assessFor(st,c).length), detailNum=Object.fromEntries(detail.map((c,i)=>[c,S+1+i]));
+    sl.addText(detail.length?[{text:'מקצועות ליבה',options:{bold:true}},{text:'   · לחיצה על מקצוע מציגה את הציונים השוטפים',options:{bold:false,fontSize:10}}]:'מקצועות ליבה',T({x:5.5,y:coreTitleY,w:4.75,h:0.32,fontSize:12,bold:true,color:C.soft}));
     const core=coreFor(st,s.cls);
     const step=Math.min(0.66,(6.82-(coreTitleY+0.37))/core.length), rh=Math.min(0.56,step-0.06);
     core.forEach((c,i)=>{
       const y=coreTitleY+0.37+i*step, x=st[c], tone=scoreTone(x,pass);
       sl.addShape(pptx.ShapeType.roundRect,{x:5.5,y,w:4.75,h:rh,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.08});
-      sl.addText(FLABEL[c],T({x:8.95,y,w:1.15,h:rh,fontSize:14,bold:true}));
+      sl.addText(FLABEL[c],T({x:8.9,y,w:1.15,h:rh,fontSize:14,bold:true}));
       sl.addShape(pptx.ShapeType.roundRect,{x:6.45,y:y+rh/2-0.045,w:2.4,h:0.09,fill:{color:C.track},line:{color:C.track},rectRadius:0.04});
       if(x!=null&&x>0){ const w=2.4*Math.min(100,x)/100; sl.addShape(pptx.ShapeType.roundRect,{x:6.45+2.4-w,y:y+rh/2-0.045,w,h:0.09,fill:{color:BARC[c]},line:{color:BARC[c]},rectRadius:0.04}); }
       sl.addText(x==null?'אין ציון':fmt(x),T({x:5.6,y,w:0.8,h:rh,fontSize:x==null?11:18,bold:x!=null,color:tone==='none'?C.faint:C[tone],align:'center'}));
+      if(detailNum[c]){
+        sl.addText('›',T({x:10.08,y,w:0.16,h:rh,fontSize:16,bold:true,color:C.soft,align:'center'}));
+        sl.addShape(pptx.ShapeType.rect,{x:5.5,y,w:4.75,h:rh,fill:{color:'FFFFFF',transparency:100},line:{color:'FFFFFF',transparency:100},hyperlink:{slide:detailNum[c],tooltip:'ציונים שוטפים'}});
+      }
     });
 
     /* left: general info table */
@@ -1663,6 +1698,26 @@ async function generate(){
 
     if(flagsBy[st.key]) sl.addText('לבדיקה – ערכים שונים בדוחות: '+flagsBy[st.key].join(' · '),T({x:5.5,y:6.92,w:7.5,h:0.3,fontSize:10,color:C.bad,fit:'shrink'}));
     if(s.credit) sl.addText(s.credit,T({x:0.33,y:6.95,w:5,h:0.3,fontSize:9,color:C.faint,align:'left'}));
+
+    /* hidden slides: ongoing grades per subject (shown only when a subject is clicked) */
+    for(const c of detail){
+      const list=assessFor(st,c), ds=pptx.addSlide(); ds.hidden=true; ds.background={color:sl.background?.color||C.bg};
+      ds.addText(`${FLABEL[c]} · ${st.name}`,T({x:0.6,y:0.4,w:9.4,h:0.7,fontSize:28,bold:true}));
+      ds.addText('ציונים שוטפים'+(st[c]!=null?` · ציון בתעודה/ממוצע: ${fmt(st[c])}`:''),T({x:0.6,y:1.05,w:9.4,h:0.4,fontSize:15,color:C.soft}));
+      ds.addText('‹ חזרה לשקף התלמיד',T({x:0.5,y:0.45,w:2.6,h:0.5,fontSize:13,bold:true,color:'FFFFFF',align:'center',fill:{color:BARC[c]||C.blue},shape:pptx.ShapeType.roundRect,rectRadius:0.2,hyperlink:{slide:S,tooltip:'חזרה'}}));
+      /* bars, oldest to newest, right to left */
+      const n=list.length, top=2.05, bh=3.0, base=top+bh, gw=Math.min(1.3,11.6/Math.max(n,1)), x0=12.6;
+      ds.addShape(pptx.ShapeType.line,{x:0.9,y:base,w:11.8,h:0,line:{color:C.line,width:1}});
+      if(pass) ds.addShape(pptx.ShapeType.line,{x:0.9,y:base-bh*pass/100,w:11.8,h:0,line:{color:C.bad,width:1,dashType:'dash'}});
+      list.forEach((a,i)=>{
+        const x=x0-(i+1)*gw, hgt=bh*Math.min(100,a.grade)/100, col=a.grade<pass?C.bad:(BARC[c]||C.blue);
+        ds.addShape(pptx.ShapeType.roundRect,{x:x+gw*0.18,y:base-hgt,w:gw*0.64,h:Math.max(0.04,hgt),fill:{color:col},line:{color:col},rectRadius:0.04});
+        ds.addText(fmt(a.grade),T({x,y:base-hgt-0.42,w:gw,h:0.38,fontSize:16,bold:true,color:a.grade<pass?C.bad:C.ink,align:'center'}));
+        ds.addText([a.event,a.period].filter(Boolean).join('\n'),T({x,y:base+0.08,w:gw,h:0.75,fontSize:10,color:C.soft,align:'center',valign:'top',fit:'shrink'}));
+      });
+      if(!n) ds.addText('אין ציונים שוטפים',T({x:0.9,y:3,w:11.8,h:0.6,fontSize:18,color:C.faint,align:'center'}));
+      if(s.credit) ds.addText(s.credit,T({x:0.33,y:6.95,w:5,h:0.3,fontSize:9,color:C.faint,align:'left'}));
+    }
   }
   const fname=`ישיבה פדגוגית ${s.cls||''} ${dateTxt}`.replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim();
   const dl = window.claude?.use ? await window.claude.use('downloads') : null;
