@@ -866,7 +866,8 @@ function matchPhotos(){
     const free=built.students.filter(s=>!photoMap[s.key]&&!state.photos[s.key]&&!(s.aliasKeys||[]).some(a=>state.photos[a]));
     for(const k of [...lostPhotos]){
       const words=new Set([...nameKey(k).split(' '),...nameKey(state.photoText[k]||state.photoNames[k]||'').split(' ')].filter(w=>w.length>=2));
-      const hits=free.filter(s=>s.key.split(' ').some(w=>words.has(w)));
+      const sc=free.map(s=>[s,s.key.split(' ').filter(w=>words.has(w)).length]).filter(x=>x[1]>0);
+      const best=Math.max(0,...sc.map(x=>x[1])), hits=sc.filter(x=>x[1]===best).map(x=>x[0]);
       if(hits.length===1&&!photoMap[hits[0].key]){ photoMap[hits[0].key]=k; lostPhotos.splice(lostPhotos.indexOf(k),1); changed=true; break; }
     }
   }
