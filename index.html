@@ -119,6 +119,7 @@ button.ph:hover{border-color:var(--accent)}
 .rep b{grid-row:span 2;font-family:var(--display);font-size:44px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
 .rep span{font-weight:700;font-size:16px;line-height:1.3}
 .rep em{font-style:normal;font-size:13px;color:var(--ink-soft)}
+.rep em strong{display:block;color:var(--bad);font-size:14px;margin-top:2px}
 .deck{display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
 .deck-text{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}
 .deck h3{font-family:var(--display);font-size:19px;margin:0}
@@ -173,7 +174,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <p class="hint">הפיקו מסמארט סקול את ארבעת הדוחות האלה וגררו את כולם יחד לאזור למטה. האתר מזהה לבד מה כל קובץ. מהאייפון: שמרו את הקבצים באפליקציית הקבצים והעלו מכאן.</p>
   <div class="reps" aria-label="הדוחות להפקה מסמארט סקול">
     <div class="rep"><b>98</b><span>סדין ציונים למועצות פדגוגיות</span><em>Excel</em></div>
-    <div class="rep"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel</em></div>
+    <div class="rep"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel · <strong>לסמן: רק אירועים לא מוצדקים</strong></em></div>
     <div class="rep"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF</em></div>
     <div class="rep"><b>66</b><span>רשימת מורי הכיתה</span><em>Excel או PDF</em></div>
   </div>
@@ -227,7 +228,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 21.10.2026 · 20:00</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 07:00</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1610,7 +1611,7 @@ async function generate(){
     sl.addText('מידע כללי',T({x:0.5,y:0.7,w:4.6,h:0.45,fontSize:16,bold:true}));
     const absN=absencesOf(st);
     const rows=INFO.map((f,i)=>{ const fill={color:i%2?C.band:C.white};
-      const label=f==='iAtt'&&absN!=null?[{text:FLABEL[f],options:{bold:true,breakLine:true}},{text:`חיסורים: ${absN}`,options:{bold:true,color:C.warn}}]:FLABEL[f];
+      const label=f==='iAtt'&&absN!=null?[{text:FLABEL[f],options:{bold:true,breakLine:true}},{text:`חיסורים לא מוצדקים: ${absN}`,options:{bold:true,color:C.warn}}]:FLABEL[f];
       return [ {text:st[f]||'',options:T({fontSize:11,fill,valign:'top',margin:[4,6,4,6]})},
                {text:label,options:T({fontSize:11,bold:true,fill,valign:'top',margin:[4,6,4,6]})} ]; });
     sl.addTable(rows,{x:0.5,y:1.25,w:4.6,colW:[3.25,1.35],rowH:[1.0,0.85,0.85,0.95,0.9,0.95],border:{type:'solid',pt:0.75,color:'C9D3E6'},autoPage:false});
