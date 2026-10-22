@@ -178,14 +178,14 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
 
 <section class="step" aria-labelledby="h-files">
   <div class="step-head"><span class="num">1</span><h2 id="h-files">הקבצים</h2></div>
-  <p class="hint">הפיקו מסמארט סקול את ששת הדוחות האלה וגררו את כולם יחד לאזור למטה. האתר מזהה לבד מה כל קובץ. מהאייפון: שמרו את הקבצים באפליקציית הקבצים והעלו מכאן.</p>
+  <p class="hint">הפיקו מסמארט סקול את הדוחות האלה וגררו את כולם יחד לאזור למטה. האתר מזהה לבד מה כל קובץ. מהאייפון: שמרו את הקבצים באפליקציית הקבצים והעלו מכאן.</p>
   <div class="reps" aria-label="הדוחות להפקה מסמארט סקול">
     <div class="rep"><b>98</b><span>סדין ציונים למועצות פדגוגיות</span><em>Excel</em></div>
     <div class="rep"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel · <strong>לסמן: רק אירועים לא מוצדקים</strong></em></div>
     <div class="rep"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF</em></div>
     <div class="rep"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel · או דוח 34</em></div>
     <div class="rep"><b>58</b><span>שיוך תלמידי כיתה לקבוצות (הקבצות ובנים/בנות)</span><em>Excel</em></div>
-    <div class="rep"><b>66</b><span>רשימת מורי הכיתה</span><em>Excel או PDF</em></div>
+    <div class="rep"><b>66</b><span>רשימת מורי הכיתה</span><em>לא חובה אם הועלה דוח 58</em></div>
   </div>
   <p class="hint">כל הדוחות לאותה כיתה ולאותה תקופה. אפשר להוסיף גם מצגת מהישיבה הקודמת (PowerPoint או PDF) כדי להעתיק את המידע הכללי.</p>
   <div id="sampleBanner" class="sample"><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
@@ -242,7 +242,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 13:35</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 13:45</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1082,7 +1082,7 @@ function renderChecks(){
     <div class="stat"><b>${withPhoto}/${students.length}</b><span>עם תמונה</span></div>`;
   const box=$('#issues'); box.innerHTML='';
   const realFiles=state.files.filter(f=>!state.sample);
-  if(realFiles.length&&$('#sTeachers').checked&&!state.files.some(f=>f.kind==='teachers')){
+  if(realFiles.length&&$('#sTeachers').checked&&!state.files.some(f=>f.kind==='teachers'||f.kind==='groups')){
     const el=document.createElement('div'); el.className='issue missing';
     el.innerHTML=`<div class="issue-title">שקף מורי הכיתה: חסר דוח 66</div><span class="hint">בלי דוח 66 (רשימת מורי הכיתה/שכבה) יופיעו רק מורים שכבר הזינו ציונים בסדין.</span>`;
     box.appendChild(el);
