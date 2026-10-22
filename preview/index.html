@@ -239,7 +239,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 07:00</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 07:10</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1642,7 +1642,7 @@ async function generate(){
     sl.addText('מידע כללי',T({x:0.5,y:0.7,w:4.6,h:0.45,fontSize:16,bold:true}));
     const absN=absencesOf(st);
     const rows=INFO.map((f,i)=>{ const fill={color:i%2?TH.band:C.white};
-      const label=f==='iAtt'&&absN!=null?[{text:FLABEL[f],options:{bold:true,breakLine:true}},{text:`חיסורים לא מוצדקים: ${absN}`,options:{bold:true,color:C.warn}}]:FLABEL[f];
+      const label=f==='iAtt'&&absN!=null?[{text:FLABEL[f],options:{bold:true,breakLine:true}},{text:String(absN),options:{bold:true,color:C.warn,fontSize:22}}]:FLABEL[f];
       return [ {text:st[f]||'',options:T({fontSize:11,fill,valign:'top',margin:[4,6,4,6]})},
                {text:label,options:T({fontSize:11,bold:true,fill,valign:'top',margin:[4,6,4,6]})} ]; });
     sl.addTable(rows,{x:0.5,y:1.25,w:4.6,colW:[3.25,1.35],rowH:[1.0,0.85,0.85,0.95,0.9,0.95],border:{type:'solid',pt:0.75,color:'C9D3E6'},autoPage:false});
