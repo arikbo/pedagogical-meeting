@@ -177,7 +177,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
     <div class="rep"><b>98</b><span>סדין ציונים למועצות פדגוגיות</span><em>Excel</em></div>
     <div class="rep"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel · <strong>לסמן: רק אירועים לא מוצדקים</strong></em></div>
     <div class="rep"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF</em></div>
-    <div class="rep"><b>34</b><span>פירוט ציונים שוטפים לכיתה</span><em>Excel</em></div>
+    <div class="rep"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel</em></div>
     <div class="rep"><b>66</b><span>רשימת מורי הכיתה</span><em>Excel או PDF</em></div>
   </div>
   <p class="hint">כל הדוחות לאותה כיתה ולאותה תקופה. אפשר להוסיף גם מצגת מהישיבה הקודמת (PowerPoint או PDF) כדי להעתיק את המידע הכללי.</p>
@@ -230,7 +230,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 07:50</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 08:00</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -969,7 +969,7 @@ function renderChecks(){
   }
   if(realFiles.length&&!state.files.some(f=>f.kind==='assess')){
     const el=document.createElement('div'); el.className='issue missing';
-    el.innerHTML=`<div class="issue-title">חסר דוח 34 (ציונים שוטפים)</div><span class="hint">בלעדיו לחיצה על מקצוע במצגת לא תציג את הציונים השוטפים.</span>`;
+    el.innerHTML=`<div class="issue-title">חסר דוח 33 (ציונים שוטפים)</div><span class="hint">בלעדיו לחיצה על מקצוע במצגת לא תציג את הציונים השוטפים.</span>`;
     box.appendChild(el);
   }
   if(!state.sample&&state.files.length&&!clean($('#sTeacher').value)){
