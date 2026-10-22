@@ -242,7 +242,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 12:45</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 12:55</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -869,6 +869,17 @@ function matchPhotos(){
       if(t.length===1){ const hits=built.students.filter(s=>s.key.split(' ').includes(t[0])); if(hits.length===1) f=hits[0].key; }
     }
     if(f&&!photoMap[f]) photoMap[f]=k; else if(built.students.length) lostPhotos.push(k);
+  }
+  /* second pass: a photo whose name is only partly readable (e.g. just "יובל") goes to the one
+     student still without a photo who shares a name word with it */
+  for(let changed=true;changed;){
+    changed=false;
+    const free=built.students.filter(s=>!photoMap[s.key]&&!state.photos[s.key]&&!(s.aliasKeys||[]).some(a=>state.photos[a]));
+    for(const k of [...lostPhotos]){
+      const words=new Set([...nameKey(k).split(' '),...nameKey(state.photoText[k]||state.photoNames[k]||'').split(' ')].filter(w=>w.length>=2));
+      const hits=free.filter(s=>s.key.split(' ').some(w=>words.has(w)));
+      if(hits.length===1&&!photoMap[hits[0].key]){ photoMap[hits[0].key]=k; lostPhotos.splice(lostPhotos.indexOf(k),1); changed=true; break; }
+    }
   }
 }
 /* the class name comes from the reports, unless the teacher typed one */
