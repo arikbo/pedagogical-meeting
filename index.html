@@ -115,12 +115,33 @@ button.ph:hover{border-color:var(--accent)}
 .ch-row{display:grid;grid-template-columns:minmax(160px,220px) 1fr;gap:10px;align-items:start}
 @media (max-width:520px){ .ch-row{grid-template-columns:1fr} }
 .reps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-.rep{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:14px;align-items:center;border:2px solid var(--accent);border-radius:14px;padding:12px 16px;background:var(--accent-soft)}
-.rep b{grid-row:span 2;font-family:var(--display);font-size:44px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
-.rep span{font-weight:700;font-size:16px;line-height:1.3}
+.rep{position:relative;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 14px 10px 36px;background:var(--surface);transition:border-color .2s, background .2s}
+.rep b{grid-row:span 2;font-family:var(--display);font-size:28px;line-height:1;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.rep::after{content:'';position:absolute;left:12px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;border:2px solid var(--line);box-sizing:border-box}
+.rep.ok{border-color:var(--good);background:var(--good-bg)}
+.rep.ok b{color:var(--good)}
+.rep.ok::after{content:'✓';border:none;background:var(--good);color:#fff;font-size:11px;font-weight:700;line-height:16px;text-align:center}
+.rep span{font-weight:700;font-size:15px;line-height:1.3}
 .rep em{font-style:normal;font-size:13px;color:var(--ink-soft)}
 .rep.opt{border-style:dashed;background:var(--surface)}
-.rep em strong{display:block;color:var(--bad);font-size:14px;margin-top:2px}
+.rep em strong{display:block;color:var(--bad);font-size:13px;margin-top:2px}
+.reps-title{font-family:var(--display);font-size:16px;font-weight:600;margin:4px 0 -6px}
+.brand{display:flex;gap:20px;align-items:center}
+.brand img{width:88px;height:auto;flex:none}
+.brand-txt{display:flex;flex-direction:column;gap:8px;min-width:0}
+.howto{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px;padding:0;list-style:none;counter-reset:h}
+.howto li{counter-increment:h;display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--ink-soft)}
+.howto li::before{content:counter(h);flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-family:var(--display);font-weight:700;display:grid;place-items:center}
+.howto b{display:block;color:var(--ink);font-family:var(--display);font-size:16px}
+.drop.big{padding:40px 20px;border-color:var(--accent);background:var(--accent-soft)}
+.drop.big svg{width:44px;height:44px;color:var(--accent)}
+.drop.big strong{font-size:21px}
+.samplebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+details.more{border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+details.more summary{cursor:pointer;font-family:var(--display);font-weight:500;color:var(--ink-soft)}
+details.more[open] summary{margin-bottom:12px}
+@media (min-width:1000px){ .reps{grid-template-columns:repeat(5,1fr)} }
+@media (max-width:640px){ .howto{gap:8px} .howto li{flex-direction:column;text-align:center;gap:6px;padding:10px 6px;font-size:0} .howto b{font-size:14px} .howto li::before{font-size:15px} .brand{gap:12px} .brand img{width:56px} .drop.big{padding:28px 14px} }
 .deck{display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
 .deck-text{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}
 .deck h3{font-family:var(--display);font-size:19px;margin:0}
@@ -164,28 +185,40 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
 <body>
 <div class="wrap">
 <header>
-  <span class="eyebrow">ישיבה פדגוגית · מצגת אוטומטית מדוחות סמארט סקול</span>
-  <h1>מחולל ישיבה פדגוגית</h1>
-  <p class="lede">מעלים את הדוחות, בודקים סתירות, ומורידים מצגת PowerPoint עם שקף לכל תלמיד: ממוצע כללי, ציוני ליבה, נכשלים, איחורים, חיסורים, הקבצות ומידע כללי.</p>
+  <div class="brand">
+    <img src="atidim-logo.png" alt="סמל תיכון עתידים">
+    <div class="brand-txt">
+      <span class="eyebrow">ישיבה פדגוגית · מצגת אוטומטית מדוחות סמארט סקול</span>
+      <h1>מחולל ישיבה פדגוגית</h1>
+      <p class="lede">מעלים את הדוחות ומורידים מצגת PowerPoint עם שקף לכל תלמיד: ממוצע, ציוני ליבה, נכשלים, חיסורים, הקבצות ומידע כללי.</p>
+    </div>
+  </div>
+  <ol class="howto" aria-label="איך זה עובד">
+    <li><span><b>מפיקים</b>5 דוחות מסמארט סקול</span></li>
+    <li><span><b>גוררים</b>את כולם יחד לאתר</span></li>
+    <li><span><b>מורידים</b>מצגת מוכנה לישיבה</span></li>
+  </ol>
   <span class="privacy">הקבצים מעובדים במחשב שלכם בלבד. שום נתון לא נשלח לשרת.</span>
 </header>
 
 <section class="step" aria-labelledby="h-files">
   <div class="step-head"><span class="num">1</span><h2 id="h-files">הקבצים</h2></div>
-  <p class="hint">הפיקו מסמארט סקול את הדוחות האלה וגררו את כולם יחד לאזור למטה. האתר מזהה לבד מה כל קובץ.</p>
+  <div class="drop big" id="dropData" tabindex="0" role="button" aria-label="העלאת דוחות">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+    <strong>גררו לכאן את כל הדוחות יחד, או לחצו לבחירה</strong>
+    <span>האתר מזהה לבד מה כל קובץ · ‎.xlsx · .pdf · .pptx · .jpg · .zip</span>
+  </div>
+  <p class="reps-title">הדוחות שצריך להפיק מסמארט סקול <span class="hint">(מסומנים ב-✓ כשהם נקלטים)</span></p>
   <div class="reps" aria-label="הדוחות להפקה מסמארט סקול">
-    <div class="rep"><b>98</b><span>סדין ציונים למועצות פדגוגיות</span><em>Excel</em></div>
-    <div class="rep"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel · <strong>לסמן: רק אירועים לא מוצדקים</strong></em></div>
-    <div class="rep"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF</em></div>
-    <div class="rep"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel · או דוח 34</em></div>
-    <div class="rep"><b>58</b><span>שיוך תלמידי כיתה לקבוצות (הקבצות ובנים/בנות)</span><em>Excel</em></div>
+    <div class="rep" data-k="sadin"><b>98</b><span>סדין ציונים למועצות פדגוגיות</span><em>Excel</em></div>
+    <div class="rep" data-k="events"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel <strong>לסמן: רק אירועים לא מוצדקים</strong></em></div>
+    <div class="rep" data-k="assess"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel · או דוח 34</em></div>
+    <div class="rep" data-k="photos"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF</em></div>
+    <div class="rep" data-k="groups"><b>58</b><span>שיוך תלמידי כיתה לקבוצות</span><em>Excel · הקבצות ובנים/בנות</em></div>
   </div>
   <p class="hint">כל הדוחות לאותה כיתה ולאותה תקופה. אפשר להוסיף גם מצגת מהישיבה הקודמת (PowerPoint או PDF) כדי להעתיק את המידע הכללי.</p>
-  <div id="sampleBanner" class="sample"><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
-  <div class="drop" id="dropData" tabindex="0" role="button" aria-label="העלאת דוחות">
-    <strong>גררו לכאן את כל הקבצים, או לחצו לבחירה</strong>
-    <span>‎.xlsx · .pdf · .pptx · .jpg · .zip</span>
-  </div>
+  <div class="samplebar"><div id="sampleBanner" class="sample" hidden><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
+    <button class="btn small" type="button" id="bSample">רוצים לראות קודם איך זה נראה? הצגת דוגמה</button></div>
   <input type="file" id="inData" accept=".xlsx,.xls,.csv,.html,.htm,.pdf,.pptx,.ppt,.jpg,.jpeg,.png,.webp,.gif,.heic,.zip" multiple hidden>
   <span class="hint" id="photoInfo"></span>
   <span class="hint" id="deckInfo"></span>
@@ -200,12 +233,16 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
     <label>מחנך/ת (אם יש שניים: את שני השמות)<input type="text" id="sTeacher" placeholder="שם/שמות המחנכים"></label>
     <label>תאריך הישיבה<input type="date" id="sDate"></label>
     <label>בית הספר<input type="text" id="sSchool" placeholder="שם בית הספר" value="עתידים"></label>
+    <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה</label>
+    <label class="check"><input type="checkbox" id="sTop3"> שקף 3 התלמידים המצטיינים לפי ממוצע</label>
+  </div>
+  <details class="more"><summary>אפשרויות נוספות</summary>
+  <div class="form">
     <label>ציון נכשל: מתחת ל-<input type="number" id="sPass" value="55" min="0" max="100"></label>
     <label>שורת קרדיט בתחתית כל שקף<input type="text" id="sCredit" value="נבנה על ידי: אריק - @mathfun.with.arik"></label>
     <label class="check"><input type="checkbox" id="sBsd" checked> בס״ד בפינה הימנית העליונה</label>
-    <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה (לפי דוח 58; בלעדיו רק מורים שהזינו ציונים בסדין)</label>
-    <label class="check"><input type="checkbox" id="sTop3"> שקף 3 התלמידים המצטיינים לפי ממוצע</label>
   </div>
+  </details>
   <div class="changed">
     <h3>שקף ״תלמידים שעברו שינוי״ <span class="hint">(לא חובה)</span></h3>
     <p class="hint">בחרו עד 3 תלמידים וכתבו משפט או שניים על השינוי. השקף יופיע לפני שקפי התלמידים, עם התמונה של כל אחד והטקסט שכתבתם.</p>
@@ -220,17 +257,17 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="evpick" id="evPick" hidden></div>
 </section>
 
-<section class="step" aria-labelledby="h-check">
+<section class="step" id="stepCheck" aria-labelledby="h-check">
   <div class="step-head"><span class="num">3</span><h2 id="h-check">בדיקת נתונים</h2></div>
   <div class="stats" id="stats"></div>
   <div class="issues" id="issues"></div>
 </section>
 
-<section class="step" aria-labelledby="h-stu">
+<section class="step" id="stepStu" aria-labelledby="h-stu">
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 18:45</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 22:40</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1025,6 +1062,11 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
 function renderFiles(){
   const box=$('#files'); box.innerHTML='';
   $('#sampleBanner').hidden=!state.sample;
+  $('#bSample').hidden=state.sample||state.files.length>0;
+  $('#stepCheck').hidden=$('#stepStu').hidden=!state.files.length;
+  { const have={sadin:0,events:0,assess:0,groups:0}; if(!state.sample) for(const f of state.files) if(f.kind in have) have[f.kind]=1;
+    const ph=!state.sample&&Object.keys(state.photos||{}).length>0;
+    document.querySelectorAll('.rep[data-k]').forEach(el=>el.classList.toggle('ok',el.dataset.k==='photos'?ph:!!have[el.dataset.k])); }
   if(!state.files.length){ box.innerHTML='<div class="empty">עוד לא הועלו דוחות.</div>'; return; }
   for(const f of state.files){
     const m=f.mapping, mapped=FIELDS.filter(x=>m[x.id]>=0);
@@ -1957,7 +1999,8 @@ $('#bGen').onclick=async()=>{
   catch(e){ console.error(e); $('#status').textContent='יצירת המצגת נכשלה. רעננו את הדף ונסו שוב.'; }
   b.disabled=false; b.textContent=old;
 };
-loadSample();
+state.sample=false; refresh();
+$('#bSample').onclick=()=>{ loadSample(); };
 </script>
 </body>
 </html>
