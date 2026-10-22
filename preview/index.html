@@ -241,7 +241,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 13:55</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 14:05</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1918,7 +1918,12 @@ function wireDrop(zone,input,handler){
 }
 wireDrop($('#dropData'),$('#inData'),handleAny);
 $('#bLogos').onclick=()=>$('#inLogos').click();
-try{ const L=JSON.parse(localStorage.getItem('pm.logos')||'[]'); if(Array.isArray(L)&&L.length){ state.logos=L; handleLogos([]); } }catch(e){}
+/* the school logo is there by default; a teacher who removed or replaced it keeps their choice in this browser */
+(async()=>{
+  let saved=null; try{ saved=localStorage.getItem('pm.logos'); }catch(e){}
+  if(saved!=null){ try{ const L=JSON.parse(saved); if(Array.isArray(L)){ state.logos=L; handleLogos([]); } }catch(e){} return; }
+  try{ const b=await (await fetch('atidim-logo.png')).blob(); if(b.size&&!state.logos.length){ state.logos=[await fileToDataURL(b)]; $('#logos').innerHTML=state.logos.map((l,i)=>`<img src="${l}" alt="לוגו ${i+1}">`).join('')+'<button class="btn small" type="button" id="clrLogos">הסרת לוגואים</button>'; $('#clrLogos').onclick=()=>{ state.logos=[]; handleLogos([]); }; } }catch(e){}
+})();
 try{ const sc=localStorage.getItem('pm.school'); if(sc!=null) $('#sSchool').value=sc; }catch(e){}
 $('#sSchool').addEventListener('input',()=>{ try{ localStorage.setItem('pm.school',$('#sSchool').value); }catch(e){} });
 $('#inLogos').onchange=e=>{ handleLogos([...e.target.files]); e.target.value=''; };
