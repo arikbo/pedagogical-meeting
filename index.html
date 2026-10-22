@@ -172,12 +172,13 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
 
 <section class="step" aria-labelledby="h-files">
   <div class="step-head"><span class="num">1</span><h2 id="h-files">הקבצים</h2></div>
-  <p class="hint">הפיקו מסמארט סקול את חמשת הדוחות האלה וגררו את כולם יחד לאזור למטה. האתר מזהה לבד מה כל קובץ. מהאייפון: שמרו את הקבצים באפליקציית הקבצים והעלו מכאן.</p>
+  <p class="hint">הפיקו מסמארט סקול את ששת הדוחות האלה וגררו את כולם יחד לאזור למטה. האתר מזהה לבד מה כל קובץ. מהאייפון: שמרו את הקבצים באפליקציית הקבצים והעלו מכאן.</p>
   <div class="reps" aria-label="הדוחות להפקה מסמארט סקול">
     <div class="rep"><b>98</b><span>סדין ציונים למועצות פדגוגיות</span><em>Excel</em></div>
     <div class="rep"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel · <strong>לסמן: רק אירועים לא מוצדקים</strong></em></div>
     <div class="rep"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF</em></div>
     <div class="rep"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel</em></div>
+    <div class="rep"><b>58</b><span>שיוך תלמידי כיתה לקבוצות (הקבצות ובנים/בנות)</span><em>Excel</em></div>
     <div class="rep"><b>66</b><span>רשימת מורי הכיתה</span><em>Excel או PDF</em></div>
   </div>
   <p class="hint">כל הדוחות לאותה כיתה ולאותה תקופה. אפשר להוסיף גם מצגת מהישיבה הקודמת (PowerPoint או PDF) כדי להעתיק את המידע הכללי.</p>
@@ -230,7 +231,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 11:30</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 12:45</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -416,6 +417,7 @@ function buildStudents(files, opts){
         (st.src[f.id] ||= []).push({file:file.id,fileName:file.name,val:v});
       }
       for(const ci of gcols){ const x=toNum(row[ci]); if(x!=null) st.grades.push({subject:clean(file.headers[ci]),val:x,file:file.id}); }
+      if(file.groupCols) file.headers.forEach((hd,ci)=>{ const m=hd.match(/^ציון קבוצה#(\d+)$/); if(!m) return; const x=toNum(row[ci]); if(x!=null) (st.gg ||= []).push({...file.groupCols[+m[1]],grade:x}); });
       if(file.assessCols) file.headers.forEach((hd,ci)=>{ const m=hd.match(/^הערכה#(\d+)$/); if(!m) return; const x=toNum(row[ci]); if(x!=null) (st.assess ||= []).push({...file.assessCols[+m[1]],grade:x}); });
       file.headers.forEach((hd,ci)=>{ if(!hd.startsWith(EV_PREFIX)) return; const t=hd.slice(EV_PREFIX.length), x=toNum(row[ci]);
         if(!eventTypes.includes(t)) eventTypes.push(t); if(x!=null) (st.evs ||= {})[t]=x; });
@@ -428,7 +430,10 @@ function buildStudents(files, opts){
       const distinct=[]; for(const e of list){ if(!distinct.some(d=>sameVal(fid,d.val,e.val))) distinct.push(e); }
       const ck=st.key+'|'+fid;
       const fromEvents=list.filter(e=>dataFiles.find(f=>f.id===e.file)?.kind==='events');
-      if(distinct.length>1&&['events','abs','late'].includes(fid)&&fromEvents.length){
+      const fromGroups=list.filter(e=>dataFiles.find(f=>f.id===e.file)?.kind==='groups');
+      if(distinct.length>1&&['gMath','gEng','gender'].includes(fid)&&fromGroups.length){
+        val[fid]=fromGroups[fromGroups.length-1].val; /* report 58 holds the current grouping */
+      } else if(distinct.length>1&&['events','abs','late'].includes(fid)&&fromEvents.length){
         val[fid]=fromEvents[fromEvents.length-1].val; /* report 42 counts lesson events directly */
       } else if(distinct.length>1&&INFO.includes(fid)){
         /* general-info texts from several files (a deck + a PDF): keep them all, joined; the teacher can still pick one */
@@ -445,6 +450,12 @@ function buildStudents(files, opts){
         conflicts.push({key:st.key,name:st.name,field:fid,options:distinct,ck,resolved:chosen!=null,value:pick});
         val[fid]=pick;
       } else val[fid]=distinct[0].val;
+    }
+    /* a student who moved between groups has grades in both: take the grade of the current group */
+    const gk=g=>clean(g).replace(/[`'׳]/g,'׳').replace(/\s+/g,'').replace(/מצויינות/,'מצוינות');
+    for(const [fid,re] of [['math',/מתמטיקה|חשבון/],['eng',/אנגלית/]]){
+      const cur=val[fid==='math'?'gMath':'gEng']; if(!cur||!st.gg) continue;
+      const hit=st.gg.find(x=>re.test(x.base)&&gk(x.group)===gk(cur)); if(hit) val[fid]=String(hit.grade);
     }
     const ov=opts.overrides?.[st.key]||{}; Object.assign(val,ov);
     /* average: from report, else computed from detected grade columns, else from core */
@@ -623,13 +634,14 @@ function parseSadin(aoa){
   let cls='';
   for(let r=0;r<hr&&!cls;r++) for(const c of (aoa[r]||[])){ const m=sadinText(c).match(/לכיתה\s+([א-ת]+[׳']?\s*\d+)/); if(m){ cls=m[1].replace(/\s+/g,'').replace("'",'׳'); break; } }
   const bases=[...new Set(blocks.map(b=>b.base))];
-  const out=[['שם התלמיד','כיתה','ממוצע כללי','מספר נכשלים','אירועי שיעור',...bases,'הקבצה מתמטיקה','הקבצה אנגלית']];
+  const gBlocks=blocks.filter(b=>b.group);
+  const out=[['שם התלמיד','כיתה','ממוצע כללי','מספר נכשלים','אירועי שיעור',...bases,'הקבצה מתמטיקה','הקבצה אנגלית',...gBlocks.map((b,j)=>'ציון קבוצה#'+j)]];
   for(let r=hr+1;r<aoa.length;r++){
     const row=aoa[r]||[];
     const name=row.slice(nameCol).map(sadinText).find(s=>/[א-ת]/.test(s));
     if(!name||/ממוצע|חציון|ס\.תקן|שליליים|ציון\//.test(name)) continue;
     const fails=toNum(row[nameCol]), avg=toNum(row[nameCol+1]);
-    let ev=0, anyEv=false, gM='', gE=''; const grade={};
+    let ev=0, anyEv=false, gM='', gE=''; const grade={}, gGrade=gBlocks.map(()=>'');
     for(const b of blocks){
       const vals=row.slice(b.from,b.to+1).filter(c=>clean(c)!=='');
       if(!vals.length) continue;
@@ -637,13 +649,14 @@ function parseSadin(aoa){
       if(vals.length>=2){ e=vals[0]; g=vals[1]; } else if(typeof vals[0]==='number') e=vals[0]; else g=vals[0];
       const en=toNum(e); if(en!=null){ ev+=en; anyEv=true; }
       const gn=toNum(g); if(gn!=null&&grade[b.base]==null) grade[b.base]=gn;
+      if(gn!=null&&b.group) gGrade[gBlocks.indexOf(b)]=gn;
       if(b.group){ if(/מתמטיקה|חשבון/.test(b.base)&&!gM) gM=b.group; if(/אנגלית/.test(b.base)&&!gE) gE=b.group; }
     }
-    out.push([name, cls, avg??'', fails??'', anyEv?ev:'', ...bases.map(b=>grade[b]??''), gM, gE]);
+    out.push([name, cls, avg??'', fails??'', anyEv?ev:'', ...bases.map(b=>grade[b]??''), gM, gE, ...gGrade]);
   }
   /* who teaches what: the teacher's name sits in parentheses under each subject */
   const teachers=blocks.map(b=>{ const raw=String(head[b.from]); const t=sadinText((raw.match(/\(([^)]+)\)/)||['',''])[1]); return t?{subject:b.base,group:b.group,teacher:t}:null; }).filter(Boolean);
-  return out.length>1 ? {aoa:out, cls, teachers} : null;
+  return out.length>1 ? {aoa:out, cls, teachers, groupCols:gBlocks.map(b=>({base:b.base,group:b.group}))} : null;
 }
 
 /* ---------- ongoing grades: "דוח סדין אירועי הערכה לכיתה" ----------
@@ -669,6 +682,37 @@ function parseAssessReport(aoa){
     out.push([name,...cols.map(c=>toNum(row[c.i])??'')]);
   }
   return out.length>1?{aoa:out,cols}:null;
+}
+/* ---------- Smart School report 58: "שיוך תלמידי כיתה לקבוצות" ----------
+   One column per teaching group ("teacher, subject, classes (רמה: הקבצה א`)"), an X for each member,
+   then gender / class / ID / name. The current grouping comes from here; the ID column is never read. */
+function parseGroupsReport(aoa){
+  for(let r=0;r<Math.min(aoa.length,30);r++){
+    const row=(aoa[r]||[]).map(clean);
+    const ni=row.findIndex(c=>/^שם התלמיד$/.test(c)), gi=row.findIndex(c=>/^מין$/.test(c)), ci=row.findIndex(c=>/^כיתה$/.test(c));
+    if(ni<0||gi<0) continue;
+    const groups=[], teachers=[];
+    row.forEach((c,i)=>{
+      const line=sadinText(String((aoa[r]||[])[i]??'').split('\n')[0]);
+      const m=line.match(/^([^,]+),\s*([^,]+),\s*(.*)$/); if(!m) return;
+      const lv=(m[3].match(/\(רמה:\s*([^)]+)\)/)||['',''])[1].trim();
+      const subject=m[2].trim(), teacher=m[1].trim();
+      teachers.push({subject,group:lv,teacher});
+      if(lv) groups.push({i,subject,group:lv});
+    });
+    if(!teachers.length) return null;
+    const out=[['שם התלמיד','כיתה','מין','הקבצה מתמטיקה','הקבצה אנגלית']];
+    for(let k=r+1;k<aoa.length;k++){
+      const rw=aoa[k]||[], name=stripNum(sadinText(rw[ni]));
+      if(!name||!/[\u05D0-\u05EA]/.test(name)||/הופק|:/.test(name)) continue;
+      const mine=groups.filter(g=>/^x$/i.test(clean(rw[g.i])));
+      const gM=(mine.find(g=>/מתמטיקה|חשבון/.test(g.subject))||{}).group||'';
+      const gE=(mine.find(g=>/^אנגלית$/.test(g.subject))||mine.find(g=>/אנגלית/.test(g.subject))||{}).group||'';
+      out.push([name, ci>=0?sadinText(rw[ci]):'', sadinText(rw[gi]), gM, gE]);
+    }
+    return out.length>1?{aoa:out,teachers}:null;
+  }
+  return null;
 }
 /* ---------- a teachers list (e.g. Smart School report 66): columns teacher + subject ---------- */
 function parseTeachersReport(aoa){
@@ -827,7 +871,7 @@ function autoClass(){
 /* homeroom teacher(s) from report 66 (subject "חינוך"), unless typed by hand */
 function autoTeacher(){
   const inp=$('#sTeacher'); if(!(state.teacherAuto||!clean(inp.value))) return;
-  const names=[...new Set(state.files.filter(f=>f.kind==='teachers').flatMap(f=>f.teachers).filter(t=>/^חינוך$/.test(t.subject)).map(t=>t.teacher))];
+  const names=[...new Set(state.files.filter(f=>f.kind==='teachers'||f.kind==='groups').flatMap(f=>f.teachers).filter(t=>/^חינוך$/.test(t.subject)).map(t=>t.teacher))];
   if(names.length){ inp.value=names.join(' ו'); state.teacherAuto=true; }
 }
 function photoFor(s){ return state.photos[s.key] || (s.aliasKeys||[]).map(k=>state.photos[k]).find(Boolean) || (photoMap[s.key]&&state.photos[photoMap[s.key]]) || null; }
@@ -873,7 +917,9 @@ function addFileFromAoa(name, aoa){
   const sadin=parseSadin(aoa), evRep=sadin?null:parseEventsReport(aoa), asRep=(sadin||evRep)?null:parseAssessReport(aoa);
   if(asRep) aoa=asRep.aoa;
   if(sadin) aoa=sadin.aoa;
-  const tRep=(sadin||evRep||asRep)?null:parseTeachersReport(aoa);
+  const grRep=(sadin||evRep||asRep)?null:parseGroupsReport(aoa);
+  if(grRep) aoa=grRep.aoa;
+  const tRep=(sadin||evRep||asRep||grRep)?null:parseTeachersReport(aoa);
   if(tRep){ const file={id:'f'+(state.nextId++), name, headers:[], rows:[], mapping:{}, kind:'teachers', teachers:tRep}; state.files.push(file); return file; }
   if(evRep) aoa=evRep.aoa;
   const hr=findHeaderRow(aoa);
@@ -882,7 +928,7 @@ function addFileFromAoa(name, aoa){
   const safeHeaders=headers.map(h=>SENSITIVE_COL.test(h)?'':h); /* ID numbers, phones etc. are never read */
   const mapping=autoMap(safeHeaders);
   if(mapping.cls>=0){ const vals=rows.map(r=>clean(r[mapping.cls])).filter(Boolean); if(vals.length&&vals.filter(v=>/\d{5,}/.test(v)).length>vals.length/3) mapping.cls=-1; }
-  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':asRep?'assess':undefined, teachers:sadin?sadin.teachers:undefined, assessCols:asRep?asRep.cols:undefined};
+  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':asRep?'assess':grRep?'groups':undefined, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined};
   state.files.push(file); return file;
 }
 function loadSample(){
@@ -927,7 +973,7 @@ function renderFiles(){
     const hasName=m.name>=0||m.first>=0||m.last>=0||f.kind==='teachers';
     const d=document.createElement('details'); d.className='file';
     d.innerHTML=`<summary><span class="fname">${esc(f.name)}</span>
-      <span class="chip">${f.kind==='deck'?`מצגת · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:f.kind==='teachers'?`מורי הכיתה · ${f.teachers.length}`:f.kind==='assess'?`ציונים שוטפים · ${f.assessCols.length} הערכות`:`${f.rows.length} שורות`}</span>
+      <span class="chip">${f.kind==='deck'?`מצגת · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:f.kind==='teachers'?`מורי הכיתה · ${f.teachers.length}`:f.kind==='assess'?`ציונים שוטפים · ${f.assessCols.length} הערכות`:f.kind==='groups'?`שיוך לקבוצות · ${f.rows.length} תלמידים`:`${f.rows.length} שורות`}</span>
       <span class="chip ${hasName?'ok':'bad'}">${hasName?mapped.length+' עמודות זוהו':'לא זוהתה עמודת שם'}</span>
       <span class="grow"></span><span class="chip">התאמת עמודות</span>
       <button class="btn small" type="button" data-del="${f.id}">הסרה</button></summary>
@@ -964,7 +1010,7 @@ function renderChecks(){
   }
   if(realFiles.length&&built.students.length&&!built.students.some(s=>s.gender)){
     const el=document.createElement('div'); el.className='issue missing';
-    el.innerHTML=`<div class="issue-title">אין נתון בנים/בנות</div><span class="hint">כדי להציג כמה בנים וכמה בנות, העלו דוח עם עמודת ״מין״. בלעדיו השקף יציג רק את מספר התלמידים.</span>`;
+    el.innerHTML=`<div class="issue-title">אין נתון בנים/בנות</div><span class="hint">כדי להציג כמה בנים וכמה בנות, העלו את דוח 58 (שיוך תלמידי כיתה לקבוצות). בלעדיו השקף יציג רק את מספר התלמידים.</span>`;
     box.appendChild(el);
   }
   if(realFiles.length&&!state.files.some(f=>f.kind==='assess')){
@@ -1422,7 +1468,7 @@ function pdfError(f,e){
 function noteData(fi,msgs,notes){
   if(fi.kind==='teachers'){ notes.push(`${fi.name}: רשימת מורים, ${fi.teachers.length} מקצועות.`); return; }
   if(!(fi.mapping.name>=0||fi.mapping.first>=0||fi.mapping.last>=0)) msgs.push(`${fi.name}: לא זוהתה עמודת שם. פתחו ״התאמת עמודות״ ובחרו אותה.`);
-  else notes.push(`${fi.name}: ${fi.kind==='sadin'?'סדין ציונים':fi.kind==='events'?'מונה אירועי שיעור':fi.kind==='assess'?'ציונים שוטפים':'דוח'}, ${fi.rows.length} שורות.`);
+  else notes.push(`${fi.name}: ${fi.kind==='sadin'?'סדין ציונים':fi.kind==='events'?'מונה אירועי שיעור':fi.kind==='assess'?'ציונים שוטפים':fi.kind==='groups'?'שיוך לקבוצות (הקבצות ומין)':'דוח'}, ${fi.rows.length} שורות.`);
 }
 function addDeck(name,res,notes,msgs){
   if(!res.entries.length){ (msgs||notes).push(`${name}: לא נמצאו בקובץ שקפים של תלמידים עם שם.`); return; }
@@ -1576,7 +1622,8 @@ async function generate(){
 
   /* who teaches the class */
   const t66=state.files.filter(f=>f.kind==='teachers').flatMap(f=>f.teachers);
-  const tList=t66.length?t66:state.files.flatMap(f=>f.teachers||[]); /* the סדין lists only teachers who entered grades */
+  const t58=state.files.filter(f=>f.kind==='groups').flatMap(f=>f.teachers);
+  const tList=t66.length?t66:t58.length?t58:state.files.flatMap(f=>f.teachers||[]); /* the סדין lists only teachers who entered grades */
   if(s.showTeachers&&tList.length){
     /* one card per teacher, with every subject they teach in the class */
     const by={}; for(const t of tList){ if(/^חינוך$/.test(t.subject)) continue; (by[t.teacher] ||= new Set()).add(t.subject+(t.group?' ('+t.group+')':'')); }
