@@ -230,7 +230,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 15:45</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 15:55</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1861,7 +1861,7 @@ async function generate(){
       list.forEach((a,i)=>{
         const x=x0-(i+1)*gw, hgt=bh*Math.min(100,Math.max(0,a.grade))/100, bad=a.grade<pass, bc=bad?C.bad:col;
         ds.addShape(pptx.ShapeType.roundRect,{x:x+gw*0.22,y:base-hgt,w:gw*0.56,h:Math.max(0.04,hgt),fill:{color:bc},line:{color:bc},rectRadius:0.05});
-        ds.addText(fmt(a.grade),T({x,y:base-hgt-0.4,w:gw,h:0.36,fontSize:15,bold:true,color:bad?C.bad:C.ink,align:'center'}));
+        ds.addText(fmt(a.grade),T({x:x+gw*0.18,y:base-hgt-0.4,w:gw*0.64,h:0.34,fontSize:15,bold:true,color:bad?C.bad:C.ink,align:'center',fill:{color:C.white}})); /* white behind the number: the pass line never runs through it */
         ds.addText([a.event,a.period].filter(Boolean).join('\n'),T({x,y:base+0.08,w:gw,h:0.8,fontSize:10,color:C.soft,align:'center',valign:'top',fit:'shrink'}));
       });
       if(!n) ds.addText('אין ציונים שוטפים',T({x:0.9,y:3.9,w:11.3,h:0.6,fontSize:18,color:C.faint,align:'center'}));
