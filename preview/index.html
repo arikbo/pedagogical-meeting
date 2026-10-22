@@ -178,7 +178,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
 
 <section class="step" aria-labelledby="h-files">
   <div class="step-head"><span class="num">1</span><h2 id="h-files">הקבצים</h2></div>
-  <p class="hint">הפיקו מסמארט סקול את הדוחות האלה וגררו את כולם יחד לאזור למטה. האתר מזהה לבד מה כל קובץ. מהאייפון: שמרו את הקבצים באפליקציית הקבצים והעלו מכאן.</p>
+  <p class="hint">הפיקו מסמארט סקול את הדוחות האלה וגררו את כולם יחד לאזור למטה. האתר מזהה לבד מה כל קובץ.</p>
   <div class="reps" aria-label="הדוחות להפקה מסמארט סקול">
     <div class="rep"><b>98</b><span>סדין ציונים למועצות פדגוגיות</span><em>Excel</em></div>
     <div class="rep"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel · <strong>לסמן: רק אירועים לא מוצדקים</strong></em></div>
@@ -241,7 +241,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 14:15</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 15:35</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -746,6 +746,8 @@ function parseGroupsReport(aoa){
       if(lv) groups.push({i,subject,group:lv});
     });
     if(!teachers.length) return null;
+    const allCols=[]; row.forEach((c,i)=>{ const line=sadinText(String((aoa[r]||[])[i]??'').split('\n')[0]); const m=line.match(/^([^,]+),\s*([^,]+),/); if(m) allCols.push({i,subject:m[2].trim()}); });
+    const subjByName={};
     const out=[['שם התלמיד','כיתה','מין','הקבצה מתמטיקה','הקבצה אנגלית']];
     for(let k=r+1;k<aoa.length;k++){
       const rw=aoa[k]||[], name=stripNum(sadinText(rw[ni]));
@@ -754,8 +756,9 @@ function parseGroupsReport(aoa){
       const gM=(mine.find(g=>/מתמטיקה|חשבון/.test(g.subject))||{}).group||'';
       const gE=(mine.find(g=>/^אנגלית$/.test(g.subject))||mine.find(g=>/אנגלית/.test(g.subject))||{}).group||'';
       out.push([name, ci>=0?sadinText(rw[ci]):'', sadinText(rw[gi]), gM, gE]);
+      subjByName[nameKey(name)]=allCols.filter(g=>/^x$/i.test(clean(rw[g.i]))).map(g=>g.subject);
     }
-    return out.length>1?{aoa:out,teachers}:null;
+    return out.length>1?{aoa:out,teachers,subjByName}:null;
   }
   return null;
 }
@@ -1006,7 +1009,7 @@ function addFileFromAoa(name, aoa){
   const safeHeaders=headers.map(h=>SENSITIVE_COL.test(h)?'':h); /* ID numbers, phones etc. are never read */
   const mapping=autoMap(safeHeaders);
   if(mapping.cls>=0){ const vals=rows.map(r=>clean(r[mapping.cls])).filter(Boolean); if(vals.length&&vals.filter(v=>/\d{5,}/.test(v)).length>vals.length/3) mapping.cls=-1; }
-  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':asRep?'assess':grRep?'groups':undefined, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, title, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined};
+  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':asRep?'assess':grRep?'groups':undefined, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, title, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined, subjByName:grRep?grRep.subjByName:undefined};
   state.files.push(file); return file;
 }
 function loadSample(){
@@ -1164,8 +1167,8 @@ function renderStudents(){
   for(const s of built.students){
     const card=document.createElement('article'); card.className='card';
     const ph=photoFor(s);
-    const bars=coreFor(s,settings().cls).map(c=>{ const x=s[c], t=scoreTone(x,pass);
-      return `<div class="bar"><span>${FLABEL[c]}</span><span class="track"><span class="fill" style="width:${x??0}%;background:var(--${t==='none'?'line':t})"></span></span><span class="score" style="color:var(--${t==='none'?'ink-faint':t})">${x==null?'אין':fmt(x)}</span></div>`; }).join('');
+    const bars=coreFor(s,settings().cls).map(c=>{ const x=s[efField(s,c)], t=scoreTone(x,pass);
+      return `<div class="bar"><span>${FLABEL[c]}${efField(s,c)!==c?' (לומד/ת גאוגרפיה)':''}</span><span class="track"><span class="fill" style="width:${x??0}%;background:var(--${t==='none'?'line':t})"></span></span><span class="score" style="color:var(--${t==='none'?'ink-faint':t})">${x==null?'אין':fmt(x)}</span></div>`; }).join('');
     const tags=[s.gMath&&`<span class="chip">מתמטיקה: ${esc(s.gMath)}</span>`, s.gEng&&`<span class="chip">אנגלית: ${esc(s.gEng)}</span>`].filter(Boolean).join('');
     card.innerHTML=`<div class="card-top"><button class="ph" type="button" title="בחירת תמונה" aria-label="בחירת תמונה ל${esc(s.name)}">${ph?`<img src="${ph}" alt="">`:esc(initials(s.name))}</button>
       <div class="who"><b>${esc(s.name)}</b><span>${esc(s.cls||'כיתה לא ידועה')}</span></div></div>
@@ -1203,6 +1206,21 @@ function renderStudents(){
 }
 /* early in the year the סדין has no period grades yet: a subject's grade is then the weighted
    average of its ongoing assessments (report 33/34), in the student's current group when known */
+/* the row a core subject draws from: in ט a student who does not learn science but learns geography shows geography there */
+function efField(st,c){ return c==='sci'&&st.sciAsGeo?'geo':c; }
+function markSciAsGeo(students){
+  const subj={}; for(const f of state.files) if(f.subjByName) Object.assign(subj,f.subjByName);
+  const cls=settings().cls;
+  for(const s of students){
+    s.sciAsGeo=false;
+    const g=(clean(cls||s.cls||'').match(/[\u05D0-\u05EA]/)||[''])[0]; if(g!=='ט') continue;
+    const list=[s.key,...(s.aliasKeys||[])].map(k=>subj[k]).find(Boolean);
+    const sciRe=/מדעים|פיזיקה|כימיה|ביולוגיה/, geoRe=/גאוגרפיה|גיאוגרפיה|ג״ג|ג"ג/;
+    const learnsSci=list?list.some(x=>sciRe.test(x)):(s.sci!=null||assessFor(s,'sci').length>0);
+    const learnsGeo=list?list.some(x=>geoRe.test(x)):(s.geo!=null||assessFor(s,'geo').length>0);
+    s.sciAsGeo=!learnsSci&&learnsGeo;
+  }
+}
 function fillFromAssess(students,pass){
   const wOf=a=>{ const m=String(a.event||'').match(/(\d+(?:\.\d+)?)\s*%/); const w=m?+m[1]:1; return w>0?w:1; };
   const wavg=list=>{ let sw=0,sx=0; for(const a of list){ const w=wOf(a); sw+=w; sx+=w*a.grade; } return sw?Math.round(sx/sw*10)/10:null; };
@@ -1243,6 +1261,7 @@ function updateStatus(){
 function refresh(){
   built=buildStudents(state.files,{pass:settings().pass,choices:state.choices,overrides:state.overrides,links:state.links,noLink:state.noLink});
   fillFromAssess(built.students,settings().pass);
+  markSciAsGeo(built.students);
   matchPhotos();
   autoClass();
   autoTeacher();
@@ -1812,17 +1831,19 @@ async function generate(){
       coreTitleY=2.64+Math.ceil(neg.length/cols)*(ch+gy)+0.08;
     }
     /* subjects with ongoing grades link to a hidden slide right after this one */
-    const S=sl._slideNum, detail=coreFor(st,s.cls).filter(c=>assessFor(st,c).length), detailNum=Object.fromEntries(detail.map((c,i)=>[c,S+1+i]));
+    const S=sl._slideNum, detail=coreFor(st,s.cls).filter(c=>assessFor(st,efField(st,c)).length), detailNum=Object.fromEntries(detail.map((c,i)=>[c,S+1+i]));
     sl.addText(detail.length?[{text:'מקצועות ליבה',options:{bold:true}},{text:'   · לחיצה על מקצוע מציגה את הציונים השוטפים',options:{bold:false,fontSize:10}}]:'מקצועות ליבה',T({x:5.5,y:coreTitleY,w:4.75,h:0.32,fontSize:12,bold:true,color:C.soft}));
     const core=coreFor(st,s.cls);
     const step=Math.min(0.66,(6.82-(coreTitleY+0.37))/core.length), rh=Math.min(0.56,step-0.06);
     core.forEach((c,i)=>{
-      const y=coreTitleY+0.37+i*step, x=st[c], tone=scoreTone(x,pass);
+      const y=coreTitleY+0.37+i*step, x=st[efField(st,c)], tone=scoreTone(x,pass), asGeo=efField(st,c)!==c;
       sl.addShape(pptx.ShapeType.roundRect,{x:5.5,y,w:4.75,h:rh,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.08});
       const lnk=detailNum[c]?{hyperlink:{slide:detailNum[c],tooltip:'ציונים שוטפים'}}:{};
-      sl.addText(detailNum[c]?[{text:FLABEL[c],options:{...lnk}}]:FLABEL[c],T({x:8.9,y,w:1.15,h:rh,fontSize:14,bold:true,color:C.ink}));
+      if(asGeo){ const who=st.gender==='f'?'לומדת':st.gender==='m'?'לומד':'לומד/ת';
+        sl.addText([{text:FLABEL[c],options:{bold:true,fontSize:14,breakLine:true,...lnk}},{text:who+' גאוגרפיה',options:{bold:false,fontSize:9,color:C.soft,...lnk}}],T({x:8.9,y,w:1.15,h:rh,color:C.ink})); }
+      else sl.addText(detailNum[c]?[{text:FLABEL[c],options:{...lnk}}]:FLABEL[c],T({x:8.9,y,w:1.15,h:rh,fontSize:14,bold:true,color:C.ink}));
       sl.addShape(pptx.ShapeType.roundRect,{x:6.45,y:y+rh/2-0.045,w:2.4,h:0.09,fill:{color:C.track},line:{color:C.track},rectRadius:0.04});
-      if(x!=null&&x>0){ const w=2.4*Math.min(100,x)/100; sl.addShape(pptx.ShapeType.roundRect,{x:6.45+2.4-w,y:y+rh/2-0.045,w,h:0.09,fill:{color:BARC[c]},line:{color:BARC[c]},rectRadius:0.04}); }
+      if(x!=null&&x>0){ const w=2.4*Math.min(100,x)/100; sl.addShape(pptx.ShapeType.roundRect,{x:6.45+2.4-w,y:y+rh/2-0.045,w,h:0.09,fill:{color:BARC[efField(st,c)]},line:{color:BARC[efField(st,c)]},rectRadius:0.04}); }
       sl.addText(detailNum[c]?[{text:x==null?'אין ציון':fmt(x),options:{...lnk}}]:(x==null?'אין ציון':fmt(x)),T({x:5.6,y,w:0.8,h:rh,fontSize:x==null?11:18,bold:x!=null,color:tone==='none'?C.faint:C[tone],align:'center'}));
       if(detailNum[c]){
         sl.addText('›',T({x:10.08,y,w:0.16,h:rh,fontSize:16,bold:true,color:C.soft,align:'center'}));
@@ -1845,22 +1866,40 @@ async function generate(){
 
     /* hidden slides: ongoing grades per subject (shown only when a subject is clicked) */
     for(const c of detail){
-      const list=assessFor(st,c), ds=pptx.addSlide(); ds.hidden=true; ds.background={color:sl.background?.color||C.bg};
-      ds.addText(`${FLABEL[c]} · ${st.name}`,T({x:0.6,y:0.4,w:9.4,h:0.7,fontSize:28,bold:true}));
-      ds.addText('ציונים שוטפים'+(st[c]!=null?` · ציון בתעודה/ממוצע: ${fmt(st[c])}`:''),T({x:0.6,y:1.05,w:9.4,h:0.4,fontSize:15,color:C.soft}));
-      ds.addText('‹ חזרה לשקף התלמיד',T({x:0.5,y:0.45,w:2.6,h:0.5,fontSize:13,bold:true,color:'FFFFFF',align:'center',fill:{color:BARC[c]||C.blue},shape:pptx.ShapeType.roundRect,rectRadius:0.2,hyperlink:{slide:S,tooltip:'חזרה'}}));
-      /* bars, oldest to newest, right to left */
-      const n=list.length, top=2.05, bh=3.0, base=top+bh, gw=Math.min(1.3,11.6/Math.max(n,1)), x0=12.6;
-      ds.addShape(pptx.ShapeType.line,{x:0.9,y:base,w:11.8,h:0,line:{color:C.line,width:1}});
-      if(pass) ds.addShape(pptx.ShapeType.line,{x:0.9,y:base-bh*pass/100,w:11.8,h:0,line:{color:C.bad,width:1,dashType:'dash'}});
-      list.forEach((a,i)=>{
-        const x=x0-(i+1)*gw, hgt=bh*Math.min(100,a.grade)/100, col=a.grade<pass?C.bad:(BARC[c]||C.blue);
-        ds.addShape(pptx.ShapeType.roundRect,{x:x+gw*0.18,y:base-hgt,w:gw*0.64,h:Math.max(0.04,hgt),fill:{color:col},line:{color:col},rectRadius:0.04});
-        ds.addText(fmt(a.grade),T({x,y:base-hgt-0.42,w:gw,h:0.38,fontSize:16,bold:true,color:a.grade<pass?C.bad:C.ink,align:'center'}));
-        ds.addText([a.event,a.period].filter(Boolean).join('\n'),T({x,y:base+0.08,w:gw,h:0.75,fontSize:10,color:C.soft,align:'center',valign:'top',fit:'shrink'}));
+      const f=efField(st,c), list=assessFor(st,f), col=BARC[f]||C.blue, ds=pptx.addSlide(); ds.hidden=true; ds.background={color:PAGE};
+      ds.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:col},line:{color:col}});
+      bsd(ds);
+      /* header: subject, student, photo */
+      const grp=f==='math'?st.gMath:f==='eng'?st.gEng:'';
+      ds.addText('ציונים שוטפים · '+FLABEL[f]+(f!==c?' (במקום מדעים)':''),T({x:2.0,y:0.45,w:10.5,h:0.6,fontSize:28,bold:true,color:col}));
+      ds.addText([st.name,s.cls&&('כיתה '+s.cls),grp].filter(Boolean).join('   ·   '),T({x:2.0,y:1.05,w:10.5,h:0.4,fontSize:16,color:C.soft}));
+      const dph=photoFor(st); if(dph) ds.addImage({data:dph,x:0.6,y:0.4,w:1.1,h:1.1,rounding:true});
+      /* three key numbers */
+      const fails=list.filter(a=>a.grade<pass).length;
+      [[fmt(st[f]),(st.computedSubj||[]).includes(f)?'ממוצע (מציונים שוטפים)':'ציון במקצוע',C.ink],[String(list.length),'הערכות',C.ink],[String(fails),'מתחת ל-'+pass,fails?C.bad:C.good]].forEach(([num,lab,tone],k)=>{
+        const x=12.5-(k+1)*2.0+0.1;
+        ds.addShape(pptx.ShapeType.roundRect,{x,y:1.7,w:1.9,h:0.95,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.08});
+        ds.addText(num,T({x,y:1.72,w:1.9,h:0.55,fontSize:24,bold:true,color:tone,align:'center'}));
+        ds.addText(lab,T({x,y:2.25,w:1.9,h:0.32,fontSize:11,color:C.soft,align:'center'}));
       });
-      if(!n) ds.addText('אין ציונים שוטפים',T({x:0.9,y:3,w:11.8,h:0.6,fontSize:18,color:C.faint,align:'center'}));
+      /* bar chart, oldest on the right */
+      ds.addShape(pptx.ShapeType.roundRect,{x:0.6,y:2.9,w:11.9,h:3.55,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.08});
+      const n=list.length, bh=2.0, base=5.45, gw=Math.min(1.3,11.1/Math.max(n,1)), x0=6.55+n*gw/2; /* bars centred, oldest on the right */
+      ds.addShape(pptx.ShapeType.line,{x:0.9,y:base,w:11.3,h:0,line:{color:C.line,width:1}});
+      if(pass){ const py=base-bh*pass/100; ds.addShape(pptx.ShapeType.line,{x:0.9,y:py,w:11.3,h:0,line:{color:C.bad,width:1,dashType:'dash'}});
+        ds.addText('ציון עובר '+pass,T({x:0.9,y:py-0.27,w:1.4,h:0.25,fontSize:9,color:C.bad,align:'left'})); }
+      list.forEach((a,i)=>{
+        const x=x0-(i+1)*gw, hgt=bh*Math.min(100,Math.max(0,a.grade))/100, bad=a.grade<pass, bc=bad?C.bad:col;
+        ds.addShape(pptx.ShapeType.roundRect,{x:x+gw*0.22,y:base-hgt,w:gw*0.56,h:Math.max(0.04,hgt),fill:{color:bc},line:{color:bc},rectRadius:0.05});
+        ds.addText(fmt(a.grade),T({x,y:base-hgt-0.4,w:gw,h:0.36,fontSize:15,bold:true,color:bad?C.bad:C.ink,align:'center'}));
+        ds.addText([a.event,a.period].filter(Boolean).join('\n'),T({x,y:base+0.08,w:gw,h:0.8,fontSize:10,color:C.soft,align:'center',valign:'top',fit:'shrink'}));
+      });
+      if(!n) ds.addText('אין ציונים שוטפים',T({x:0.9,y:3.9,w:11.3,h:0.6,fontSize:18,color:C.faint,align:'center'}));
+      const whoBack=st.gender==='f'?'התלמידה':st.gender==='m'?'התלמיד':'התלמיד/ה';
+      ds.addText('לחצו בכל מקום על המסך כדי לחזור לשקף '+whoBack,T({x:0.6,y:6.58,w:11.9,h:0.3,fontSize:11,color:C.faint,align:'center'}));
       if(s.credit) ds.addText(s.credit,T({x:0.33,y:6.95,w:5,h:0.3,fontSize:9,color:C.faint,align:'left'}));
+      /* the whole slide is the way back */
+      ds.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.333,h:7.5,fill:{color:'FFFFFF',transparency:100},line:{color:'FFFFFF',transparency:100},hyperlink:{slide:S,tooltip:'חזרה לשקף '+whoBack}});
     }
   }
   const fname=`ישיבה פדגוגית ${s.cls||''} ${dateTxt}`.replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim();
