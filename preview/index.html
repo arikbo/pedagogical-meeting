@@ -241,7 +241,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 14:05</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 14:15</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1641,7 +1641,7 @@ async function generate(){
   const avgs=built.students.map(x=>x.avg).filter(x=>x!=null);
   const classAvg=avgs.length?avgs.reduce((a,b)=>a+b,0)/avgs.length:null;
   const credit=(sl)=>{ if(s.credit) sl.addText(s.credit,T({x:0.4,y:7.08,w:6,h:0.28,fontSize:9,color:C.faint,align:'left'})); };
-  const bsd=(sl)=>{ if(s.bsd) sl.addText('בס״ד',T({x:11.9,y:0.18,w:1.1,h:0.3,fontSize:11,color:C.soft})); };
+  const bsd=(sl)=>{ if(s.bsd) sl.addText('בס״ד',T({x:11.55,y:0.18,w:1.2,h:0.3,fontSize:11,color:C.soft})); }; /* clear of the accent bar on the right edge */
 
   /* cover: light, one accent, the class and its numbers */
   const cv=pptx.addSlide(); cv.background={color:PAGE};
@@ -1649,10 +1649,13 @@ async function generate(){
   cv.addShape(pptx.ShapeType.ellipse,{x:2.2,y:-1.7,w:3.4,h:3.4,fill:{color:TH.band},line:{color:TH.band}});
   cv.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
   bsd(cv);
-  let lx=0.6;
-  for(const l of state.logos){ const z=await imgSize(l); const hh=0.75, w=Math.min(2.2,hh*z.w/z.h);
-    cv.addShape(pptx.ShapeType.roundRect,{x:lx-0.1,y:0.35,w:w+0.2,h:hh+0.2,fill:{color:'FFFFFF'},rectRadius:0.08,line:{color:C.line,width:0.75}});
-    cv.addImage({data:l,x:lx,y:0.45,w,h:hh}); lx+=w+0.4; }
+  /* logos sit straight on the page, no frame: the first (the school's) large on the left, others in a row under it */
+  if(state.logos.length){
+    const z=await imgSize(state.logos[0]); let hh=2.5, w=hh*z.w/z.h; if(w>3.4){ w=3.4; hh=w*z.h/z.w; }
+    cv.addImage({data:state.logos[0],x:0.75+(3.4-w)/2,y:1.55+(2.5-hh)/2,w,h:hh});
+    let lx=0.75;
+    for(const l of state.logos.slice(1)){ const z2=await imgSize(l); const h2=0.8, w2=Math.min(1.6,h2*z2.w/z2.h); cv.addImage({data:l,x:lx,y:4.45,w:w2,h:h2}); lx+=w2+0.3; }
+  }
   if(s.school) cv.addText(s.school,T({x:4.6,y:1.75,w:7.9,h:0.45,fontSize:18,bold:true,color:C.soft}));
   cv.addText('ישיבה פדגוגית',T({x:4.6,y:2.2,w:7.9,h:1.1,fontSize:54,bold:true,color:C.ink}));
   if(s.cls) cv.addText('כיתה '+s.cls,T({x:4.6,y:3.3,w:7.9,h:0.7,fontSize:32,bold:true,color:ACC}));
