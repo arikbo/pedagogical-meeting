@@ -183,7 +183,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
     <div class="rep"><b>98</b><span>סדין ציונים למועצות פדגוגיות</span><em>Excel</em></div>
     <div class="rep"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel · <strong>לסמן: רק אירועים לא מוצדקים</strong></em></div>
     <div class="rep"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF</em></div>
-    <div class="rep"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel</em></div>
+    <div class="rep"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel · או דוח 34</em></div>
     <div class="rep"><b>58</b><span>שיוך תלמידי כיתה לקבוצות (הקבצות ובנים/בנות)</span><em>Excel</em></div>
     <div class="rep"><b>66</b><span>רשימת מורי הכיתה</span><em>Excel או PDF</em></div>
   </div>
@@ -242,7 +242,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 12:55</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 13:00</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -675,7 +675,7 @@ function parseSadin(aoa){
 function parseAssessReport(aoa){
   let hr=-1, nameCol=-1;
   for(let r=0;r<Math.min(aoa.length,40);r++){ const k=(aoa[r]||[]).findIndex(c=>/שם התלמיד\s*\/\s*ציונים שליליים/.test(clean(c))); if(k>=0){ hr=r; nameCol=k; break; } }
-  if(hr<0) return null;
+  if(hr<0) return parseAssess34(aoa);
   const head=aoa[hr]||[], per=aoa[hr+1]||[], ev=aoa[hr+2]||[], cols=[];
   let last='';
   for(let i=0;i<nameCol;i++){
@@ -693,6 +693,37 @@ function parseAssessReport(aoa){
     out.push([name,...cols.map(c=>toNum(row[c.i])??'')]);
   }
   return out.length>1?{aoa:out,cols}:null;
+}
+/* the same data as report 34: under each subject a triplet "אירוע / משקל / ציון" (grade, weight, event);
+   a student with several assessments in a subject gets more rows, the name only on the first */
+function parseAssess34(aoa){
+  let hr=-1, nameCol=-1;
+  for(let r=0;r<Math.min(aoa.length,40)&&hr<0;r++){
+    const row=(aoa[r]||[]).map(clean), k=row.findIndex(c=>/^שם התלמיד/.test(c));
+    if(k>=0&&(aoa[r+1]||[]).some(c=>/אירוע\s*\/\s*משקל/.test(clean(c)))){ hr=r; nameCol=k; }
+  }
+  if(hr<0) return null;
+  const head=aoa[hr], subs=[];
+  head.forEach((c,i)=>{ if(i<nameCol&&clean(c)){ const subj=sadinText(String(c).split('\n')[0]); const m=subj.match(/^(.*?)\s+((?:הקבצה|מצוינות|מצויינות|רמה|מואץ|מקבץ|מגמה)(?:\s.*)?)$/); subs.push({i,subject:(m?m[1]:subj).trim(),group:m?m[2].trim():''}); } });
+  if(!subs.length) return null;
+  const cols=[], colIx={}, per={}, order=[]; let cur=null, nth={};
+  for(let r=hr+2;r<aoa.length;r++){
+    const row=aoa[r]||[]; if(!row.some(c=>clean(c)!=='')) continue;
+    const nm=stripNum(row.slice(nameCol).map(sadinText).find(x=>/[\u05D0-\u05EA]/.test(x))||'');
+    if(nm){ if(/הופק|:/.test(nm)) continue; cur=nm; nth={}; if(!per[cur]){ per[cur]={}; order.push(cur); } }
+    if(!cur) continue;
+    for(const sb of subs){
+      const g=toNum(row[sb.i]), w=clean(row[sb.i+1]), e=sadinText(row[sb.i+2]).replace(/^\*+/,'');
+      if(!e&&g==null) continue;
+      const n=(nth[sb.i]=(nth[sb.i]||0)+1), key=sb.i+'|'+n+'|'+e;
+      if(colIx[key]==null){ colIx[key]=cols.length; const wn=toNum(w); cols.push({i:sb.i,subject:sb.subject,group:sb.group,event:e+(wn!=null&&wn<=1?' '+Math.round(wn*100)+'%':''),period:''}); }
+      if(g!=null) per[cur][colIx[key]]=g;
+    }
+  }
+  if(!cols.length||!order.length) return null;
+  const out=[['שם התלמיד',...cols.map((c,j)=>'הערכה#'+j)]];
+  for(const nm of order) out.push([nm,...cols.map((c,j)=>per[nm][j]??'')]);
+  return {aoa:out,cols};
 }
 /* ---------- Smart School report 58: "שיוך תלמידי כיתה לקבוצות" ----------
    One column per teaching group ("teacher, subject, classes (רמה: הקבצה א`)"), an X for each member,
@@ -957,6 +988,7 @@ function renderEvPick(){
 }
 
 function addFileFromAoa(name, aoa){
+  const title=aoa.slice(0,8).flat().map(c=>clean(c)).find(c=>/^דוח /.test(c))||'';
   const sadin=parseSadin(aoa), evRep=sadin?null:parseEventsReport(aoa), asRep=(sadin||evRep)?null:parseAssessReport(aoa);
   if(asRep) aoa=asRep.aoa;
   if(sadin) aoa=sadin.aoa;
@@ -971,7 +1003,7 @@ function addFileFromAoa(name, aoa){
   const safeHeaders=headers.map(h=>SENSITIVE_COL.test(h)?'':h); /* ID numbers, phones etc. are never read */
   const mapping=autoMap(safeHeaders);
   if(mapping.cls>=0){ const vals=rows.map(r=>clean(r[mapping.cls])).filter(Boolean); if(vals.length&&vals.filter(v=>/\d{5,}/.test(v)).length>vals.length/3) mapping.cls=-1; }
-  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':asRep?'assess':grRep?'groups':undefined, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined};
+  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':asRep?'assess':grRep?'groups':undefined, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, title, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined};
   state.files.push(file); return file;
 }
 function loadSample(){
@@ -1510,6 +1542,7 @@ function pdfError(f,e){
 }
 function noteData(fi,msgs,notes){
   if(fi.kind==='teachers'){ notes.push(`${fi.name}: רשימת מורים, ${fi.teachers.length} מקצועות.`); return; }
+  if(fi.kind!=='assess'&&fi.title&&/אירועי הערכה/.test(fi.title)) msgs.push(`${fi.name}: זה דוח אירועי הערכה (33/34), אבל המבנה שלו לא זוהה. שלחו את הקובץ לאריק.`);
   if(!(fi.mapping.name>=0||fi.mapping.first>=0||fi.mapping.last>=0)) msgs.push(`${fi.name}: לא זוהתה עמודת שם. פתחו ״התאמת עמודות״ ובחרו אותה.`);
   else notes.push(`${fi.name}: ${fi.kind==='sadin'?'סדין ציונים':fi.kind==='events'?'מונה אירועי שיעור':fi.kind==='assess'?'ציונים שוטפים':fi.kind==='groups'?'שיוך לקבוצות (הקבצות ומין)':'דוח'}, ${fi.rows.length} שורות.`);
 }
