@@ -231,7 +231,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 13:00</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 13:10</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -418,7 +418,11 @@ function buildStudents(files, opts){
       }
       for(const ci of gcols){ const x=toNum(row[ci]); if(x!=null) st.grades.push({subject:clean(file.headers[ci]),val:x,file:file.id}); }
       if(file.groupCols) file.headers.forEach((hd,ci)=>{ const m=hd.match(/^ציון קבוצה#(\d+)$/); if(!m) return; const x=toNum(row[ci]); if(x!=null) (st.gg ||= []).push({...file.groupCols[+m[1]],grade:x}); });
-      if(file.assessCols) file.headers.forEach((hd,ci)=>{ const m=hd.match(/^הערכה#(\d+)$/); if(!m) return; const x=toNum(row[ci]); if(x!=null) (st.assess ||= []).push({...file.assessCols[+m[1]],grade:x}); });
+      if(file.assessCols){ const prev=(st.assess||[]).filter(a=>a.file!==file.id), used=new Set();
+        file.headers.forEach((hd,ci)=>{ const m=hd.match(/^הערכה#(\d+)$/); if(!m) return; const x=toNum(row[ci]); if(x==null) return; const c=file.assessCols[+m[1]];
+          const dup=prev.findIndex((a,j)=>!used.has(j)&&a.grade===x&&a.subject===c.subject&&a.event.replace(/\s*\d+%$/,'')===c.event.replace(/\s*\d+%$/,''));
+          if(dup>=0){ used.add(dup); return; } /* the same assessment already came from report 33/34 */
+          (st.assess ||= []).push({...c,grade:x,file:file.id}); }); }
       file.headers.forEach((hd,ci)=>{ if(!hd.startsWith(EV_PREFIX)) return; const t=hd.slice(EV_PREFIX.length), x=toNum(row[ci]);
         if(!eventTypes.includes(t)) eventTypes.push(t); if(x!=null) (st.evs ||= {})[t]=x; });
     }
@@ -957,7 +961,7 @@ function renderEvPick(){
 }
 
 function addFileFromAoa(name, aoa){
-  const title=aoa.slice(0,8).flat().map(c=>clean(c)).find(c=>/^דוח /.test(c))||'';
+  const title=aoa.slice(0,10).flat().map(c=>clean(c)).find(c=>/^דוח |אירועי הערכה/.test(c))||'';
   const sadin=parseSadin(aoa), evRep=sadin?null:parseEventsReport(aoa), asRep=(sadin||evRep)?null:parseAssessReport(aoa);
   if(asRep) aoa=asRep.aoa;
   if(sadin) aoa=sadin.aoa;
@@ -1511,7 +1515,11 @@ function pdfError(f,e){
 }
 function noteData(fi,msgs,notes){
   if(fi.kind==='teachers'){ notes.push(`${fi.name}: רשימת מורים, ${fi.teachers.length} מקצועות.`); return; }
-  if(fi.kind!=='assess'&&fi.title&&/אירועי הערכה/.test(fi.title)) msgs.push(`${fi.name}: זה דוח אירועי הערכה (33/34), אבל המבנה שלו לא זוהה. שלחו את הקובץ לאריק.`);
+  if(fi.kind!=='assess'&&fi.title&&/אירועי הערכה/.test(fi.title)){
+    state.files=state.files.filter(f=>f!==fi);
+    msgs.push(/\.pdf$/i.test(fi.name)?`${fi.name}: דוח 33/34 נקרא רק כקובץ Excel. הפיקו אותו מחדש כ-Excel. (הקובץ לא נוסף.)`:`${fi.name}: זה דוח אירועי הערכה (33/34), אבל המבנה שלו לא זוהה. הקובץ לא נוסף. שלחו אותו לאריק.`);
+    return;
+  }
   if(!(fi.mapping.name>=0||fi.mapping.first>=0||fi.mapping.last>=0)) msgs.push(`${fi.name}: לא זוהתה עמודת שם. פתחו ״התאמת עמודות״ ובחרו אותה.`);
   else notes.push(`${fi.name}: ${fi.kind==='sadin'?'סדין ציונים':fi.kind==='events'?'מונה אירועי שיעור':fi.kind==='assess'?'ציונים שוטפים':fi.kind==='groups'?'שיוך לקבוצות (הקבצות ומין)':'דוח'}, ${fi.rows.length} שורות.`);
 }
