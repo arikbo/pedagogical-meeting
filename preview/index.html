@@ -242,7 +242,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 13:20</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 13:35</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1855,13 +1855,50 @@ async function generate(){
     }
   }
   const fname=`ישיבה פדגוגית ${s.cls||''} ${dateTxt}`.replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim();
+  let blob;
+  try{ blob=await returnShows(await pptx.write({outputType:'arraybuffer'})); }
+  catch(e){ console.error(e); blob=await pptx.write({outputType:'blob'}); }
   const dl = window.claude?.use ? await window.claude.use('downloads') : null;
   if(dl){
-    const blob = await pptx.write({outputType:'blob'});
     try{ await dl.save({filename:fname+'.pptx', data:blob}); return 'saved'; }
     catch(e){ return e?.code==='declined' ? 'declined' : 'failed'; }
   }
-  await pptx.writeFile({fileName:fname+'.pptx'}); return 'saved';
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname+'.pptx';
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },4000); return 'saved';
+}
+/* Each ongoing-grades slide becomes a one-slide custom show opened with "show and return":
+   in the slideshow, "next" (click, arrow, mouse wheel) on it goes back to the student's slide.
+   Its back button jumps to the last slide viewed. */
+async function returnShows(ab){
+  const zip=await JSZip.loadAsync(ab);
+  const pres=await zip.file('ppt/presentation.xml').async('string');
+  const prels=await zip.file('ppt/_rels/presentation.xml.rels').async('string');
+  const ridOf={};
+  for(const m of prels.matchAll(/<Relationship\b[^>]*>/g)){ const id=(m[0].match(/\bId="([^"]+)"/)||[])[1], t=(m[0].match(/\bTarget="([^"]+)"/)||[])[1]||''; const f=t.match(/slides\/(slide\d+\.xml)$/); if(id&&f) ridOf[f[1]]=id; }
+  const files=Object.keys(ridOf), xml={}, hidden=new Set();
+  for(const f of files){ xml[f]=await zip.file('ppt/slides/'+f).async('string'); if(/<p:sld\b[^>]*\bshow="0"/.test(xml[f])) hidden.add(f); }
+  if(!hidden.size) return new Blob([ab],{type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+  const showId={}; [...hidden].forEach((f,i)=>showId[f]=i);
+  for(const f of files){
+    const relsPath='ppt/slides/_rels/'+f+'.rels', rf=zip.file(relsPath); if(!rf) continue;
+    const rels=await rf.async('string'), target={};
+    for(const m of rels.matchAll(/<Relationship\b[^>]*>/g)){ const id=(m[0].match(/\bId="([^"]+)"/)||[])[1], t=((m[0].match(/\bTarget="([^"]+)"/)||[])[1]||'').split('/').pop(); if(id&&ridOf[t]) target[id]=t; }
+    let changed=false;
+    const out=xml[f].replace(/<a:hlinkClick\b[^>]*>/g,tag=>{
+      const rid=(tag.match(/\br:id="([^"]*)"/)||[])[1], to=target[rid]; if(!to||!/hlinksldjump/.test(tag)) return tag;
+      let act=null;
+      if(!hidden.has(f)&&hidden.has(to)) act='ppaction://customshow?id='+showId[to]+'&amp;return=true';
+      else if(hidden.has(f)&&!hidden.has(to)) act='ppaction://hlinkshowjump?jump=lastslideviewed';
+      if(!act) return tag; changed=true;
+      return tag.replace(/\br:id="[^"]*"/,'r:id=""').replace(/\baction="[^"]*"/,'action="'+act+'"');
+    });
+    if(changed) zip.file('ppt/slides/'+f,out);
+  }
+  const lst='<p:custShowLst>'+[...hidden].map(f=>`<p:custShow name="ציונים שוטפים ${showId[f]+1}" id="${showId[f]}"><p:sldLst><p:sld r:id="${ridOf[f]}"/></p:sldLst></p:custShow>`).join('')+'</p:custShowLst>';
+  const at=['<p:photoAlbum','<p:custDataLst','<p:kinsoku','<p:defaultTextStyle','<p:modifyVerifier','<p:extLst','</p:presentation>'].map(t=>pres.indexOf(t)).filter(i=>i>=0);
+  const pos=Math.min(...at);
+  zip.file('ppt/presentation.xml',pres.slice(0,pos)+lst+pres.slice(pos));
+  return zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
 }
 
 /* ---------- wiring ---------- */
