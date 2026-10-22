@@ -241,7 +241,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 08:00</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 11:30</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1681,10 +1681,11 @@ async function generate(){
     core.forEach((c,i)=>{
       const y=coreTitleY+0.37+i*step, x=st[c], tone=scoreTone(x,pass);
       sl.addShape(pptx.ShapeType.roundRect,{x:5.5,y,w:4.75,h:rh,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.08});
-      sl.addText(FLABEL[c],T({x:8.9,y,w:1.15,h:rh,fontSize:14,bold:true}));
+      const lnk=detailNum[c]?{hyperlink:{slide:detailNum[c],tooltip:'ציונים שוטפים'}}:{};
+      sl.addText(detailNum[c]?[{text:FLABEL[c],options:{...lnk}}]:FLABEL[c],T({x:8.9,y,w:1.15,h:rh,fontSize:14,bold:true,color:C.ink}));
       sl.addShape(pptx.ShapeType.roundRect,{x:6.45,y:y+rh/2-0.045,w:2.4,h:0.09,fill:{color:C.track},line:{color:C.track},rectRadius:0.04});
       if(x!=null&&x>0){ const w=2.4*Math.min(100,x)/100; sl.addShape(pptx.ShapeType.roundRect,{x:6.45+2.4-w,y:y+rh/2-0.045,w,h:0.09,fill:{color:BARC[c]},line:{color:BARC[c]},rectRadius:0.04}); }
-      sl.addText(x==null?'אין ציון':fmt(x),T({x:5.6,y,w:0.8,h:rh,fontSize:x==null?11:18,bold:x!=null,color:tone==='none'?C.faint:C[tone],align:'center'}));
+      sl.addText(detailNum[c]?[{text:x==null?'אין ציון':fmt(x),options:{...lnk}}]:(x==null?'אין ציון':fmt(x)),T({x:5.6,y,w:0.8,h:rh,fontSize:x==null?11:18,bold:x!=null,color:tone==='none'?C.faint:C[tone],align:'center'}));
       if(detailNum[c]){
         sl.addText('›',T({x:10.08,y,w:0.16,h:rh,fontSize:16,bold:true,color:C.soft,align:'center'}));
         sl.addShape(pptx.ShapeType.rect,{x:5.5,y,w:4.75,h:rh,fill:{color:'FFFFFF',transparency:100},line:{color:'FFFFFF',transparency:100},hyperlink:{slide:detailNum[c],tooltip:'ציונים שוטפים'}});
