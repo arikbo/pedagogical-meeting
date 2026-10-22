@@ -185,7 +185,6 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
     <div class="rep"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF</em></div>
     <div class="rep"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel · או דוח 34</em></div>
     <div class="rep"><b>58</b><span>שיוך תלמידי כיתה לקבוצות (הקבצות ובנים/בנות)</span><em>Excel</em></div>
-    <div class="rep"><b>66</b><span>רשימת מורי הכיתה</span><em>לא חובה אם הועלה דוח 58</em></div>
   </div>
   <p class="hint">כל הדוחות לאותה כיתה ולאותה תקופה. אפשר להוסיף גם מצגת מהישיבה הקודמת (PowerPoint או PDF) כדי להעתיק את המידע הכללי.</p>
   <div id="sampleBanner" class="sample"><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
@@ -203,14 +202,14 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
 <section class="step" aria-labelledby="h-meta">
   <div class="step-head"><span class="num">2</span><h2 id="h-meta">פרטי הישיבה</h2></div>
   <div class="form">
-    <label>כיתה<input type="text" id="sClass" placeholder="ח׳3"></label>
+    <label>כיתה <span class="hint">(נשאב אוטומטית מהדוחות / רשמו בעצמכם)</span><input type="text" id="sClass" placeholder="ח׳3"></label>
     <label>מחנך/ת (אם יש שניים: את שני השמות)<input type="text" id="sTeacher" placeholder="שם/שמות המחנכים"></label>
     <label>תאריך הישיבה<input type="date" id="sDate"></label>
-    <label>בית הספר<input type="text" id="sSchool" placeholder="שם בית הספר"></label>
+    <label>בית הספר<input type="text" id="sSchool" placeholder="שם בית הספר" value="עתידים"></label>
     <label>ציון נכשל: מתחת ל-<input type="number" id="sPass" value="55" min="0" max="100"></label>
     <label>שורת קרדיט בתחתית כל שקף<input type="text" id="sCredit" value="נבנה על ידי: אריק - @mathfun.with.arik"></label>
     <label class="check"><input type="checkbox" id="sBsd" checked> בס״ד בפינה הימנית העליונה</label>
-    <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה (לפי דוח 66; בלעדיו רק מורים שהזינו ציונים בסדין)</label>
+    <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה (לפי דוח 58; בלעדיו רק מורים שהזינו ציונים בסדין)</label>
     <label class="check"><input type="checkbox" id="sTop3"> שקף 3 התלמידים המצטיינים לפי ממוצע</label>
   </div>
   <div class="changed">
@@ -224,7 +223,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
     <div id="changedRows"></div>
   </div>
   <div class="uploads">
-    <button class="btn" id="bLogos" type="button">הוספת לוגואים לשקף הפתיחה</button>
+    <button class="btn" id="bLogos" type="button">הוספת סמל בית הספר / לוגואים לשקף הפתיחה</button>
     <input type="file" id="inLogos" accept="image/*" multiple hidden>
     <span class="hint">תמונה לתלמיד בודד: לחצו על העיגול בכרטיס שלו.</span>
   </div>
@@ -242,7 +241,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 13:45</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 13:55</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1084,7 +1083,7 @@ function renderChecks(){
   const realFiles=state.files.filter(f=>!state.sample);
   if(realFiles.length&&$('#sTeachers').checked&&!state.files.some(f=>f.kind==='teachers'||f.kind==='groups')){
     const el=document.createElement('div'); el.className='issue missing';
-    el.innerHTML=`<div class="issue-title">שקף מורי הכיתה: חסר דוח 66</div><span class="hint">בלי דוח 66 (רשימת מורי הכיתה/שכבה) יופיעו רק מורים שכבר הזינו ציונים בסדין.</span>`;
+    el.innerHTML=`<div class="issue-title">שקף מורי הכיתה: חסר דוח 58</div><span class="hint">בלי דוח 58 (שיוך תלמידי כיתה לקבוצות) יופיעו רק מורים שכבר הזינו ציונים בסדין.</span>`;
     box.appendChild(el);
   }
   if(realFiles.length&&built.students.length&&!built.students.some(s=>s.gender)){
@@ -1376,8 +1375,15 @@ async function handlePhotos(list,outNotes){
   if(outNotes) outNotes.push(line); else $('#deckInfo').textContent=line;
   refresh();
 }
+async function logoData(f){
+  const d=await fileToDataURL(f);
+  return new Promise(res=>{ const img=new Image(); img.onload=()=>{ const k=Math.min(1,500/Math.max(img.width,img.height)), c=document.createElement('canvas');
+    c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/png')); };
+    img.onerror=()=>res(d); img.src=d; });
+}
 async function handleLogos(list){
-  for(const f of list){ const d=await fileToDataURL(f); state.logos.push(d); }
+  for(const f of list){ state.logos.push(await logoData(f)); }
+  try{ localStorage.setItem('pm.logos',JSON.stringify(state.logos)); }catch(e){}
   $('#logos').innerHTML=state.logos.map((l,i)=>`<img src="${l}" alt="לוגו ${i+1}">`).join('') + (state.logos.length?'<button class="btn small" type="button" id="clrLogos">הסרת לוגואים</button>':'');
   const b=$('#clrLogos'); if(b) b.onclick=()=>{ state.logos=[]; handleLogos([]); };
 }
@@ -1912,6 +1918,9 @@ function wireDrop(zone,input,handler){
 }
 wireDrop($('#dropData'),$('#inData'),handleAny);
 $('#bLogos').onclick=()=>$('#inLogos').click();
+try{ const L=JSON.parse(localStorage.getItem('pm.logos')||'[]'); if(Array.isArray(L)&&L.length){ state.logos=L; handleLogos([]); } }catch(e){}
+try{ const sc=localStorage.getItem('pm.school'); if(sc!=null) $('#sSchool').value=sc; }catch(e){}
+$('#sSchool').addEventListener('input',()=>{ try{ localStorage.setItem('pm.school',$('#sSchool').value); }catch(e){} });
 $('#inLogos').onchange=e=>{ handleLogos([...e.target.files]); e.target.value=''; };
 ['#sPass','#sCredit'].forEach(id=>$(id).addEventListener('input',refresh));
 $('#sTeacher').addEventListener('input',()=>{ state.teacherAuto=false; renderChecks(); updateStatus(); });
