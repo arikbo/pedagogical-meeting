@@ -278,7 +278,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 22.10.2026 · 22:40</span></footer>
+<footer><span id="credit"></span> · <span id="ver">גרסה 24.10.2026 · 09:10</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1949,8 +1949,8 @@ async function generate(){
       const whoBack=st.gender==='f'?'התלמידה':st.gender==='m'?'התלמיד':'התלמיד/ה';
       ds.addText('לחצו בכל מקום על המסך כדי לחזור לשקף '+whoBack,T({x:0.6,y:6.58,w:11.9,h:0.3,fontSize:11,color:C.faint,align:'center'}));
       if(s.credit) ds.addText(s.credit,T({x:0.33,y:6.95,w:5,h:0.3,fontSize:9,color:C.faint,align:'left'}));
-      /* the whole slide is the way back */
-      ds.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.333,h:7.5,fill:{color:'FFFFFF',transparency:100},line:{color:'FFFFFF',transparency:100},hyperlink:{slide:S,tooltip:'חזרה לשקף '+whoBack}});
+      /* no link on this slide: a plain click (like the mouse wheel) is "next", which ends the one-slide
+         custom show and returns to the student's slide (PowerPoint's "show and return") */
     }
   }
   const fname=`ישיבה פדגוגית ${s.cls||''} ${dateTxt}`.replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim();
