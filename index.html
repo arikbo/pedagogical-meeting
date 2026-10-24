@@ -114,6 +114,11 @@ button.ph:hover{border-color:var(--accent)}
 .changed h3{font-family:var(--display);font-size:19px;margin:0}
 .ch-row{display:grid;grid-template-columns:minmax(160px,220px) 1fr;gap:10px;align-items:start}
 @media (max-width:520px){ .ch-row{grid-template-columns:1fr} }
+.preview-tag{display:inline-block;width:fit-content;font-family:var(--display);font-weight:700;font-size:15px;color:#7A4A00;background:#FFE9B8;border-radius:999px;padding:6px 14px}
+.themes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.themes label{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 8px;cursor:pointer;background:var(--surface);font-size:15px}
+.themes label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.themes .sw{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
 .reps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .rep{position:relative;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 14px 10px 36px;background:var(--surface);transition:border-color .2s, background .2s}
 .rep b{grid-row:span 2;font-family:var(--display);font-size:28px;line-height:1;color:var(--ink-faint);font-variant-numeric:tabular-nums}
@@ -245,6 +250,11 @@ footer a:hover{text-decoration:underline}
   </div>
   </details>
   <div class="changed">
+    <h3>צבע המצגת</h3>
+    <div class="themes" id="themes"></div>
+    <span class="hint" id="themeNote"></span>
+  </div>
+  <div class="changed">
     <h3>שקף ״תלמידים שעברו שינוי״ <span class="hint">(לא חובה)</span></h3>
     <p class="hint">בחרו עד 3 תלמידים וכתבו משפט או שניים על השינוי. השקף יופיע לפני שקפי התלמידים, עם התמונה של כל אחד והטקסט שכתבתם.</p>
     <div id="changedRows"></div>
@@ -268,7 +278,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 20:25</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 20:30</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1000,6 +1010,26 @@ function negTypes(){ return (built.eventTypes||[]).filter(t=>!POSITIVE_EV.test(t
 function posSum(s){ const v=posTypes().map(t=>s.evs?.[t]).filter(x=>x!=null); const n=v.reduce((a,b)=>a+b,0); return n>0?n:null; }
 function posLabel(){ return posTypes().join(' + ')||'צל״ש'; }
 function shownEvents(s){ return s.evs ? built.eventTypes.filter(t=>!evIsHidden(t)&&s.evs[t]!=null).map(t=>({t,n:s.evs[t],pos:POSITIVE_EV.test(t)})) : []; }
+/* light color themes; by default the grade picks one (ז blue, ח mint, ט lavender) */
+const THEMES={
+  blue:{name:'כחול',acc:'2F5BD8',page:'F6F8FC',bg:'F3F5FA',band:'EEF3FC',tint:'EAF0FF',edge:'C3D2F7'},
+  mint:{name:'ירוק מנטה',acc:'1F8A70',page:'F3FAF7',bg:'F1F8F5',band:'E6F4EE',tint:'E3F4EC',edge:'B9E0D0'},
+  lavender:{name:'סגול לבנדר',acc:'6D5BD0',page:'F7F5FD',bg:'F5F3FC',band:'EFECFB',tint:'ECE8FC',edge:'CFC7F3'},
+  peach:{name:'אפרסק',acc:'D9692B',page:'FDF7F3',bg:'FBF4EF',band:'FBEDE3',tint:'FCEBDF',edge:'F2CDB4'},
+  sky:{name:'תכלת',acc:'0E86A8',page:'F2F9FC',bg:'EFF7FA',band:'E3F2F8',tint:'E0F1F7',edge:'B3DDEB'},
+  rose:{name:'ורוד',acc:'C2477A',page:'FCF5F8',bg:'FAF2F6',band:'F8E6EE',tint:'F9E4ED',edge:'EDC0D3'}
+};
+const GRADE_THEME={'ז':'blue','ח':'mint','ט':'lavender'};
+state.theme='auto';
+function gradeOf(cls){ return (clean(cls||'').match(/[\u05D0-\u05EA]/)||[''])[0]; }
+function themeKey(){ return state.theme!=='auto'?state.theme:(GRADE_THEME[gradeOf(settings().cls)]||'blue'); }
+function renderThemes(){
+  const box=$('#themes'); if(!box) return;
+  const opts=[['auto','אוטומטי לפי שכבה',null],...Object.entries(THEMES).map(([k,t])=>[k,t.name,t.acc])];
+  box.innerHTML=opts.map(([k,n,c])=>`<label><input type="radio" name="theme" value="${k}" ${state.theme===k?'checked':''}>${c?`<span class="sw" style="background:#${c}"></span>`:''}${n}</label>`).join('');
+  box.querySelectorAll('input').forEach(r=>r.onchange=()=>{ state.theme=r.value; renderThemes(); });
+  const k=themeKey(); $('#themeNote').textContent=state.theme==='auto'?`לכיתה ${settings().cls||'—'}: ${THEMES[k].name}. ז׳ כחול · ח׳ ירוק מנטה · ט׳ סגול לבנדר.`:`המצגת תהיה ב${THEMES[k].name}.`;
+}
 function renderChanged(){
   const box=$('#changedRows'); if(!box) return; box.innerHTML='';
   state.changed.forEach((c,i)=>{
@@ -1303,7 +1333,7 @@ function refresh(){
   matchPhotos();
   autoClass();
   autoTeacher();
-  renderFiles(); renderChecks(); renderEvPick(); renderChanged(); renderStudents(); updateStatus();
+  renderFiles(); renderChecks(); renderEvPick(); renderChanged(); renderThemes(); renderStudents(); updateStatus();
 }
 
 /* ---------- file reading ---------- */
@@ -1700,7 +1730,7 @@ async function generate(){
   const s=settings(), pass=s.pass;
   const pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE'; pptx.rtlMode=true; pptx.title='ישיבה פדגוגית '+(s.cls||'');
   const dateTxt = s.date ? s.date.split('-').reverse().join('.') : '';
-  const ACC='2F5BD8', PAGE='F6F8FC';
+  const TH=THEMES[themeKey()], ACC=TH.acc, PAGE=TH.page;
   const avgs=built.students.map(x=>x.avg).filter(x=>x!=null);
   const classAvg=avgs.length?avgs.reduce((a,b)=>a+b,0)/avgs.length:null;
   const credit=()=>{}; /* no credit line on the slides; only the cover carries one */
@@ -1708,8 +1738,8 @@ async function generate(){
 
   /* cover: light, one accent, the class and its numbers */
   const cv=pptx.addSlide(); cv.background={color:PAGE};
-  cv.addShape(pptx.ShapeType.ellipse,{x:-1.6,y:3.4,w:5.6,h:5.6,fill:{color:'E6EDFF'},line:{color:'E6EDFF'}});
-  cv.addShape(pptx.ShapeType.ellipse,{x:2.2,y:-1.7,w:3.4,h:3.4,fill:{color:'EEF3FC'},line:{color:'EEF3FC'}});
+  cv.addShape(pptx.ShapeType.ellipse,{x:-1.6,y:3.4,w:5.6,h:5.6,fill:{color:TH.tint},line:{color:TH.tint}});
+  cv.addShape(pptx.ShapeType.ellipse,{x:2.2,y:-1.7,w:3.4,h:3.4,fill:{color:TH.band},line:{color:TH.band}});
   cv.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
   bsd(cv);
   /* logos sit straight on the page, no frame: the first (the school's) large on the left, others in a row under it */
@@ -1831,7 +1861,7 @@ async function generate(){
 
   const flagsBy={}; for(const c of built.conflicts) if(!c.resolved)(flagsBy[c.key] ||= []).push(`${FLABEL[c.field]} (${c.options.map(o=>o.val).join(' / ')})`);
   for(const st of built.students){
-    const sl=pptx.addSlide(); sl.background={color:C.bg};
+    const sl=pptx.addSlide(); sl.background={color:TH.bg};
     if(s.bsd) sl.addText('בס״ד',T({x:11.9,y:0.15,w:1.1,h:0.3,fontSize:11,color:C.soft}));
     /* right: profile */
     sl.addShape(pptx.ShapeType.roundRect,{x:10.5,y:0.6,w:2.5,h:6.25,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.12});
@@ -1900,7 +1930,7 @@ async function generate(){
     sl.addShape(pptx.ShapeType.roundRect,{x:0.33,y:0.6,w:4.95,h:6.25,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.12});
     sl.addText('מידע כללי',T({x:0.5,y:0.7,w:4.6,h:0.45,fontSize:16,bold:true}));
     const absN=absencesOf(st);
-    const rows=INFO.map((f,i)=>{ const fill={color:i%2?C.band:C.white};
+    const rows=INFO.map((f,i)=>{ const fill={color:i%2?TH.band:C.white};
       const label=f==='iAtt'&&absN!=null?[{text:FLABEL[f],options:{bold:true,breakLine:true}},{text:'חיסורים: ',options:{bold:true,color:C.warn}},{text:String(absN),options:{bold:true,color:C.warn,fontSize:22}}]:FLABEL[f];
       return [ {text:st[f]||'',options:T({fontSize:11,fill,valign:'top',margin:[4,6,4,6]})},
                {text:label,options:T({fontSize:11,bold:true,fill,valign:'top',margin:[4,6,4,6]})} ]; });
@@ -2016,7 +2046,7 @@ $('#sSchool').addEventListener('input',()=>{ try{ localStorage.setItem('pm.schoo
 $('#inLogos').onchange=e=>{ handleLogos([...e.target.files]); e.target.value=''; };
 ['#sPass'].forEach(id=>$(id).addEventListener('input',refresh));
 $('#sTeacher').addEventListener('input',()=>{ state.teacherAuto=false; renderChecks(); updateStatus(); });
-$('#sClass').addEventListener('input',()=>{ state.clsAuto=false; });
+$('#sClass').addEventListener('input',()=>{ state.clsAuto=false; renderThemes(); });
 $('#bGen').onclick=async()=>{
   const b=$('#bGen'); b.disabled=true; const old=b.textContent; b.textContent='יוצר מצגת…';
   try{ const r=await generate();
