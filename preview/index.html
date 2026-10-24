@@ -279,7 +279,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 19:50</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 20:00</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -412,6 +412,8 @@ function nameDist(a,b){
   if(A.length!==B.length){
     const [s,l]=A.length<B.length?[A,B]:[B,A];
     if(s.length>=2&&s.every(t=>l.includes(t))) return 0.5;
+    const letters=x=>x.join('').split('').sort().join('');
+    if(letters(A)===letters(B)) return 1;
     return 99;
   }
   if(A.length>4) return 99;
@@ -439,15 +441,27 @@ function buildStudents(files, opts){
   const dataFiles=files.filter(f=>f.mapping&&(f.mapping.name>=0||f.mapping.first>=0||f.mapping.last>=0))
     .sort((a,b)=>(b.kind==='sadin')-(a.kind==='sadin')||(a.kind==='deck')-(b.kind==='deck')); /* the reference spelling first */
   /* reference spelling: the סדין when there is one, else all Smart School reports (decks are typed by hand) */
-  const anchorFiles=dataFiles.some(f=>f.kind==='sadin')?dataFiles.filter(f=>f.kind==='sadin'):dataFiles.filter(f=>f.kind!=='deck');
+  /* the class list: the סדין, else report 58, else all Smart School reports (decks are typed by hand) */
+  const isRoster=f=>f.kind==='sadin'||f.kind==='groups';
+  const anchorFiles=dataFiles.some(f=>f.kind==='sadin')?dataFiles.filter(f=>f.kind==='sadin'):dataFiles.some(f=>f.kind==='groups')?dataFiles.filter(f=>f.kind==='groups'):dataFiles.filter(f=>f.kind!=='deck');
   const anchorIds=new Set(anchorFiles.map(f=>f.id)), anchors=new Set();
   if(dataFiles.length>anchorFiles.length) for(const f of anchorFiles) for(const row of f.rows){ const nm=rowName(f,row); if(nm&&nm.length>=2) anchors.add(nameKey(nm)); }
+  /* report 58 is a full class list too: a student it has that the סדין lacks (no grades yet) joins the list */
+  if(anchors.size) for(const f of dataFiles.filter(f=>isRoster(f)&&!anchorIds.has(f.id))){
+    const add=[]; for(const row of f.rows){ const nm=rowName(f,row); if(!nm||nm.length<2) continue; const k=nameKey(nm);
+      if(!anchors.has(k)&&!opts.links?.[k]&&!fuzzyFind(k,anchors)) add.push(k); }
+    for(const k of add) anchors.add(k);
+  }
   const autoLinks=[], unmatched=new Map(), aliasOf={};
+  /* a name from another report that matches no one on the class list gets NO slide of its own
+     (that is how duplicates were made); the teacher can link it to a student or add it on purpose */
   const resolveKey=(file,k,nm)=>{
     if(anchorIds.has(file.id)||!anchors.size||anchors.has(k)) return k;
     const man=opts.links?.[k]; if(man&&anchors.has(man)){ aliasOf[k]=man; return man; }
     if(!opts.noLink?.[k]){ const f=fuzzyFind(k,anchors); if(f){ autoLinks.push({raw:k,rawName:nm,to:f,file:file.name}); aliasOf[k]=f; return f; } }
-    unmatched.set(k,{key:k,name:nm,file:file.name}); return k;
+    const keep=!!opts.noLink?.[k];
+    if(!unmatched.has(k)) unmatched.set(k,{key:k,name:nm,file:file.name,kept:keep});
+    return keep?k:null;
   };
   for(const file of dataFiles){
     const gcols=gradeColumns(file);
@@ -455,7 +469,7 @@ function buildStudents(files, opts){
       const nm=rowName(file,row); if(!nm||nm.length<2) continue;
       if(/^(סה"כ|סה״כ|ממוצע|סיכום)/.test(nm)||/הופק|:/.test(nm)) continue;
       if(scoreHeader('name',nm)>0||scoreHeader('first',nm)>0||scoreHeader('last',nm)>0) continue; /* repeated header row */
-      const key=resolveKey(file,nameKey(nm),nm);
+      const key=resolveKey(file,nameKey(nm),nm); if(key==null) continue;
       if(!byKey.has(key)) byKey.set(key,{key,name:nm,src:{},files:new Set(),grades:[]});
       const st=byKey.get(key); st.files.add(file.id);
       for(const f of FIELDS){
@@ -1183,10 +1197,11 @@ function renderChecks(){
   for(const u of lost){
     const el=document.createElement('div'); el.className='issue missing';
     const id='link-'+u.key.replace(/\s/g,'_');
-    el.innerHTML=`<div class="issue-title">״${esc(u.name)}״ מ${esc(u.file)} לא נמצא/ה בדוחות. אולי השם כתוב אחרת?</div>
-      <label class="hint" for="${id}">לשייך ל:</label><select id="${id}"><option value="">תלמיד/ה נפרד/ת (להשאיר)</option>${(built.roster||[]).map(r=>`<option value="${esc(r.key)}">${esc(r.name)}</option>`).join('')}</select>`;
-    const sel=el.querySelector('select'); sel.value=state.links[u.key]||'';
-    sel.onchange=()=>{ if(sel.value){ state.links[u.key]=sel.value; delete state.noLink[u.key]; } else { delete state.links[u.key]; state.noLink[u.key]=true; } refresh(); };
+    el.innerHTML=`<div class="issue-title">״${esc(u.name)}״ מ${esc(u.file)} לא נמצא/ה ברשימת הכיתה. אולי השם כתוב אחרת? בחרו את התלמיד/ה.</div>
+      <label class="hint" for="${id}">מה לעשות:</label><select id="${id}"><option value="">לא להוסיף (אין לו/ה שקף)</option><option value="__keep">להוסיף כתלמיד/ה נפרד/ת</option><optgroup label="זה התלמיד/ה:">${(built.roster||[]).map(r=>`<option value="${esc(r.key)}">${esc(r.name)}</option>`).join('')}</optgroup></select>`;
+    const sel=el.querySelector('select'); sel.value=state.links[u.key]||(state.noLink[u.key]?'__keep':'');
+    sel.onchange=()=>{ delete state.links[u.key]; delete state.noLink[u.key];
+      if(sel.value==='__keep') state.noLink[u.key]=true; else if(sel.value) state.links[u.key]=sel.value; refresh(); };
     box.appendChild(el);
   }
   if(!conflicts.length&&!missing.length&&!links.length&&!lost.length&&!lostPhotos.length&&clsSet.length<2){ box.insertAdjacentHTML('beforeend','<div class="empty">לא נמצאו סתירות בין הדוחות.</div>'); } /* keep the notes above it */
