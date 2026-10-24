@@ -239,6 +239,7 @@ footer a:hover{text-decoration:underline}
     <label>כיתה <span class="hint">(נשאב אוטומטית מהדוחות / רשמו בעצמכם)</span><input type="text" id="sClass" placeholder="ח׳3"></label>
     <label>מחנך/ת (אם יש שניים: את שני השמות)<input type="text" id="sTeacher" placeholder="שם/שמות המחנכים"></label>
     <label>תאריך הישיבה<input type="date" id="sDate"></label>
+    <label>חיסורים בשורת ״ביקור סדיר״: להציג מ- <span class="hint">(חובה)</span><input type="number" id="sAbsMin" min="0" step="1" inputmode="numeric" placeholder="מספר חיסורים, למשל 5"></label>
     <label>בית הספר<input type="text" id="sSchool" placeholder="שם בית הספר" value="עתידים"></label>
     <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה</label>
     <label class="check"><input type="checkbox" id="sTop3"> שקף 3 התלמידים המצטיינים לפי ממוצע</label>
@@ -278,7 +279,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 20:30</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 20:40</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1103,7 +1104,7 @@ function loadSample(){
 }
 function settings(){
   return { cls:clean($('#sClass').value), teacher:clean($('#sTeacher').value), date:$('#sDate').value,
-    school:clean($('#sSchool').value), showTeachers:$('#sTeachers').checked, showTop3:$('#sTop3').checked, pass:toNum($('#sPass').value)??55, credit:'', bsd:$('#sBsd').checked };
+    school:clean($('#sSchool').value), showTeachers:$('#sTeachers').checked, showTop3:$('#sTop3').checked, pass:toNum($('#sPass').value)??55, absMin:toNum($('#sAbsMin').value), credit:'', bsd:$('#sBsd').checked };
 }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -1315,10 +1316,12 @@ let busyCount=0;
 function updateStatus(){
   const open=built.conflicts.filter(c=>!c.resolved).length, n=built.students.length;
   const ph=built.students.filter(s=>photoFor(s)).length;
-  $('#bGen').disabled=!n||busyCount>0;
+  const noAbsMin=!state.sample&&state.files.length&&toNum($('#sAbsMin').value)==null;
+  $('#bGen').disabled=!n||busyCount>0||noAbsMin;
   const mixed=new Set((built.classes||[]).map(c=>c.cls)).size>1;
   const noTeacher=!state.sample&&state.files.length&&!clean($('#sTeacher').value);
   $('#status').textContent = busyCount>0 ? 'קורא את הקבצים… המצגת תהיה זמינה בעוד רגע.'
+    : noAbsMin ? 'בחרו מאיזה מספר חיסורים להציג אותם בשורת ״ביקור סדיר״ (שלב 2).'
     : noTeacher ? 'לא מולא שם המחנך/ת. אנא הזינו שם/שמות (שלב 2).'
     : mixed ? 'שימו לב: הדוחות שייכים לכיתות שונות. ראו ״בדיקת נתונים״.'
     : !n ? 'העלו דוחות כדי ליצור מצגת.'
@@ -1931,7 +1934,7 @@ async function generate(){
     sl.addText('מידע כללי',T({x:0.5,y:0.7,w:4.6,h:0.45,fontSize:16,bold:true}));
     const absN=absencesOf(st);
     const rows=INFO.map((f,i)=>{ const fill={color:i%2?TH.band:C.white};
-      const label=f==='iAtt'&&absN!=null?[{text:FLABEL[f],options:{bold:true,breakLine:true}},{text:'חיסורים: ',options:{bold:true,color:C.warn}},{text:String(absN),options:{bold:true,color:C.warn,fontSize:22}}]:FLABEL[f];
+      const label=f==='iAtt'&&absN!=null&&s.absMin!=null&&absN>=s.absMin?[{text:FLABEL[f],options:{bold:true,breakLine:true}},{text:'חיסורים: ',options:{bold:true,color:C.warn}},{text:String(absN),options:{bold:true,color:C.warn,fontSize:22}}]:FLABEL[f];
       return [ {text:st[f]||'',options:T({fontSize:11,fill,valign:'top',margin:[4,6,4,6]})},
                {text:label,options:T({fontSize:11,bold:true,fill,valign:'top',margin:[4,6,4,6]})} ]; });
     sl.addTable(rows,{x:0.5,y:1.25,w:4.6,colW:[3.25,1.35],rowH:[1.0,0.85,0.85,0.95,0.9,0.95],border:{type:'solid',pt:0.75,color:'C9D3E6'},autoPage:false});
@@ -2044,7 +2047,7 @@ $('#bLogos').onclick=()=>$('#inLogos').click();
 try{ const sc=localStorage.getItem('pm.school'); if(sc!=null) $('#sSchool').value=sc; }catch(e){}
 $('#sSchool').addEventListener('input',()=>{ try{ localStorage.setItem('pm.school',$('#sSchool').value); }catch(e){} });
 $('#inLogos').onchange=e=>{ handleLogos([...e.target.files]); e.target.value=''; };
-['#sPass'].forEach(id=>$(id).addEventListener('input',refresh));
+['#sPass','#sAbsMin'].forEach(id=>$(id).addEventListener('input',refresh));
 $('#sTeacher').addEventListener('input',()=>{ state.teacherAuto=false; renderChecks(); updateStatus(); });
 $('#sClass').addEventListener('input',()=>{ state.clsAuto=false; renderThemes(); });
 $('#bGen').onclick=async()=>{
