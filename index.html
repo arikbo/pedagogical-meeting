@@ -178,6 +178,8 @@ details.info summary{cursor:pointer;padding:10px 14px;font-size:15px;color:var(-
 .logos{display:flex;gap:8px;flex-wrap:wrap}
 .logos img{height:40px;border-radius:6px;background:#fff;padding:3px;border:1px solid var(--line)}
 footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px}
+footer a{color:var(--accent);text-decoration:none;font-weight:500}
+footer a:hover{text-decoration:underline}
 @media (max-width:520px){ section.step{padding:18px} .nums{grid-template-columns:repeat(2,1fr)} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -239,7 +241,6 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <details class="more"><summary>אפשרויות נוספות</summary>
   <div class="form">
     <label>ציון נכשל: מתחת ל-<input type="number" id="sPass" value="55" min="0" max="100"></label>
-    <label>שורת קרדיט בתחתית כל שקף<input type="text" id="sCredit" value="נבנה על ידי: אריק - @mathfun.with.arik"></label>
     <label class="check"><input type="checkbox" id="sBsd" checked> בס״ד בפינה הימנית העליונה</label>
   </div>
   </details>
@@ -267,7 +268,7 @@ footer{color:var(--ink-faint);font-size:14px;text-align:center;padding-block:8px
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><span id="credit"></span> · <span id="ver">גרסה 24.10.2026 · 09:10</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 18:55</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1055,7 +1056,7 @@ function loadSample(){
 }
 function settings(){
   return { cls:clean($('#sClass').value), teacher:clean($('#sTeacher').value), date:$('#sDate').value,
-    school:clean($('#sSchool').value), showTeachers:$('#sTeachers').checked, showTop3:$('#sTop3').checked, pass:toNum($('#sPass').value)??55, credit:clean($('#sCredit').value), bsd:$('#sBsd').checked };
+    school:clean($('#sSchool').value), showTeachers:$('#sTeachers').checked, showTop3:$('#sTop3').checked, pass:toNum($('#sPass').value)??55, credit:'', bsd:$('#sBsd').checked };
 }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -1285,7 +1286,6 @@ function refresh(){
   autoClass();
   autoTeacher();
   renderFiles(); renderChecks(); renderEvPick(); renderChanged(); renderStudents(); updateStatus();
-  const c=settings().credit; $('#credit').textContent=c;
 }
 
 /* ---------- file reading ---------- */
@@ -1678,7 +1678,7 @@ async function generate(){
   const ACC='2F5BD8', PAGE='F6F8FC';
   const avgs=built.students.map(x=>x.avg).filter(x=>x!=null);
   const classAvg=avgs.length?avgs.reduce((a,b)=>a+b,0)/avgs.length:null;
-  const credit=(sl)=>{ if(s.credit) sl.addText(s.credit,T({x:0.4,y:7.08,w:6,h:0.28,fontSize:9,color:C.faint,align:'left'})); };
+  const credit=()=>{}; /* no credit line on the slides; only the cover carries one */
   const bsd=(sl)=>{ if(s.bsd) sl.addText('בס״ד',T({x:11.55,y:0.18,w:1.2,h:0.3,fontSize:11,color:C.soft})); }; /* clear of the accent bar on the right edge */
 
   /* cover: light, one accent, the class and its numbers */
@@ -1700,7 +1700,7 @@ async function generate(){
   const sub=[s.teacher&&('מחנך/ת: '+s.teacher), dateTxt].filter(Boolean).join('   ·   ');
   if(sub) cv.addText(sub,T({x:4.6,y:4.0,w:7.9,h:0.45,fontSize:18,color:C.soft}));
   cv.addShape(pptx.ShapeType.rect,{x:11.3,y:4.65,w:1.2,h:0.06,fill:{color:ACC},line:{color:ACC}});
-  credit(cv);
+  cv.addText([{text:'© נבנה על ידי אריק · כל הזכויות שמורות · לפניות בוואטסאפ',options:{hyperlink:{url:'https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A',tooltip:'וואטסאפ לאריק'},color:C.faint}}],T({x:0.4,y:7.05,w:7,h:0.3,fontSize:9,color:C.faint,align:'left'}));
 
   /* the class at a glance: boys / girls */
   {
@@ -1989,7 +1989,7 @@ $('#bLogos').onclick=()=>$('#inLogos').click();
 try{ const sc=localStorage.getItem('pm.school'); if(sc!=null) $('#sSchool').value=sc; }catch(e){}
 $('#sSchool').addEventListener('input',()=>{ try{ localStorage.setItem('pm.school',$('#sSchool').value); }catch(e){} });
 $('#inLogos').onchange=e=>{ handleLogos([...e.target.files]); e.target.value=''; };
-['#sPass','#sCredit'].forEach(id=>$(id).addEventListener('input',refresh));
+['#sPass'].forEach(id=>$(id).addEventListener('input',refresh));
 $('#sTeacher').addEventListener('input',()=>{ state.teacherAuto=false; renderChecks(); updateStatus(); });
 $('#sClass').addEventListener('input',()=>{ state.clsAuto=false; });
 $('#bGen').onclick=async()=>{
