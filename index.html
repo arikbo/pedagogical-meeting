@@ -133,7 +133,7 @@ button.ph:hover{border-color:var(--accent)}
 .reps-title{font-family:var(--display);font-size:16px;font-weight:600;margin:4px 0 -6px}
 .brand{display:flex;gap:20px;align-items:center}
 .brand img{width:88px;height:auto;flex:none}
-.brand-txt{display:flex;flex-direction:column;gap:8px;min-width:0}
+.brand-txt{display:flex;flex-direction:column;gap:6px;min-width:0}
 .howto{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px;padding:0;list-style:none;counter-reset:h}
 .howto li{counter-increment:h;display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--ink-soft)}
 .howto li::before{content:counter(h);flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-family:var(--display);font-weight:700;display:grid;place-items:center}
@@ -145,7 +145,24 @@ button.ph:hover{border-color:var(--accent)}
 details.more{border:1px solid var(--line);border-radius:12px;padding:10px 14px}
 details.more summary{cursor:pointer;font-family:var(--display);font-weight:500;color:var(--ink-soft)}
 details.more[open] summary{margin-bottom:12px}
-@media (min-width:1000px){ .reps{grid-template-columns:repeat(5,1fr)} }
+@media (min-width:1000px){
+  .upl{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}
+  .upl .drop.big{padding:24px 18px;justify-content:center}
+  .upl-list{display:flex;flex-direction:column;gap:10px}
+  .upl-list .reps-title{margin:0}
+  .upl-list .reps{grid-template-columns:1fr;gap:6px}
+  .upl-list .rep{grid-template-columns:44px 1fr;grid-template-rows:auto;padding:7px 12px 7px 34px;row-gap:0}
+  .upl-list .rep b{grid-row:span 2;font-size:24px}
+  .upl-list .rep span{font-size:14px}
+  .upl-list .rep em{grid-column:2;font-size:12px}
+  .upl-list .rep em strong{display:inline;margin:0 4px 0 0;font-size:12px}
+}
+@media (max-width:999px){ .upl{display:flex;flex-direction:column;gap:18px} .upl-list{display:flex;flex-direction:column;gap:18px} }
+header{padding-block:22px 0}
+.brand img{width:70px}
+.howto{margin-top:4px}
+.howto li{padding:8px 12px}
+@media (min-width:1000px){ header{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:center;column-gap:28px} .howto{margin:0;gap:8px} .howto li{flex-direction:column;align-items:flex-start;gap:6px;padding:10px 12px} }
 @media (max-width:640px){ .howto{gap:8px} .howto li{flex-direction:column;text-align:center;gap:6px;padding:10px 6px;font-size:0} .howto b{font-size:14px} .howto li::before{font-size:15px} .brand{gap:12px} .brand img{width:56px} .drop.big{padding:28px 14px} }
 .deck{display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
 .deck-text{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}
@@ -197,7 +214,8 @@ footer a:hover{text-decoration:underline}
     <div class="brand-txt">
       <span class="eyebrow">ישיבה פדגוגית · מצגת אוטומטית מדוחות סמארט סקול</span>
       <h1>מחולל ישיבה פדגוגית</h1>
-      <p class="lede">מעלים את הדוחות ומורידים מצגת PowerPoint עם שקף לכל תלמיד: ממוצע, ציוני ליבה, נכשלים, חיסורים, הקבצות ומידע כללי.</p>
+      <p class="lede">מעלים את הדוחות ומורידים מצגת PowerPoint עם שקף לכל תלמיד.</p>
+      <span class="privacy">הקבצים מעובדים במחשב שלכם בלבד. שום נתון לא נשלח לשרת.</span>
     </div>
   </div>
   <ol class="howto" aria-label="איך זה עובד">
@@ -205,16 +223,17 @@ footer a:hover{text-decoration:underline}
     <li><span><b>גוררים</b>את כולם יחד לאתר</span></li>
     <li><span><b>מורידים</b>מצגת מוכנה לישיבה</span></li>
   </ol>
-  <span class="privacy">הקבצים מעובדים במחשב שלכם בלבד. שום נתון לא נשלח לשרת.</span>
 </header>
 
 <section class="step" aria-labelledby="h-files">
   <div class="step-head"><span class="num">1</span><h2 id="h-files">הקבצים</h2></div>
+  <div class="upl">
   <div class="drop big" id="dropData" tabindex="0" role="button" aria-label="העלאת דוחות">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
     <strong>גררו לכאן את כל הדוחות יחד, או לחצו לבחירה</strong>
     <span>האתר מזהה לבד מה כל קובץ · ‎.xlsx · .pdf · .pptx · .jpg · .zip</span>
   </div>
+  <div class="upl-list">
   <p class="reps-title">הדוחות שצריך להפיק מסמארט סקול <span class="hint">(מסומנים ב-✓ כשהם נקלטים)</span></p>
   <div class="reps" aria-label="הדוחות להפקה מסמארט סקול">
     <div class="rep" data-k="sadin"><b>98</b><span>סדין ציונים למועצות פדגוגיות</span><em>Excel</em></div>
@@ -222,6 +241,8 @@ footer a:hover{text-decoration:underline}
     <div class="rep" data-k="assess"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel · או דוח 34 <strong>לסמן: את כל המקצועות</strong></em></div>
     <div class="rep" data-k="photos"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF <strong>לשמור רק אחרי שכל התמונות נטענו במסך</strong></em></div>
     <div class="rep" data-k="groups"><b>58</b><span>שיוך תלמידי כיתה לקבוצות</span><em>Excel · הקבצות ובנים/בנות <strong>לסמן: את כל המקצועות</strong></em></div>
+  </div>
+  </div>
   </div>
   <p class="hint">כל הדוחות לאותה כיתה ולאותה תקופה. אפשר להוסיף גם מצגת מהישיבה הקודמת (PowerPoint או PDF) כדי להעתיק את המידע הכללי.</p>
   <div class="samplebar"><div id="sampleBanner" class="sample" hidden><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
@@ -279,7 +300,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 20:50</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 21:00</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
