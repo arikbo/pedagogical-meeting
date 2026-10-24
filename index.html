@@ -268,7 +268,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 20:00</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 20:05</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1634,6 +1634,13 @@ function pdfError(f,e){
 }
 function noteData(fi,msgs,notes){
   if(fi.kind==='teachers'){ notes.push(`${fi.name}: רשימת מורים, ${fi.teachers.length} מקצועות.`); return; }
+  /* 98, 42 and 33/34 are read only from Excel: a PDF of them says which report it is and is not added */
+  if(/\.pdf$/i.test(fi.name)){
+    const t=fi.title||'', which=fi.kind==='sadin'||/סדין תקופתי|סדין ציונים|מועצות פדגוגיות/.test(t)?'דוח 98 (סדין ציונים)'
+      :fi.kind==='events'||/מונה אירועי/.test(t)?'דוח 42 (מונה אירועים בשיעור)'
+      :fi.kind==='assess'||/אירועי הערכה/.test(t)?'דוח 33/34 (ציונים שוטפים)':'';
+    if(which){ state.files=state.files.filter(f=>f!==fi); msgs.push(`${fi.name}: זה ${which} בפורמט PDF. הפיקו אותו מחדש מסמארט סקול כקובץ Excel והעלו שוב. (הקובץ לא נוסף.)`); return; }
+  }
   if(fi.kind!=='assess'&&fi.title&&/אירועי הערכה/.test(fi.title)){
     state.files=state.files.filter(f=>f!==fi);
     msgs.push(/\.pdf$/i.test(fi.name)?`${fi.name}: דוח 33/34 נקרא רק כקובץ Excel. הפיקו אותו מחדש כ-Excel. (הקובץ לא נוסף.)`:`${fi.name}: זה דוח אירועי הערכה (33/34), אבל המבנה שלו לא זוהה. הקובץ לא נוסף. שלחו אותו לאריק.`);
