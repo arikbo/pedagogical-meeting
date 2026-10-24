@@ -268,7 +268,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 20:10</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 20:20</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -356,7 +356,10 @@ function autoMap(headers){
     headers.forEach((h,i)=>{ if(used.has(i)) return; const s=scoreHeader(f.id,h); if(s>bs){bs=s;best=i;} });
     map[f.id]=best; if(best>=0) used.add(best);
   }
-  if(map.name>=0 && (map.first>=0||map.last>=0)){ /* full name wins */ map.first=-1; map.last=-1; }
+  if(map.name>=0 && (map.first>=0||map.last>=0)){
+    /* a bare "שם" column next to real first/last-name columns (a stray header word in some rosters) loses; otherwise the full name wins */
+    if(map.first>=0&&map.last>=0&&/^שם$/.test(clean(headers[map.name]))) map.name=-1; else { map.first=-1; map.last=-1; }
+  }
   return map;
 }
 function findHeaderRow(aoa){
