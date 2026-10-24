@@ -130,6 +130,9 @@ button.ph:hover{border-color:var(--accent)}
 .rep em{font-style:normal;font-size:13px;color:var(--ink-soft)}
 .rep.opt{border-style:dashed;background:var(--surface)}
 .rep em strong{display:block;color:var(--bad);font-size:13px;margin-top:2px}
+.infobox{border-inline-start:4px solid var(--accent);background:var(--surface-2);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:4px}
+.infobox p{margin:0;font-size:15px;color:var(--ink-soft)}
+.infobox b{color:var(--ink)}
 .reps-title{font-family:var(--display);font-size:16px;font-weight:600;margin:4px 0 -6px}
 .brand{display:flex;gap:20px;align-items:center}
 .brand img{width:88px;height:auto;flex:none}
@@ -244,7 +247,10 @@ footer a:hover{text-decoration:underline}
   </div>
   </div>
   </div>
-  <p class="hint">כל הדוחות לאותה כיתה ולאותה תקופה. אפשר להוסיף גם מצגת מהישיבה הקודמת (PowerPoint או PDF) כדי להעתיק את המידע הכללי.</p>
+  <div class="infobox">
+    <p><b>כל הדוחות לאותה כיתה ולאותה תקופה.</b></p>
+    <p><b>מידע כללי</b> (חוזקות, קשיים, מענים ועוד) אפשר למלא לכל תלמיד בשלב 4, ״התלמידים״, אחרי שהדוחות עולים. אפשר גם להעתיק אותו אוטומטית מהישיבה הקודמת: גוררים את המצגת הקודמת (PowerPoint או PDF) יחד עם הדוחות.</p>
+  </div>
   <div class="samplebar"><div id="sampleBanner" class="sample" hidden><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
     <button class="btn small" type="button" id="bSample">רוצים לראות קודם איך זה נראה? הצגת דוגמה</button></div>
   <input type="file" id="inData" accept=".xlsx,.xls,.csv,.html,.htm,.pdf,.pptx,.ppt,.jpg,.jpeg,.png,.webp,.gif,.heic,.zip" multiple hidden>
@@ -300,7 +306,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 21:00</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 21:05</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
