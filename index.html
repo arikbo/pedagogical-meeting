@@ -252,7 +252,7 @@ footer a:hover{text-decoration:underline}
   </div>
   <div class="infobox">
     <p><b>כל הדוחות לאותה כיתה ולאותה תקופה.</b></p>
-    <p><b>מידע כללי</b> (חוזקות, קשיים, מענים ועוד) אפשר למלא לכל תלמיד בשלב 4, ״התלמידים״, אחרי שהדוחות עולים. אפשר גם להעתיק אותו אוטומטית מהישיבה הקודמת: גוררים את המצגת הקודמת (PowerPoint או PDF) יחד עם הדוחות.</p>
+    <p><b>תמונת מצב אישית</b> (פרופיל תלמיד, חוזקות, אתגרים, מענים, דרכי פעולה מומלצות ועוד) אפשר למלא לכל תלמיד בשלב 4, ״התלמידים״, אחרי שהדוחות עולים. אפשר גם להעתיק אותו אוטומטית מהישיבה הקודמת: גוררים את המצגת הקודמת (PowerPoint או PDF) יחד עם הדוחות.</p>
   </div>
   <div class="samplebar"><div id="sampleBanner" class="sample" hidden><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
     <button class="btn small" type="button" id="bSample">רוצים לראות קודם איך זה נראה? הצגת דוגמה</button></div>
@@ -306,10 +306,10 @@ footer a:hover{text-decoration:underline}
 </section>
 
 <section class="step" id="stepStu" aria-labelledby="h-stu">
-  <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
+  <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 27.10.2026 · 12:20</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 27.10.2026 · 18:20</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -330,8 +330,9 @@ const FIELDS = [
   {id:'geo', label:'גאוגרפיה'}, {id:'hist', label:'היסטוריה'}, {id:'lit', label:'ספרות'}, {id:'gender', label:'מין (בן/בת)'},
   {id:'fails', label:'מספר נכשלים'}, {id:'late', label:'איחורים'}, {id:'abs', label:'חיסורים'}, {id:'events', label:'אירועי שיעור'},
   {id:'gMath', label:'הקבצה במתמטיקה'}, {id:'gEng', label:'הקבצה באנגלית'},
-  {id:'iGen', label:'כללי'}, {id:'iStr', label:'חוזקות'}, {id:'iExc', label:'בעיות חריגות'}, {id:'iAtt', label:'ביקור סדיר'},
-  {id:'iEmo', label:'קשיים'}, {id:'iAns', label:'מענים'}
+  {id:'iGen', label:'פרופיל תלמיד'}, {id:'iStr', label:'חוזקות'}, {id:'iEmo', label:'אתגרים'}, {id:'iAtt', label:'ביקור סדיר'},
+  {id:'iAns', label:'מענים'}, {id:'iRec', label:'דרכי פעולה מומלצות'},
+  {id:'iExc', label:'בעיות חריגות'} /* legacy column: read from old files and merged into אתגרים */
 ];
 const FLABEL = Object.fromEntries(FIELDS.map(f=>[f.id,f.label]));
 const CORE = ['math','lang','eng','sci','geo','hist','lit'];
@@ -342,7 +343,8 @@ function coreFor(s, cls){
   if(g==='ח') return ['math','eng','lang','lit','sci'];
   return ['math','eng','lang','hist','sci'];
 }
-const INFO = ['iGen','iStr','iExc','iAtt','iEmo','iAns'];
+const INFO = ['iGen','iStr','iEmo','iAtt','iAns','iRec']; /* rows of the 'תמונת מצב אישית' table, in order */
+const INFO_IN = [...INFO,'iExc']; /* also read from older files */
 const NUMERIC = ['avg','math','lang','eng','sci','geo','hist','lit','fails','late','abs','events'];
 
 function clean(s){ return String(s==null?'':s).replace(/[‎‏‪-‮]/g,'').replace(/\s+/g,' ').trim(); }
@@ -383,12 +385,13 @@ function scoreHeader(field, h){
     case 'abs': return (has('חיסור')||has('היעדרו')||has('העדרו'))&&!has('מוצדק ')?10:0;
     case 'gMath': return grp&&(has('מתמטיקה')||has('חשבון'))?10:0;
     case 'gEng': return grp&&has('אנגלית')?10:0;
-    case 'iGen': return h==='כללי'||has('מידע כללי')?10:0;
+    case 'iGen': return h==='כללי'||has('מידע כללי')||has('פרופיל')?10:0;
     case 'iExc': return has('חריג')?10:0;
     case 'iStr': return has('חוזק')?10:0;
     case 'iAtt': return has('ביקור סדיר')?10:0;
-    case 'iEmo': return has('רגשי')||has('קשיים')?10:0;
+    case 'iEmo': return has('רגשי')||has('קשיים')||has('אתגר')?10:0;
     case 'iAns': return has('מענ')?10:0;
+    case 'iRec': return has('דרכי פעולה')||has('המלצ')||has('מומלצ')?10:0;
   }
   return 0;
 }
@@ -510,7 +513,7 @@ function buildStudents(files, opts){
       for(const f of FIELDS){
         if(['name','first','last'].includes(f.id)) continue;
         const ci=file.mapping[f.id]; if(ci==null||ci<0) continue;
-        const v=INFO.includes(f.id)?cleanML(row[ci]):clean(row[ci]); if(v==='') continue;
+        const v=INFO_IN.includes(f.id)?cleanML(row[ci]):clean(row[ci]); if(v==='') continue;
         (st.src[f.id] ||= []).push({file:file.id,fileName:file.name,val:v});
       }
       for(const ci of gcols){ const x=toNum(row[ci]); if(x!=null) st.grades.push({subject:clean(file.headers[ci]),val:x,file:file.id}); }
@@ -536,7 +539,7 @@ function buildStudents(files, opts){
         val[fid]=fromGroups[fromGroups.length-1].val; /* report 58 holds the current grouping */
       } else if(distinct.length>1&&['events','abs','late'].includes(fid)&&fromEvents.length){
         val[fid]=fromEvents[fromEvents.length-1].val; /* report 42 counts lesson events directly */
-      } else if(distinct.length>1&&INFO.includes(fid)){
+      } else if(distinct.length>1&&INFO_IN.includes(fid)){
         /* general-info texts from several files (a deck + a PDF): keep them all, joined; the teacher can still pick one */
         const longest=distinct.reduce((a,b)=>b.val.length>a.val.length?b:a);
         if(distinct.every(d=>longest.val.includes(d.val))){ val[fid]=longest.val; continue; }
@@ -576,7 +579,9 @@ function buildStudents(files, opts){
       late:toNum(val.late), abs:toNum(val.abs), events:toNum(val.events),
       math:toNum(val.math), lang:toNum(val.lang), eng:toNum(val.eng), sci:toNum(val.sci), geo:toNum(val.geo), hist:toNum(val.hist), lit:toNum(val.lit),
       gMath:val.gMath||'', gEng:val.gEng||'',
-      iGen:val.iGen||'', iStr:val.iStr||'', iExc:val.iExc||'', iAtt:val.iAtt||'', iEmo:val.iEmo||'', iAns:val.iAns||'',
+      iGen:val.iGen||'', iStr:val.iStr||'', iAtt:val.iAtt||'', iAns:val.iAns||'', iRec:val.iRec||'',
+      /* old 'בעיות חריגות' text joins 'אתגרים' (unless the teacher already edited אתגרים) */
+      iEmo:('iEmo' in ov)?(val.iEmo||''):[val.iEmo,val.iExc].filter(Boolean).join('\n'),
       evs:st.evs||null, assess:st.assess||null,
       gender:(()=>{ const g=clean(val.gender); return /^(ז|זכר|בן|m|male)/i.test(g)?'m':/^(נ|נקבה|בת|f|female)/i.test(g)?'f':null; })(),
       aliasKeys:Object.keys(aliasOf).filter(k=>aliasOf[k]===st.key),
@@ -898,21 +903,22 @@ const SENSITIVE_COL=/תעודת|זהות|ת\.ז|טלפון|נייד|דוא"?ל|�
 const POSITIVE_EV=/צל.?.?ש|חיזוק|מחמאה|הצטיינות|שבח|חיובי/;
 
 /* ---------- existing decks: general-info table + student name ---------- */
-const INFO_HEAD={iGen:'כללי',iStr:'חוזקות',iExc:'בעיות חריגות',iAtt:'ביקור סדיר',iEmo:'קשיים',iAns:'מענים'};
+const INFO_HEAD={iGen:'פרופיל תלמיד',iStr:'חוזקות',iEmo:'אתגרים',iAtt:'ביקור סדיר',iAns:'מענים',iRec:'דרכי פעולה מומלצות',iExc:'בעיות חריגות'};
 /* a label cell of the general-info table → field id (short text that starts with the label word) */
 function infoLabelStart(s){
   const w=clean(s).replace(/[:׃]/g,''); if(!w) return null;
   const words=w.split(' '); if(words.length>5) return null;
   const f=words[0];
-  if(f==='כללי'||(f==='מידע'&&words[1]==='כללי'&&words.length===2)) return 'iGen';
+  if(f==='כללי'||f==='פרופיל'||(f==='מידע'&&words[1]==='כללי'&&words.length===2)) return 'iGen';
   if(f==='בעיות'||f==='בעיה'||f.startsWith('חריג')) return 'iExc';
   if(f==='חוזקות'||f==='חוזקה'||f==='כוחות') return 'iStr';
   if(f==='ביקור'||f==='נוכחות') return 'iAtt';
-  if(f==='קשיים'||f==='קשי'||f.startsWith('רגשי')) return 'iEmo';
+  if(f==='קשיים'||f==='קשי'||f.startsWith('רגשי')||f.startsWith('אתגר')) return 'iEmo';
   if(f==='מענים'||f==='מענה'||f==='טיפול') return 'iAns';
+  if(f==='דרכי'||f==='המלצות'||f==='המלצה') return 'iRec';
   return null;
 }
-const NAME_STOP=/כיתה|בס"ד|בס״ד|ממוצע|נכשל|מתמטיקה|אנגלית|עברית|לשון|מדעים|הקבצ|הישגים|מידע|כללי|אירוע|צל"ש|צל״ש|מצוינות|בעיות|ביקור|קשיים|מענים|תלמיד|ישיבה|פדגוגית|ציון|מקצוע|חיסור|איחור|נבנה|מחנך|תיכון|עיריית|שכבה|מחצית|רגשיים|חריגות|סדיר|אחרים|הערות|ליבה|קבוצה/;
+const NAME_STOP=/כיתה|בס"ד|בס״ד|ממוצע|נכשל|מתמטיקה|אנגלית|עברית|לשון|מדעים|הקבצ|הישגים|מידע|כללי|אירוע|צל"ש|צל״ש|מצוינות|בעיות|ביקור|קשיים|מענים|תלמיד|ישיבה|פדגוגית|ציון|מקצוע|חיסור|איחור|נבנה|מחנך|תיכון|עיריית|שכבה|מחצית|רגשיים|חריגות|סדיר|אחרים|הערות|ליבה|קבוצה|פרופיל|אתגרים|דרכי|מומלצות|תמונת|מצב/;
 const NAME_RE=/^[א-ת'"`׳״\-]+$/;
 /* cands: [{text, size}] in slide order; known: [{key,name}] students already loaded from reports */
 function pickName(cands, known){
@@ -943,7 +949,7 @@ function infoFromTableRows(rows){
 function pdfDeckPage(items, flip){
   const rows=pdfRows([items],flip);
   const cells=rows.flatMap(r=>rowCells(r,0.4).map(c=>({...c,y:r.y,h:r.h})));
-  const starters=cells.filter(c=>infoLabelStart(c.str)&&c.str.split(' ').length<=4&&!/^מידע/.test(c.str)).sort((a,b)=>b.y-a.y)
+  const starters=cells.filter(c=>infoLabelStart(c.str)&&c.str.split(' ').length<=4&&!/^(מידע|תמונת)/.test(c.str)).sort((a,b)=>b.y-a.y)
     .filter((c,i,arr)=>i===0||infoLabelStart(c.str)!==infoLabelStart(arr[i-1].str)); /* 'קשיים' / 'רגשיים או' = one label on two lines */
   const info={};
   if(starters.length){
@@ -960,7 +966,7 @@ function pdfDeckPage(items, flip){
   return {info, cands:cells.map(c=>({text:c.str,size:c.h})), starters:starters.length};
 }
 function deckAoa(entries){
-  return [['שם',...INFO.map(f=>INFO_HEAD[f])], ...entries.filter(e=>e.name).map(e=>[e.name,...INFO.map(f=>e.info[f]||'')])];
+  return [['שם',...INFO_IN.map(f=>INFO_HEAD[f])], ...entries.filter(e=>e.name).map(e=>[e.name,...INFO_IN.map(f=>e.info[f]||'')])];
 }
 if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,parseTeachersReport,parseAssessReport,pickName,infoFromTableRows,pdfDeckPage,deckAoa,infoLabelStart};
 </script>
@@ -1125,10 +1131,10 @@ function loadSample(){
     ['מזרחי יונתן','ח׳3',5,3],['פרץ שירה','ח׳3',0,2],['ביטון דניאל','ח׳2',12,14]
   ]);
   addFileFromAoa('דוגמה – מידע כללי.xlsx',[
-    ['שם','כללי','בעיות חריגות','ביקור סדיר','קשיים רגשיים או אחרים','מענים'],
-    ['נועה לוי','תלמידה משקיעה ומשתתפת בשיעורים.','','תקין','קושי בריכוז בשיעורים ארוכים','שיחה עם ההורים. תגבור במדעים.'],
-    ['מאיה אברהם','שקטה בכיתה, חברה טובה.','','חיסורים רבים','','שיחה עם יועצת. מעקב נוכחות שבועי.'],
-    ['דניאל ביטון','','מפריע בשיעורים','איחורים רבים','','שיחה עם האב. חוזה התנהגות.']
+    ['שם','פרופיל תלמיד','חוזקות','אתגרים','ביקור סדיר','מענים','דרכי פעולה מומלצות'],
+    ['נועה לוי','תלמידה משקיעה ומשתתפת בשיעורים.','אחריות, יחסים טובים עם חברים','קושי בריכוז בשיעורים ארוכים','תקין','שיחה עם ההורים. תגבור במדעים.','הפסקות קצרות בשיעור, ישיבה קדמית'],
+    ['מאיה אברהם','שקטה בכיתה, חברה טובה.','','','חיסורים רבים','שיחה עם יועצת. מעקב נוכחות שבועי.','קשר שבועי עם הבית'],
+    ['דניאל ביטון','','','מפריע בשיעורים','איחורים רבים','שיחה עם האב. חוזה התנהגות.','חיזוק חיובי על כל שיעור בלי הפרעה']
   ]);
   $('#sClass').value='ח׳3'; state.clsAuto=true; $('#sTeacher').value='';
   try{ $('#sDate').valueAsDate=new Date(); }catch(e){}
@@ -1242,7 +1248,7 @@ function renderChecks(){
   if(!conflicts.length&&!missing.length&&!links.length&&!lost.length&&!lostPhotos.length&&clsSet.length<2){ box.insertAdjacentHTML('beforeend','<div class="empty">לא נמצאו סתירות בין הדוחות.</div>'); } /* keep the notes above it */
   for(const c of conflicts){
     const el=document.createElement('div'); el.className='issue'+(c.resolved?' done':'');
-    el.innerHTML=`<div class="issue-title">${esc(c.name)} · ${esc(FLABEL[c.field])}: ${INFO.includes(c.field)?'טקסט שונה בקבצים, חוברו יחד. אפשר לבחור אחד מהם':'ערכים שונים בדוחות'}</div><div class="opts"></div>`;
+    el.innerHTML=`<div class="issue-title">${esc(c.name)} · ${esc(FLABEL[c.field])}: ${INFO_IN.includes(c.field)?'טקסט שונה בקבצים, חוברו יחד. אפשר לבחור אחד מהם':'ערכים שונים בדוחות'}</div><div class="opts"></div>`;
     const opts=el.querySelector('.opts');
     c.options.forEach((o,i)=>{
       const id='c-'+btoa(unescape(encodeURIComponent(c.ck))).replace(/[^a-z0-9]/gi,'')+'-'+i;
@@ -1281,7 +1287,7 @@ function renderStudents(){
       <div class="bars">${bars}</div>
       ${tags?`<div class="tags">${tags}</div>`:''}
       ${flagsBy[s.key]?`<div class="flag">לבדיקה: ${flagsBy[s.key].map(esc).join(', ')}</div>`:''}
-      <details class="info"><summary>מידע כללי${INFO.some(f=>s[f])?' ✓':''}</summary><div class="info-fields"></div></details>`;
+      <details class="info"><summary>תמונת מצב אישית${INFO.some(f=>s[f])?' ✓':''}</summary><div class="info-fields"></div></details>`;
     card.querySelector('.ph').onclick=()=>{
       const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
       inp.onchange=async()=>{ const f=inp.files[0]; if(!f) return; const d=await shrink(await fileToDataURL(f)); if(d){ state.photos[s.key]=d; refresh(); } };
@@ -1961,7 +1967,7 @@ async function generate(){
 
     /* left: general info table */
     sl.addShape(pptx.ShapeType.roundRect,{x:0.33,y:0.6,w:4.95,h:6.25,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.12});
-    sl.addText('מידע כללי',T({x:0.5,y:0.7,w:4.6,h:0.45,fontSize:16,bold:true}));
+    sl.addText('תמונת מצב אישית',T({x:0.5,y:0.7,w:4.6,h:0.45,fontSize:16,bold:true}));
     const absN=absencesOf(st);
     const rows=INFO.map((f,i)=>{ const fill={color:i%2?TH.band:C.white};
       /* the count is shown for everyone; from the threshold up it is big and red */
@@ -1969,7 +1975,7 @@ async function generate(){
       const label=f==='iAtt'&&absN!=null?[{text:FLABEL[f],options:{bold:true,breakLine:true}},{text:'חיסורים: ',options:{bold:hot,color:hot?C.bad:C.soft}},{text:String(absN),options:{bold:true,color:hot?C.bad:C.ink,fontSize:hot?22:14}}]:FLABEL[f];
       return [ {text:st[f]||'',options:T({fontSize:11,fill,valign:'top',margin:[4,6,4,6]})},
                {text:label,options:T({fontSize:11,bold:true,fill,valign:'top',margin:[4,6,4,6]})} ]; });
-    sl.addTable(rows,{x:0.5,y:1.25,w:4.6,colW:[3.25,1.35],rowH:[1.0,0.85,0.85,0.95,0.9,0.95],border:{type:'solid',pt:0.75,color:'C9D3E6'},autoPage:false});
+    sl.addTable(rows,{x:0.5,y:1.25,w:4.6,colW:[3.25,1.35],rowH:[0.95,0.85,0.9,0.95,0.9,0.95],border:{type:'solid',pt:0.75,color:'C9D3E6'},autoPage:false});
 
     if(flagsBy[st.key]) sl.addText('לבדיקה – ערכים שונים בדוחות: '+flagsBy[st.key].join(' · '),T({x:5.5,y:6.92,w:7.5,h:0.3,fontSize:10,color:C.bad,fit:'shrink'}));
     if(s.credit) sl.addText(s.credit,T({x:0.33,y:6.95,w:5,h:0.3,fontSize:9,color:C.faint,align:'left'}));
