@@ -351,6 +351,38 @@ const INFO = ['iGen','iStr','iEmo','iAtt','iAns','iRec']; /* rows of the 'תמו
 const INFO_IN = [...INFO,'iExc']; /* also read from older files */
 const NUMERIC = ['avg','math','lang','eng','sci','geo','hist','lit','fails','late','abs','events'];
 
+/* ---------- the school's own words: a sentence that mentions them belongs to a fixed row, whatever the teacher's header ----------
+   קשת / שילוב / פרטני are the school's מענים ("מקבל שעתיים שילוב", "3 ש' פרטני", "בתוכנית קשת").
+   חיסורים / איחורים are ביקור סדיר, not פרופיל תלמיד. */
+const ANS_WORDS=/(^|[^א-ת])(?:[והלמש]{0,2}קשת|[ובהלמש]{0,2}(?:שילוב|שלוב)(?!\s+עם)|[ובהלמש]{0,2}פרטנ[א-ת]*)(?![א-ת])/;
+const ATT_WORDS=/חיסור|איחור|היעדרו|העדרו|מחסיר|מחסירה/;
+const ANS_FROM=['iGen','iStr','iEmo','iExc','iRec'];   /* rows a מענה sentence is taken out of */
+const ATT_FROM=['iGen','iStr','iEmo','iExc'];          /* rows an attendance sentence is taken out of (not מענים / המלצות: "מעקב חיסורים" there is a מענה) */
+function sentencesOf(line){ return line.split(/(?<=[.;!?])\s+/).map(x=>x.trim()).filter(Boolean); }
+/* val: {iGen:'...', ...}; locked: rows the teacher typed by hand (never moved into or out of) */
+function rerouteInfo(val, locked={}){
+  const add={iAns:[],iAtt:[]};
+  for(const f of new Set([...ANS_FROM,...ATT_FROM])){
+    if(locked[f]||!val[f]) continue;
+    const keepLines=[];
+    for(const line of String(val[f]).split('\n')){
+      const keep=[];
+      for(const s of sentencesOf(line)){
+        if(ANS_FROM.includes(f)&&!locked.iAns&&ANS_WORDS.test(s)) add.iAns.push(s);
+        else if(ATT_FROM.includes(f)&&!locked.iAtt&&ATT_WORDS.test(s)) add.iAtt.push(s);
+        else keep.push(s);
+      }
+      if(keep.length) keepLines.push(keep.join(' '));
+    }
+    val[f]=keepLines.join('\n');
+  }
+  for(const [f,list] of Object.entries(add)){
+    const have=String(val[f]||''); const extra=list.filter(s=>!have.includes(s));
+    if(extra.length) val[f]=[have,...extra].filter(Boolean).join('\n');
+  }
+  return val;
+}
+
 function clean(s){ return String(s==null?'':s).replace(/[‎‏‪-‮]/g,'').replace(/\s+/g,' ').trim(); }
 /* like clean, but keeps line breaks (for the general-info texts) */
 function cleanML(s){ return String(s==null?'':s).replace(/[‎‏‪-‮]/g,'').replace(/\r/g,'').split('\n').map(l=>l.replace(/[ \t ]+/g,' ').trim()).filter(Boolean).join('\n'); }
@@ -574,7 +606,9 @@ function buildStudents(files, opts){
       const cur=val[fid==='math'?'gMath':'gEng']; if(!cur||!st.gg) continue;
       const hit=st.gg.find(x=>re.test(x.base)&&gk(x.group)===gk(cur)); if(hit) val[fid]=String(hit.grade);
     }
-    const ov=opts.overrides?.[st.key]||{}; Object.assign(val,ov);
+    const ov=opts.overrides?.[st.key]||{};
+    rerouteInfo(val, ov); /* קשת/שילוב/פרטני → מענים; חיסורים/איחורים → ביקור סדיר */
+    Object.assign(val,ov);
     /* average: from report, else computed from detected grade columns, else from core */
     let avg=toNum(val.avg), avgSource='report';
     const uniq={}; for(const g of st.grades) uniq[g.subject]=g.val;
@@ -920,7 +954,7 @@ const INFO_HEAD={iGen:'פרופיל תלמיד',iStr:'חוזקות',iEmo:'אתג
 /* every teacher titles the table differently. Word stems that tell which row a header belongs to;
    the stem that appears FIRST in the header wins ("מענים לקשיים" → מענים, "קשיים חברתיים" → אתגרים). */
 const INFO_WORDS=[
-  ['iAns',['מענ','טיפול','תמיכ','התאמות','ליווי','סיוע','עזרה','תגבור','שיעורי עזר','יועצ','פסיכולוג','מתי"א','שילוב','הנגש','הקלות','התערבות']],
+  ['iAns',['מענ','קשת','פרטנ','טיפול','תמיכ','התאמות','ליווי','סיוע','עזרה','תגבור','שיעורי עזר','יועצ','פסיכולוג','מתי"א','שילוב','הנגש','הקלות','התערבות']],
   ['iRec',['המלצ','מומלצ','דרכי פעולה','דרך פעולה','דרכי','יעד','מטרות','תוכנית','תכנית','להמשך','צעדים','הצע','מה עושים']],
   ['iEmo',['קשי','קושי','חולש','אתגר','בעי','לשיפור','שיפור','רגשי','משמעת','חריג','מגבל','לקות','לקויות','הפרע','דאג','חשש','סיכון','מצוק']],
   ['iStr',['חוזק','חזק','תחביב','כישרו','כשרו','כישור','יכולות','מצטיין','הצלח','תחומי עניין','עניין','אוהב','כוחות','נקודות אור','משאב','טוב','מצליח']],
@@ -1091,7 +1125,7 @@ function pdfDeckPage(items, flip){
   }
   return {pairs, cands, starters:starters.length};
 }
-if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,parseTeachersReport,parseAssessReport,pickName,infoFromTable,pairsFromBlocks,pdfDeckPage,deckAoa,infoLabelStart,infoFieldFor,guessInfoMap,sureLabel};
+if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,parseTeachersReport,parseAssessReport,pickName,infoFromTable,pairsFromBlocks,pdfDeckPage,deckAoa,infoLabelStart,infoFieldFor,guessInfoMap,sureLabel,rerouteInfo};
 </script>
 
 <script>
