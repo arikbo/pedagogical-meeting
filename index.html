@@ -87,6 +87,10 @@ textarea{resize:vertical;min-height:56px}
 .issue.missing{border-inline-start-color:var(--warn)}
 .issue.done{border-inline-start-color:var(--good)}
 .issue-title{font-weight:700}
+.imap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center}
+.imap .h{font-size:14px;overflow-wrap:anywhere}
+.imap .h small{color:var(--warn);font-weight:600}
+.imap select{width:auto;min-width:9.5em;font-size:15px;padding:5px 8px}
 .opts{display:flex;gap:8px;flex-wrap:wrap}
 .opt{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:15px;cursor:pointer;background:var(--surface)}
 .opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
@@ -237,7 +241,7 @@ footer a:hover{text-decoration:underline}
   <div class="drop big" id="dropData" tabindex="0" role="button" aria-label="העלאת דוחות">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
     <strong>גררו לכאן את כל הדוחות יחד, או לחצו לבחירה</strong>
-    <span>האתר מזהה לבד מה כל קובץ · ‎.xlsx · .pdf · .pptx · .jpg · .zip</span>
+    <span>האתר מזהה לבד מה כל קובץ · ‎.xlsx · .pdf · .pptx · .docx · .jpg · .zip</span>
   </div>
   <div class="upl-list">
   <p class="reps-title">הדוחות שצריך להפיק מסמארט סקול <span class="hint">(מסומנים ב-✓ כשהם נקלטים)</span></p>
@@ -252,11 +256,11 @@ footer a:hover{text-decoration:underline}
   </div>
   <div class="infobox">
     <p><b>כל הדוחות לאותה כיתה ולאותה תקופה.</b></p>
-    <p><b>תמונת מצב אישית</b> (פרופיל תלמיד, חוזקות, אתגרים, מענים, דרכי פעולה מומלצות ועוד) אפשר למלא לכל תלמיד בשלב 4, ״התלמידים״, אחרי שהדוחות עולים. אפשר גם להעתיק אותו אוטומטית מהישיבה הקודמת: גוררים את המצגת הקודמת (PowerPoint או PDF) יחד עם הדוחות.</p>
+    <p><b>תמונת מצב אישית</b> (פרופיל תלמיד, חוזקות, אתגרים, מענים, דרכי פעולה מומלצות ועוד) אפשר למלא לכל תלמיד בשלב 4, ״התלמידים״, אחרי שהדוחות עולים. אפשר גם להעתיק אותו אוטומטית מהישיבה הקודמת: גוררים את המצגת הקודמת או מסמך עם המידע (PowerPoint, Word או PDF) יחד עם הדוחות. לא משנה איך נקראות הכותרות שם: האתר משייך אותן לפי הניסוח, ובשלב 3 אפשר לתקן.</p>
   </div>
   <div class="samplebar"><div id="sampleBanner" class="sample" hidden><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
     <button class="btn small" type="button" id="bSample">רוצים לראות קודם איך זה נראה? הצגת דוגמה</button></div>
-  <input type="file" id="inData" accept=".xlsx,.xls,.csv,.html,.htm,.pdf,.pptx,.ppt,.jpg,.jpeg,.png,.webp,.gif,.heic,.zip" multiple hidden>
+  <input type="file" id="inData" accept=".xlsx,.xls,.csv,.html,.htm,.pdf,.pptx,.ppt,.docx,.doc,.jpg,.jpeg,.png,.webp,.gif,.heic,.zip" multiple hidden>
   <span class="hint" id="photoInfo"></span>
   <span class="hint" id="deckInfo"></span>
   <div id="fileErr" class="err" hidden></div>
@@ -309,7 +313,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 27.10.2026 · 18:20</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 27.10.2026 · 19:05</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -512,9 +516,18 @@ function buildStudents(files, opts){
       const st=byKey.get(key); st.files.add(file.id);
       for(const f of FIELDS){
         if(['name','first','last'].includes(f.id)) continue;
+        if(file.infoMap&&INFO_IN.includes(f.id)) continue; /* this file's general info goes by its own headers, below */
         const ci=file.mapping[f.id]; if(ci==null||ci<0) continue;
         const v=INFO_IN.includes(f.id)?cleanML(row[ci]):clean(row[ci]); if(v==='') continue;
         (st.src[f.id] ||= []).push({file:file.id,fileName:file.name,val:v});
+      }
+      if(file.infoMap){ /* the teacher's own headers → rows of the new table; two headers into one row keep their titles */
+        const by={};
+        file.infoMap.forEach((fid,ci)=>{ if(!fid||fid==='skip') return; const v=cleanML(row[ci]); if(v) (by[fid] ||= []).push({h:file.headers[ci],v}); });
+        for(const [fid,parts] of Object.entries(by)){
+          const many=file.infoMap.filter(x=>x===fid).length>1;
+          (st.src[fid] ||= []).push({file:file.id,fileName:file.name,val:parts.map(p=>many?`${p.h}: ${p.v}`:p.v).join('\n')});
+        }
       }
       for(const ci of gcols){ const x=toNum(row[ci]); if(x!=null) st.grades.push({subject:clean(file.headers[ci]),val:x,file:file.id}); }
       if(file.groupCols) file.headers.forEach((hd,ci)=>{ const m=hd.match(/^ציון קבוצה#(\d+)$/); if(!m) return; const x=toNum(row[ci]); if(x!=null) (st.gg ||= []).push({...file.groupCols[+m[1]],grade:x}); });
@@ -902,73 +915,183 @@ function isRosterHeaders(headers){
 const SENSITIVE_COL=/תעודת|זהות|ת\.ז|טלפון|נייד|דוא"?ל|מייל|מיקוד|רחוב|כתובת|תאריך לידה|הורה|אב |אם /;
 const POSITIVE_EV=/צל.?.?ש|חיזוק|מחמאה|הצטיינות|שבח|חיובי/;
 
-/* ---------- existing decks: general-info table + student name ---------- */
+/* ---------- general info from any teacher's file (deck, Word, PDF): their headers → the rows of the new table ---------- */
 const INFO_HEAD={iGen:'פרופיל תלמיד',iStr:'חוזקות',iEmo:'אתגרים',iAtt:'ביקור סדיר',iAns:'מענים',iRec:'דרכי פעולה מומלצות',iExc:'בעיות חריגות'};
-/* a label cell of the general-info table → field id (short text that starts with the label word) */
-function infoLabelStart(s){
-  const w=clean(s).replace(/[:׃]/g,''); if(!w) return null;
-  const words=w.split(' '); if(words.length>5) return null;
-  const f=words[0];
-  if(f==='כללי'||f==='פרופיל'||(f==='מידע'&&words[1]==='כללי'&&words.length===2)) return 'iGen';
-  if(f==='בעיות'||f==='בעיה'||f.startsWith('חריג')) return 'iExc';
-  if(f==='חוזקות'||f==='חוזקה'||f==='כוחות') return 'iStr';
-  if(f==='ביקור'||f==='נוכחות') return 'iAtt';
-  if(f==='קשיים'||f==='קשי'||f.startsWith('רגשי')||f.startsWith('אתגר')) return 'iEmo';
-  if(f==='מענים'||f==='מענה'||f==='טיפול') return 'iAns';
-  if(f==='דרכי'||f==='המלצות'||f==='המלצה') return 'iRec';
-  return null;
+/* every teacher titles the table differently. Word stems that tell which row a header belongs to;
+   the stem that appears FIRST in the header wins ("מענים לקשיים" → מענים, "קשיים חברתיים" → אתגרים). */
+const INFO_WORDS=[
+  ['iAns',['מענ','טיפול','תמיכ','התאמות','ליווי','סיוע','עזרה','תגבור','שיעורי עזר','יועצ','פסיכולוג','מתי"א','שילוב','הנגש','הקלות','התערבות']],
+  ['iRec',['המלצ','מומלצ','דרכי פעולה','דרך פעולה','דרכי','יעד','מטרות','תוכנית','תכנית','להמשך','צעדים','הצע','מה עושים']],
+  ['iEmo',['קשי','קושי','חולש','אתגר','בעי','לשיפור','שיפור','רגשי','משמעת','חריג','מגבל','לקות','לקויות','הפרע','דאג','חשש','סיכון','מצוק']],
+  ['iStr',['חוזק','חזק','תחביב','כישרו','כשרו','כישור','יכולות','מצטיין','הצלח','תחומי עניין','עניין','אוהב','כוחות','נקודות אור','משאב','טוב','מצליח']],
+  ['iAtt',['ביקור','נוכחות','חיסור','היעדר','העדר','איחור']],
+  ['iGen',['פרופיל','כללי','רקע','משפח','הורים','אחים','בית','אישי','היכרות','תיאור','על התלמיד','חברתי','חבר','התנהגות','תמונת מצב','מידע','הערות','הערה','נוסף','אחר','סיכום','לדעת','חשוב','מי ']]
+];
+/* headers that are never general info (a grades table, the teachers table, the name row) */
+const NOT_INFO_HEAD=/^(שם|תלמיד|תלמידה|כיתה|שכבה|מקצוע|ציון|ציונים|מורה|מורים|ממוצע|תאריך|מחנך|מחנכת|הקבצה|קבוצה)(\s|$|[:׃(])/;
+function labelText(s){ return clean(s).replace(/[:׃\-–]+$/,'').trim(); }
+/* header text → which row of the new table; sure=false means no known word (a guess: פרופיל תלמיד) */
+function infoFieldFor(h){
+  const w=labelText(h); if(!w) return null;
+  let best=null;
+  for(const [f,stems] of INFO_WORDS) for(const s of stems){ const i=w.indexOf(s); if(i>=0&&(!best||i<best.i||(i===best.i&&s.length>best.len))) best={f,i,len:s.length}; }
+  return best?{f:best.f,sure:true}:{f:'iGen',sure:false};
 }
-const NAME_STOP=/כיתה|בס"ד|בס״ד|ממוצע|נכשל|מתמטיקה|אנגלית|עברית|לשון|מדעים|הקבצ|הישגים|מידע|כללי|אירוע|צל"ש|צל״ש|מצוינות|בעיות|ביקור|קשיים|מענים|תלמיד|ישיבה|פדגוגית|ציון|מקצוע|חיסור|איחור|נבנה|מחנך|תיכון|עיריית|שכבה|מחצית|רגשיים|חריגות|סדיר|אחרים|הערות|ליבה|קבוצה|פרופיל|אתגרים|דרכי|מומלצות|תמונת|מצב/;
+/* short text that can be a header (not a sentence) */
+const SUBJECT_HEAD=['math','lang','eng','sci','geo','hist','lit'];
+function isLabel(s){ const w=labelText(String(s??'').split('\n').join(' ')); if(!w||/[.!?,]$/.test(w)||/\d/.test(w)) return false;
+  if(SUBJECT_HEAD.some(f=>scoreHeader(f,w)>0)) return false; /* a grades/teachers table, not general info */
+  return w.split(' ').length<=6&&w.length<=45; }
+/* a short header with no known word ("מה כדאי לדעת:") — taken only next to real headers, as a guess */
+function looseLabel(s){ const w=labelText(s); return isLabel(w)&&w.split(' ').length<=4&&!NOT_INFO_HEAD.test(w); }
+function sureLabel(s){ const w=labelText(String(s??'').split('\n').join(' ')); return isLabel(w)&&!NOT_INFO_HEAD.test(w)&&infoFieldFor(w).sure; }
+/* kept for older callers: header → field id, only when sure */
+function infoLabelStart(s){ return sureLabel(s)?infoFieldFor(s).f:null; }
+function addPair(pairs,h,v){
+  h=labelText(String(h).split('\n').join(' '));
+  let p=pairs.find(x=>x.h===h);
+  if(!p){ p={h,v:''}; pairs.push(p); }
+  const t=cleanML(v); if(t) p.v=p.v?p.v+'\n'+t:t;
+  return p;
+}
+const NAME_STOP=/כיתה|בס"ד|בס״ד|ממוצע|נכשל|מתמטיקה|אנגלית|עברית|לשון|מדעים|הקבצ|הישגים|מידע|כללי|אירוע|צל"ש|צל״ש|מצוינות|בעיות|ביקור|קשיים|מענים|תלמיד|ישיבה|פדגוגית|ציון|מקצוע|חיסור|איחור|נבנה|מחנך|תיכון|עיריית|שכבה|מחצית|רגשיים|חריגות|סדיר|אחרים|הערות|ליבה|קבוצה|פרופיל|אתגרים|דרכי|מומלצות|תמונת|מצב|חוזקות|משפחה|רקע/;
 const NAME_RE=/^[א-ת'"`׳״\-]+$/;
+function nameShaped(t){ const w=clean(t).split(' '); return w.length>=2&&w.length<=4&&w.every(x=>NAME_RE.test(x))&&!NAME_STOP.test(clean(t))&&!['name','first','last'].some(f=>scoreHeader(f,clean(t))>0); }
+function knownMatch(text, known){
+  const k=nameKey(text); const toks=k.split(' ');
+  return known.find(s=>s.key===k) || (toks.length<=5 ? known.find(s=>{ const st=s.key.split(' '); return st.length>=2 && st.every(t=>toks.includes(t)); }) : null);
+}
 /* cands: [{text, size}] in slide order; known: [{key,name}] students already loaded from reports */
 function pickName(cands, known){
   const texts=cands.map((c,i)=>({...c,i,text:clean(c.text).replace(/^(שם( התלמיד(ה)?)?|תלמיד(ה)?)\s*[:׃-]\s*/,'')})).filter(c=>c.text);
-  for(const c of texts){
-    const k=nameKey(c.text); const toks=k.split(' ');
-    const hit=known.find(s=>s.key===k) || (toks.length<=5 ? known.find(s=>{ const st=s.key.split(' '); return st.length>=2 && st.every(t=>toks.includes(t)); }) : null);
-    if(hit) return hit.name;
-  }
-  const ok=texts.filter(c=>{ const w=c.text.split(' '); return w.length>=2&&w.length<=4&&w.every(x=>NAME_RE.test(x))&&!NAME_STOP.test(c.text); });
+  for(const c of texts){ const hit=knownMatch(c.text,known); if(hit) return hit.name; }
+  const ok=texts.filter(c=>nameShaped(c.text));
   if(!ok.length) return '';
   ok.sort((a,b)=>(b.size||0)-(a.size||0)||a.i-b.i);
   return ok[0].text;
 }
-/* rows of the general-info table, as cell texts per row → {field: text} */
-function infoFromTableRows(rows){
-  const info={};
-  for(const cells of rows){
-    const k=cells.findIndex(c=>infoLabelStart(c.split('\n').join(' ')));
-    if(k<0) continue;
-    const f=infoLabelStart(cells[k].split('\n').join(' '));
-    const val=cleanML(cells.filter((c,i)=>i!==k&&cleanML(c)).join('\n'));
-    if(val && !info[f]) info[f]=val; else if(!(f in info)) info[f]='';
+/* one table (rows of cell texts) → {pairs:[{h,v}], name} for one student,
+   or {people:[{name,pairs}]} when the table lists several students, one per row.
+   Headers may run along the top row or down the side (right or left) — each teacher builds it differently. */
+function infoFromTable(rows){
+  rows=(rows||[]).map(r=>r.map(c=>String(c??''))).filter(r=>r.some(c=>clean(c)));
+  if(!rows.length) return {pairs:[]};
+  const one=c=>clean(String(c).split('\n').join(' '));
+  const H=rows[0], nCols=Math.max(...rows.map(r=>r.length));
+  /* a grades or teachers table ("מקצוע", "ציון", "מורה" headers) is not general info */
+  const edge=[...H, ...rows.map(r=>r[0]||''), ...rows.map(r=>r[r.length-1]||'')].map(one);
+  if(edge.some(c=>NOT_INFO_HEAD.test(c)&&!/^(שם|תלמיד)/.test(c))) return {pairs:[],notInfo:true};
+  const sureN=cells=>cells.filter(c=>sureLabel(c)).length;
+  const allLabels=cells=>cells.filter(c=>clean(c)).length>0&&cells.filter(c=>clean(c)).every(c=>isLabel(c));
+  /* a list of students: a name column + info columns */
+  const isName=c=>scoreHeader('name',one(c))>0, isFirst=c=>scoreHeader('first',one(c))>0, isLast=c=>scoreHeader('last',one(c))>0;
+  if(rows.length>=2&&H.some(c=>isName(c)||isFirst(c))&&sureN(H)>=1){
+    const ni=H.findIndex(isName), fi=H.findIndex(isFirst), li=H.findIndex(isLast);
+    const people=[];
+    for(const r of rows.slice(1)){
+      const name=ni>=0?one(r[ni]):clean(one(r[fi]??'')+' '+one(r[li]??'')); if(!name) continue;
+      const pairs=[]; H.forEach((h,i)=>{ if(i===ni||i===fi||i===li||!isLabel(h)||NOT_INFO_HEAD.test(labelText(one(h)))) return; addPair(pairs,one(h),r[i]); });
+      people.push({name,pairs});
+    }
+    if(people.length) return {people};
   }
-  return info;
+  /* headers along the top */
+  const top=rows.length>=2&&allLabels(H)?sureN(H):-1;
+  /* headers down one side */
+  let side=-1, sideCol=-1;
+  for(const c of [...new Set([0,nCols-1])]){
+    if(nCols<2) break;
+    const cells=rows.map(r=>r[c]||''); if(!allLabels(cells)) continue;
+    const n=sureN(cells); if(n>side){ side=n; sideCol=c; }
+  }
+  const pairs=[]; let name='';
+  if(side>0&&side>=top){
+    for(const r of rows){ const h=one(r[sideCol]||''); const v=r.filter((x,i)=>i!==sideCol).join('\n');
+      if(!h) continue;
+      if(isName(h)||/^שם/.test(h)){ if(!name) name=one(v); continue; }
+      if(!isLabel(h)||NOT_INFO_HEAD.test(labelText(h))) continue;
+      addPair(pairs,h,v); }
+  } else if(top>0){
+    H.forEach((h,i)=>{ const hh=one(h); if(!hh) return; const v=rows.slice(1).map(r=>r[i]||'').join('\n');
+      if(isName(hh)||/^שם/.test(hh)){ if(!name&&rows.length===2) name=one(v); return; }
+      if(!isLabel(hh)||NOT_INFO_HEAD.test(labelText(hh))) return;
+      addPair(pairs,hh,v); });
+  } else {
+    /* no header row/column: cells written as "חוזקות: ..." */
+    return {pairs:pairsFromBlocks(rows.flat()), name};
+  }
+  return {pairs, name};
 }
-/* one PDF page of a deck: text items → {info, cands} (values sit left of the label column, RTL table) */
+/* free text in blocks (text boxes / paragraphs): "חוזקות: ...", or a header line with the text under it */
+function pairsFromBlocks(blocks){
+  const pairs=[]; let pending=null;
+  for(const b of blocks){
+    const lines=String(b??'').split('\n').map(clean).filter(Boolean); if(!lines.length) continue;
+    let cur=null, used=false;
+    for(const t of lines){
+      const m=t.match(/^([^:׃]{2,45})[:׃]\s*(.*)$/);
+      if(m&&sureLabel(m[1])){ cur=addPair(pairs,m[1],m[2]); used=true; pending=null; continue; }
+      if(sureLabel(t)&&t.split(' ').length<=5){ cur=addPair(pairs,t,''); used=true; pending=cur; continue; }
+      if(m&&pairs.length&&looseLabel(m[1])){ cur=addPair(pairs,m[1],m[2]); used=true; pending=null; continue; }
+      if(cur){ cur.v=cur.v?cur.v+'\n'+t:t; pending=null; }
+    }
+    if(!used&&pending){ pending.v=cleanML(lines.join('\n')); pending=null; } /* a header box, then its text box */
+  }
+  return pairs;
+}
+/* several files' entries → one table: name + every header the teacher used, in order of appearance */
+function deckAoa(entries){
+  const heads=[]; for(const e of entries) for(const p of e.pairs||[]) if(!heads.includes(p.h)) heads.push(p.h);
+  return [['שם',...heads], ...entries.filter(e=>e.name).map(e=>[e.name,...heads.map(h=>(e.pairs.find(p=>p.h===h)||{}).v||'')])];
+}
+/* the teacher's headers → rows of the new table (the teacher can change each one in "בדיקת נתונים") */
+function guessInfoMap(headers, all){
+  const map=[], guess=[];
+  headers.forEach((h,i)=>{ if(i===0&&all){ map.push(null); guess.push(false); return; }
+    const r=infoFieldFor(h); if(!r||(!all&&!r.sure)){ map.push(null); guess.push(false); return; }
+    map.push(r.f); guess.push(!r.sure); });
+  return {map,guess};
+}
+/* PDF cells on lines → text, line by line, right to left */
+function joinCells(cells){
+  const lines=[]; for(const c of [...cells].sort((a,b)=>b.y-a.y||b.right-a.right)){ const l=lines.find(l=>Math.abs(l.y-c.y)<c.h*0.45); if(l) l.t.push(c.str); else lines.push({y:c.y,t:[c.str]}); }
+  return cleanML(lines.map(l=>l.t.join(' ')).join('\n'));
+}
+/* one PDF page of a deck: text items → {pairs, cands}. The info table may have its headers on top (one line)
+   or down the right side (values to their left, RTL) */
 function pdfDeckPage(items, flip){
   const rows=pdfRows([items],flip);
   const cells=rows.flatMap(r=>rowCells(r,0.4).map(c=>({...c,y:r.y,h:r.h})));
-  const starters=cells.filter(c=>infoLabelStart(c.str)&&c.str.split(' ').length<=4&&!/^(מידע|תמונת)/.test(c.str)).sort((a,b)=>b.y-a.y)
-    .filter((c,i,arr)=>i===0||infoLabelStart(c.str)!==infoLabelStart(arr[i-1].str)); /* 'קשיים' / 'רגשיים או' = one label on two lines */
-  const info={};
+  const cands=cells.map(c=>({text:c.str,size:c.h}));
+  const isStarter=c=>sureLabel(c.str)&&c.str.split(' ').length<=5&&!/^(מידע כללי$|תמונת)/.test(clean(c.str));
+  const st=cells.filter(isStarter), pairs=[];
+  /* headers along one line */
+  const lines=[]; for(const c of st){ const l=lines.find(l=>Math.abs(l.y-c.y)<c.h*0.5); if(l) l.c.push(c); else lines.push({y:c.y,h:c.h,c:[c]}); }
+  const top=lines.filter(l=>l.c.length>=2).sort((a,b)=>b.c.length-a.c.length)[0];
+  /* a header next to a short value that happens to be a header word ("מענים | תגבור") is still a side table */
+  if(top&&top.c.length>lines.length-1){
+    const H=cells.filter(c=>Math.abs(c.y-top.y)<top.h*0.5&&(top.c.includes(c)||(isLabel(c.str)&&!NOT_INFO_HEAD.test(labelText(c.str))))).sort((a,b)=>b.cx-a.cx);
+    const below=cells.filter(c=>c.y<top.y-top.h*0.3&&!/נבנה על ידי/.test(c.str)).sort((a,b)=>b.y-a.y);
+    let lastY=top.y; const vals=[];
+    for(const c of below){ if(lastY-c.y>top.h*5) break; vals.push(c); lastY=Math.min(lastY,c.y); }
+    H.forEach((h,i)=>{ const hi=i===0?Infinity:(H[i-1].cx+h.cx)/2, lo=i===H.length-1?-Infinity:(H[i+1].cx+h.cx)/2;
+      addPair(pairs,h.str,joinCells(vals.filter(c=>c.cx<hi&&c.cx>=lo))); });
+    return {pairs, cands, starters:H.length};
+  }
+  /* headers down the side: 'קשיים' / 'רגשיים או' on two lines = one header */
+  const maxRight=Math.max(...st.map(c=>c.right)), hMax=Math.max(0,...st.map(c=>c.h));
+  const starters=st.filter(c=>c.right>=maxRight-hMax*4).sort((a,b)=>b.y-a.y) /* the header column: aligned on the right */.filter((c,i,arr)=>i===0||!(infoFieldFor(c.str).f===infoFieldFor(arr[i-1].str).f&&arr[i-1].y-c.y<c.h*1.8));
   if(starters.length){
     const colLeft=Math.min(...starters.map(s=>s.x)), tol=Math.max(...starters.map(s=>s.h))*0.6;
     const gaps=starters.slice(1).map((s,i)=>starters[i].y-s.y), avg=gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:starters[0].h*6;
     starters.forEach((s,i)=>{
-      const f=infoLabelStart(s.str); if(f in info) return;
       const top=s.y+s.h*0.9, bottom= i<starters.length-1 ? starters[i+1].y+starters[i+1].h*0.9 : s.y-Math.max(avg*1.3,s.h*4);
-      const vals=cells.filter(c=>c.right<=colLeft+tol && c.y<=top && c.y>bottom && !/נבנה על ידי/.test(c.str));
-      const byLine=[]; for(const c of vals.sort((a,b)=>b.y-a.y||b.right-a.right)){ const l=byLine.find(l=>Math.abs(l.y-c.y)<c.h*0.45); if(l) l.t.push(c.str); else byLine.push({y:c.y,t:[c.str]}); }
-      info[f]=cleanML(byLine.map(l=>l.t.join(' ')).join('\n'));
+      addPair(pairs,s.str,joinCells(cells.filter(c=>c.right<=colLeft+tol && c.y<=top && c.y>bottom && !/נבנה על ידי/.test(c.str))));
     });
   }
-  return {info, cands:cells.map(c=>({text:c.str,size:c.h})), starters:starters.length};
+  return {pairs, cands, starters:starters.length};
 }
-function deckAoa(entries){
-  return [['שם',...INFO_IN.map(f=>INFO_HEAD[f])], ...entries.filter(e=>e.name).map(e=>[e.name,...INFO_IN.map(f=>e.info[f]||'')])];
-}
-if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,parseTeachersReport,parseAssessReport,pickName,infoFromTableRows,pdfDeckPage,deckAoa,infoLabelStart};
+if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,parseTeachersReport,parseAssessReport,pickName,infoFromTable,pairsFromBlocks,pdfDeckPage,deckAoa,infoLabelStart,infoFieldFor,guessInfoMap,sureLabel};
 </script>
 
 <script>
@@ -1110,7 +1233,17 @@ function addFileFromAoa(name, aoa){
   const safeHeaders=headers.map(h=>SENSITIVE_COL.test(h)?'':h); /* ID numbers, phones etc. are never read */
   const mapping=autoMap(safeHeaders);
   if(mapping.cls>=0){ const vals=rows.map(r=>clean(r[mapping.cls])).filter(Boolean); if(vals.length&&vals.filter(v=>/\d{5,}/.test(v)).length>vals.length/3) mapping.cls=-1; }
-  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind:sadin?'sadin':evRep?'events':asRep?'assess':grRep?'groups':undefined, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, title, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined, subjByName:grRep?grRep.subjByName:undefined};
+  const kind=sadin?'sadin':evRep?'events':asRep?'assess':grRep?'groups':undefined;
+  /* a teacher's own table (not a Smart School report): text columns whose headers read as general info */
+  let infoMap, infoGuess;
+  if(!kind){
+    const g=guessInfoMap(safeHeaders,false);
+    const other=new Set(FIELDS.filter(f=>!INFO_IN.includes(f.id)).map(f=>mapping[f.id]).filter(i=>i>=0));
+    const m=g.map.map((f,i)=>{ if(!f||other.has(i)) return null; const vals=rows.map(r=>clean(r[i])).filter(Boolean);
+      return vals.filter(v=>toNum(v)==null).length>=vals.length*0.6?f:null; });
+    if(m.some(Boolean)){ infoMap=m; infoGuess=g.guess; INFO_IN.forEach(f=>{ mapping[f]=-1; }); }
+  }
+  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind, infoMap, infoGuess, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, title, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined, subjByName:grRep?grRep.subjByName:undefined};
   state.files.push(file); return file;
 }
 function loadSample(){
@@ -1160,13 +1293,14 @@ function renderFiles(){
     const hasName=m.name>=0||m.first>=0||m.last>=0||f.kind==='teachers';
     const d=document.createElement('details'); d.className='file';
     d.innerHTML=`<summary><span class="fname">${esc(f.name)}</span>
-      <span class="chip">${f.kind==='deck'?`מצגת · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:f.kind==='teachers'?`מורי הכיתה · ${f.teachers.length}`:f.kind==='assess'?`ציונים שוטפים · ${f.assessCols.length} הערכות`:f.kind==='groups'?`שיוך לקבוצות · ${f.rows.length} תלמידים`:`${f.rows.length} שורות`}</span>
+      <span class="chip">${f.kind==='deck'?`${/\.docx$/i.test(f.name)?'מסמך':'מצגת'} · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:f.kind==='teachers'?`מורי הכיתה · ${f.teachers.length}`:f.kind==='assess'?`ציונים שוטפים · ${f.assessCols.length} הערכות`:f.kind==='groups'?`שיוך לקבוצות · ${f.rows.length} תלמידים`:`${f.rows.length} שורות`}</span>
       <span class="chip ${hasName?'ok':'bad'}">${hasName?mapped.length+' עמודות זוהו':'לא זוהתה עמודת שם'}</span>
       <span class="grow"></span><span class="chip">התאמת עמודות</span>
       <button class="btn small" type="button" data-del="${f.id}">הסרה</button></summary>
       <div class="map"></div>`;
     const map=d.querySelector('.map');
     for(const fl of FIELDS){
+      if(f.infoMap&&INFO_IN.includes(fl.id)) continue; /* set per header in "בדיקת נתונים" */
       const lab=document.createElement('label'); lab.textContent=fl.label;
       const sel=document.createElement('select'); sel.id='map-'+f.id+'-'+fl.id;
       sel.innerHTML='<option value="-1">— לא בקובץ —</option>'+f.headers.map((h,i)=>h?`<option value="${i}">${esc(h)}</option>`:'').join('');
@@ -1190,6 +1324,26 @@ function renderChecks(){
     <div class="stat"><b>${withPhoto}/${students.length}</b><span>עם תמונה</span></div>`;
   const box=$('#issues'); box.innerHTML='';
   const realFiles=state.files.filter(f=>!state.sample);
+  /* each teacher titles the general-info table differently: show where every header goes, and let them change it */
+  for(const f of state.files.filter(f=>f.infoMap&&f.infoMap.some(Boolean))){
+    const el=document.createElement('div'); el.className='issue '+(f.infoGuess?.some((g,i)=>g&&f.infoMap[i]&&f.infoMap[i]!=='skip')?'missing':'done');
+    el.innerHTML=`<div class="issue-title">המידע הכללי מ־${esc(f.name)}: לאן נכנסת כל כותרת</div>
+      <span class="hint">כל מורה כותב כותרות משלו, אז שייכנו לפי הניסוח. אם כותרת לא במקום, בחרו שורה אחרת. השינוי חל על כל התלמידים בקובץ. שתי כותרות באותה שורה יופיעו זו אחר זו, כל אחת עם שמה.</span>
+      <div class="imap"></div>`;
+    const grid=el.querySelector('.imap');
+    f.infoMap.forEach((fid,ci)=>{
+      if(!fid) return;
+      const filled=f.rows.filter(r=>clean(r[ci])).length;
+      const h=document.createElement('div'); h.className='h';
+      h.innerHTML=`<b>${esc(f.headers[ci])}</b><br><span class="hint">מלא אצל ${filled} תלמידים</span>${f.infoGuess?.[ci]&&fid!=='skip'?' <small>ניחוש, בדקו</small>':''}`;
+      const sel=document.createElement('select'); sel.setAttribute('aria-label','שורה בטבלה עבור '+f.headers[ci]);
+      sel.innerHTML=INFO.map(x=>`<option value="${x}">${esc(FLABEL[x])}</option>`).join('')+'<option value="skip">לא להכניס</option>';
+      sel.value=INFO.includes(fid)||fid==='skip'?fid:'iEmo';
+      sel.onchange=()=>{ f.infoMap[ci]=sel.value; if(f.infoGuess) f.infoGuess[ci]=false; refresh(); };
+      grid.append(h,sel);
+    });
+    box.appendChild(el);
+  }
   if(realFiles.length&&$('#sTeachers').checked&&!state.files.some(f=>f.kind==='teachers'||f.kind==='groups')){
     const el=document.createElement('div'); el.className='issue missing';
     el.innerHTML=`<div class="issue-title">שקף מורי הכיתה: חסר דוח 58</div><span class="hint">בלי דוח 58 (שיוך תלמידי כיתה לקבוצות) יופיעו רק מורים שכבר הזינו ציונים בסדין.</span>`;
@@ -1529,10 +1683,12 @@ function parsePptxSlide(path, xml, relsXml){
   const rels={};
   if(relsXml){ const rd=dp.parseFromString(relsXml,'application/xml');
     for(const r of tags(rd,'Relationship')) if(r.getAttribute('TargetMode')!=='External') rels[r.getAttribute('Id')]=resolvePart(path,r.getAttribute('Target')); }
-  const tables=tags(doc,'tbl').map(tbl=>tags(tbl,'tr').map(tr=>tags(tr,'tc').map(tc=>paraText(tc))));
-  const texts=[];
+  const tables=tags(doc,'tbl').map(tbl=>{ const rtl=tags(tbl,'tblPr')[0]?.getAttribute('rtl')==='1';
+    return tags(tbl,'tr').map(tr=>{ const cells=tags(tr,'tc').map(tc=>paraText(tc)); return rtl?cells:cells.reverse(); }); }); /* Hebrew order: right to left */
+  const texts=[], blocks=[];
   for(const sp of tags(doc,'sp')){
     const tb=tags(sp,'txBody')[0]; if(!tb) continue;
+    blocks.push(paraText(tb));
     const size=Math.max(0,...[...tags(tb,'rPr'),...tags(tb,'defRPr'),...tags(tb,'endParaRPr')].map(r=>Number(r.getAttribute('sz'))||0))/100;
     for(const line of paraText(tb).split('\n')) if(line.trim()) texts.push({text:line,size});
   }
@@ -1545,7 +1701,7 @@ function parsePptxSlide(path, xml, relsXml){
     if(host){ const ext=tags(host,'ext').find(e=>e.parentNode&&e.parentNode.localName==='xfrm'); if(ext){ cx=Number(ext.getAttribute('cx'))||0; cy=Number(ext.getAttribute('cy'))||0; } }
     pics.push({target:rels[id],area:cx*cy,aspect:cy?cx/cy:0});
   }
-  return {tables,texts,pics};
+  return {tables,texts,blocks,pics};
 }
 const IMG_EXT=/\.(png|jpe?g|gif|webp|bmp)$/i;
 function repeatedSet(lists){ /* things that show up on most slides = logos */
@@ -1554,9 +1710,24 @@ function repeatedSet(lists){ /* things that show up on most slides = logos */
   return new Set(Object.keys(cnt).filter(t=>n>=3&&cnt[t]>=Math.max(2,Math.ceil(n*0.5))));
 }
 function knownStudents(){ return built.students.filter(s=>s.files.some(id=>state.files.find(f=>f.id===id&&f.kind!=='deck'))).map(s=>({key:s.key,name:s.name})); }
-function deckEntry(name, info, known){
-  const hasInfo=Object.values(info).some(Boolean)||Object.keys(info).length>=2;
-  return {name, info, hasInfo, matched:known.some(k=>k.name===name)};
+function deckEntry(name, pairs, known){
+  const hasInfo=pairs.some(p=>p.v);
+  return {name, pairs, hasInfo, matched:known.some(k=>k.name===name)};
+}
+/* one slide / page → entries (usually one student; a table may list several) */
+function slideEntries(s, known, entries, skipped, unknownTables){
+  let pairs=[], tname='', notInfo=false;
+  for(const t of s.tables){
+    const r=infoFromTable(t); if(r.notInfo) notInfo=true;
+    if(r.people){ for(const p of r.people){ const k=knownMatch(p.name,known); entries.push(deckEntry(k?k.name:p.name,p.pairs,known)); } continue; }
+    for(const p of r.pairs) addPair(pairs,p.h,p.v);
+    if(r.name&&!tname) tname=r.name;
+  }
+  const fromTable=pairs.length>0;
+  if(!pairs.length&&s.blocks) for(const p of pairsFromBlocks(s.blocks)) addPair(pairs,p.h,p.v);
+  const name=tname?(knownMatch(tname,known)?.name||tname):pickName(s.texts, known);
+  if(!pairs.length&&name&&s.tables.some(t=>t.length>=1&&!t.flat().some(c=>NOT_INFO_HEAD.test(labelText(String(c).split('\n')[0]))))) unknownTables.push(s.num);
+  return {name, pairs, fromTable, notInfo:notInfo&&!pairs.length}; /* a teachers/grades slide */
 }
 async function readPptxDeck(file){
   const zip=await JSZip.loadAsync(await file.arrayBuffer());
@@ -1568,18 +1739,18 @@ async function readPptxDeck(file){
     slides.push({num:slides.length+1, ...parsePptxSlide(p, await zip.file(p).async('string'), zip.file(rp)?await zip.file(rp).async('string'):'')});
   }
   const logos=repeatedSet(slides.map(s=>s.pics.map(x=>x.target)));
-  const known=knownStudents(), entries=[], skipped=[];
+  const known=knownStudents(), entries=[], skipped=[], unknownTables=[];
   for(const s of slides){
-    const info={}; for(const t of s.tables) Object.assign(info, infoFromTableRows(t));
-    const name=pickName(s.texts, known);
+    const {name,pairs,fromTable,notInfo}=slideEntries(s, known, entries, skipped, unknownTables);
+    if(notInfo) continue;
     const pic=s.pics.filter(x=>!logos.has(x.target)&&IMG_EXT.test(x.target)&&x.area>0&&x.aspect>=0.4&&x.aspect<=2.5).sort((a,b)=>b.area-a.area)[0];
-    const e=deckEntry(name, info, known);
-    if(!name){ if(e.hasInfo) skipped.push(s.num); continue; }
+    const e=deckEntry(name, pairs, known);
+    if(!name){ if(e.hasInfo&&fromTable) skipped.push(s.num); continue; }
     if(!(e.hasInfo||e.matched||pic)) continue;
     if(pic){ const ext=pic.target.split('.').pop().toLowerCase(); const blob=new Blob([await zip.file(pic.target).async('uint8array')],{type:'image/'+(ext==='jpg'?'jpeg':ext)}); e.photo=await shrink(await fileToDataURL(blob)); }
     entries.push(e);
   }
-  return {entries, skipped};
+  return {entries, skipped, unknownTables};
 }
 function imageRects(opList){
   const O=pdfjsLib.OPS, U=pdfjsLib.Util; let ctm=[1,0,0,1,0,0]; const st=[], out=[];
@@ -1645,9 +1816,9 @@ async function readPdfDeck(file){
   const logos=repeatedSet(pages.map(p=>p.rects.map(sig)));
   const known=knownStudents(), entries=[], skipped=[];
   for(const p of pages){
-    const {info,cands}=pdfDeckPage(p.items,flip);
+    const {pairs,cands}=pdfDeckPage(p.items,flip);
     const name=pickName(cands, known);
-    const e=deckEntry(name, info, known);
+    const e=deckEntry(name, pairs, known);
     const pic=p.rects.filter(r=>{ const w=r.x2-r.x1,h=r.y2-r.y1; return !logos.has(sig(r))&&w*h>p.area*0.005&&w/h>=0.4&&w/h<=2.5; }).sort((a,b)=>(b.x2-b.x1)*(b.y2-b.y1)-(a.x2-a.x1)*(a.y2-a.y1))[0];
     if(!name){ if(e.hasInfo) skipped.push(p.num); continue; }
     if(!(e.hasInfo||e.matched||pic)) continue;
@@ -1667,9 +1838,10 @@ async function handleAnyInner(list){
   const ext=f=>f.name.split('.').pop().toLowerCase();
   const data=list.filter(f=>/^(xlsx|xls|csv|htm|html)$/.test(ext(f)));
   const decks=list.filter(f=>/^(pptx|ppt|key)$/.test(ext(f)));
+  const docs=list.filter(f=>/^(docx|doc|odt)$/.test(ext(f)));
   const pics=list.filter(f=>/^(jpe?g|png|webp|gif|heic|zip)$/.test(ext(f)));
   const pdfs=list.filter(f=>ext(f)==='pdf');
-  const msgs=list.filter(f=>![...data,...decks,...pics,...pdfs].includes(f)).map(f=>`${f.name}: סוג קובץ לא מוכר.`);
+  const msgs=list.filter(f=>![...data,...decks,...docs,...pics,...pdfs].includes(f)).map(f=>`${f.name}: סוג קובץ לא מוכר.`);
   const notes=[];
   const busy=t=>{ $('#photoInfo').textContent=t; };
   if(data.length){ busy('קורא דוחות…'); await handleData(data,msgs,notes); }
@@ -1680,7 +1852,7 @@ async function handleAnyInner(list){
       if(ro.photos.length&&ro.rows>=3){ for(const x of ro.photos) setPhoto(x.name,x.photo,x.text); notes.push(`${f.name}: אלפון תמונות, נקראו ${ro.photos.length} תמונות.`); continue; }
       if(ro.isRoster){ msgs.push(`${f.name}: זה אלפון תלמידים, אבל לא נמצאו בו תמונות. שמרו אותו שוב כ-PDF כשהתמונות מופיעות במסך (פריסה לרוחב, התאמה לעמוד).`); continue; }
       const dk=await readPdfDeck(f);
-      if(dk.entries.some(e=>Object.values(e.info).some(Boolean))){ addDeck(f.name,dk,notes); refresh(); continue; }
+      if(dk.entries.some(e=>e.hasInfo)){ addDeck(f.name,dk,notes); refresh(); continue; }
       const sheets=await readPdf(f);
       for(const s of sheets){ const fi=addFileFromAoa(s.name,s.aoa); noteData(fi,msgs,notes); }
       refresh();
@@ -1692,6 +1864,13 @@ async function handleAnyInner(list){
       if(ext(f)!=='pptx'){ msgs.push(`${f.name}: הקובץ בפורמט ישן. שמרו אותו כ-pptx או כ-PDF ונסו שוב.`); continue; }
       addDeck(f.name, await readPptxDeck(f), notes, msgs); refresh();
     }catch(e){ console.error(e); msgs.push(`${f.name}: לא הצלחנו לקרוא את המצגת. נסו לשמור אותה מחדש כ-pptx או כ-PDF.`); }
+  }
+  for(const f of docs){
+    busy(`קורא את המסמך ${f.name}…`);
+    try{
+      if(ext(f)!=='docx'){ msgs.push(`${f.name}: הקובץ בפורמט ישן. שמרו אותו כ-docx (Word) או כ-PDF ונסו שוב.`); continue; }
+      addDeck(f.name, await readDocxInfo(f), notes, msgs); refresh();
+    }catch(e){ console.error(e); msgs.push(`${f.name}: לא הצלחנו לקרוא את המסמך. נסו לשמור אותו מחדש כ-docx או כ-PDF.`); }
   }
   if(pics.length){ busy('משייך תמונות…'); await handlePhotos(pics,notes); }
   busy('');
@@ -1722,40 +1901,69 @@ function noteData(fi,msgs,notes){
   else notes.push(`${fi.name}: ${fi.kind==='sadin'?'סדין ציונים':fi.kind==='events'?'מונה אירועי שיעור':fi.kind==='assess'?'ציונים שוטפים':fi.kind==='groups'?'שיוך לקבוצות (הקבצות ומין)':'דוח'}, ${fi.rows.length} שורות.`);
 }
 function addDeck(name,res,notes,msgs){
-  if(!res.entries.length){ (msgs||notes).push(`${name}: לא נמצאו בקובץ שקפים של תלמידים עם שם.`); return; }
-  const file=addFileFromAoa(name, deckAoa(res.entries)); file.kind='deck'; file.photoKeys=[]; file.photoData={};
-  for(const e of res.entries) if(e.photo){ const k=setPhoto(e.name,e.photo); file.photoKeys.push(k); file.photoData[k]=e.photo; }
-  const withInfo=res.entries.filter(e=>Object.values(e.info).some(Boolean)).length;
-  notes.push(`${name}: מצגת, ${res.entries.length} תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות.`+(res.skipped.length?` לא זוהה שם תלמיד בשקפים ${res.skipped.join(', ')}.`:''));
-}
-async function handleDeck(list){
-  const err=$('#fileErr'); err.hidden=true; const msgs=[], summary=[];
-  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.sample=false; refresh(); }
-  $('#deckInfo').textContent='קורא את המצגת…';
-  for(const f of list){
-    const ext=f.name.split('.').pop().toLowerCase();
-    try{
-      if(ext==='ppt'||ext==='key'){ msgs.push(`${f.name}: הקובץ בפורמט ישן. שמרו אותו כ-pptx או כ-PDF ונסו שוב.`); continue; }
-      if(ext==='pdf'){ /* a photo roster (Smart School report 61) uploaded here: take its photos */
-        const ro=await rosterPhotosFromPdf(f);
-        if(ro.photos.length){ for(const x of ro.photos) setPhoto(x.name,x.photo,x.text); summary.push(`${f.name}: אלפון עם תמונות, שויכו ${ro.photos.length} תמונות.`); continue; }
-      }
-      const res = ext==='pdf' ? await readPdfDeck(f) : await readPptxDeck(f);
-      if(!res.entries.length){ msgs.push(`${f.name}: לא נמצאו בקובץ שקפים של תלמידים עם שם, ולא תמונות בטבלה של תלמידים.`); continue; }
-      const file=addFileFromAoa(f.name, deckAoa(res.entries)); file.kind='deck'; file.photoKeys=[]; file.photoData={};
-      for(const e of res.entries) if(e.photo){ const k=setPhoto(e.name,e.photo); file.photoKeys.push(k); file.photoData[k]=e.photo; }
-      const withInfo=res.entries.filter(e=>Object.values(e.info).some(Boolean)).length;
-      summary.push(`${f.name}: ${res.entries.length} תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות.`+(res.skipped.length?` לא זוהה שם תלמיד בשקפים ${res.skipped.join(', ')}.`:''));
-    }catch(e){
-      console.error(e);
-      if(e?.message==='scanned') msgs.push(`${f.name}: ה-PDF הוא תמונה סרוקה בלי טקסט.`);
-      else if(e?.message==='script') msgs.push(`${f.name}: רכיב קריאת ה-PDF לא נטען. בדקו את החיבור לאינטרנט ונסו שוב.`);
-      else msgs.push(`${f.name}: לא הצלחנו לקרוא את המצגת. נסו לשמור אותה מחדש כ-pptx או כ-PDF.`);
-    }
+  const kindWord=/\.docx$/i.test(name)?'מסמך':/\.pdf$/i.test(name)?'קובץ':'מצגת';
+  if(!res.entries.length){
+    (msgs||notes).push(res.unknownTables?.length?`${name}: נמצאה טבלה, אבל לא זיהינו בה כותרות של מידע על התלמיד (למשל חוזקות, קשיים, רקע). כתבו כותרת מעל כל עמודה או לצד כל שורה ונסו שוב.`:`${name}: לא נמצאו ב${kindWord} תלמידים עם שם.`);
+    return;
   }
-  $('#deckInfo').textContent=summary.join(' ');
-  if(msgs.length){ err.innerHTML=msgs.map(esc).join('<br>'); err.hidden=false; }
-  refresh();
+  /* the same student on two slides: one entry */
+  const merged=[]; for(const e of res.entries){ const m=merged.find(x=>x.name===e.name); if(!m){ merged.push({...e,pairs:e.pairs.map(p=>({...p}))}); continue; } for(const p of e.pairs) addPair(m.pairs,p.h,p.v); if(!m.photo&&e.photo) m.photo=e.photo; }
+  const aoa=deckAoa(merged);
+  const file=addFileFromAoa(name, aoa); file.kind='deck'; file.photoKeys=[]; file.photoData={};
+  /* keep only the name column mapped; every other column is the teacher's own info header */
+  for(const k of Object.keys(file.mapping)) if(!['name','first','last'].includes(k)) file.mapping[k]=-1;
+  file.headers=aoa[0].map(clean); file.mapping.name=0; file.mapping.first=file.mapping.last=-1;
+  const g=guessInfoMap(file.headers,true); file.infoMap=g.map; file.infoGuess=g.guess;
+  for(const e of merged) if(e.photo){ const k=setPhoto(e.name,e.photo); file.photoKeys.push(k); file.photoData[k]=e.photo; }
+  const withInfo=merged.filter(e=>e.hasInfo).length;
+  const heads=file.headers.slice(1).map((h,i)=>`${h} ← ${FLABEL[file.infoMap[i+1]]}`);
+  notes.push(`${name}: ${kindWord}, ${merged.length} תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות.`
+    +(heads.length?` כותרות שזוהו: ${heads.join(' · ')} (אפשר לשנות בשלב 3).`:'')
+    +(res.skipped.length?` לא זוהה שם תלמיד בשקפים ${res.skipped.join(', ')}.`:'')
+    +(res.unknownTables?.length?` בשקפים ${res.unknownTables.join(', ')} יש טבלה בלי כותרות מוכרות.`:''));
+}
+
+/* a Word document: a section per student (name line, then "חוזקות: ..." lines or a small table),
+   or one table listing all students */
+async function readDocxInfo(file){
+  const zip=await JSZip.loadAsync(await file.arrayBuffer());
+  const xml=zip.file('word/document.xml'); if(!xml) throw new Error('nodoc');
+  const doc=new DOMParser().parseFromString(await xml.async('string'),'application/xml');
+  const body=tags(doc,'body')[0]; if(!body) throw new Error('nodoc');
+  const known=knownStudents(), entries=[], skipped=[], unknownTables=[];
+  const blocks=[]; const walk=el=>{ for(const c of el.children){ if(c.localName==='p'||c.localName==='tbl') blocks.push(c); else if(c.localName==='sdt'||c.localName==='sdtContent'||c.localName==='customXml') walk(c); } };
+  walk(body);
+  let cur=null, last=null; const orphan=[];
+  const start=name=>{ const k=knownMatch(name,known); cur={name:k?k.name:name,pairs:[]}; entries.push(cur); last=null; };
+  /* Word: columns run right to left only when the table is marked bidi; read them in the teacher's reading order */
+  const directRows=tbl=>{ const bidi=tags(tbl,'bidiVisual').length>0; return [...tbl.children].filter(x=>x.localName==='tr').map(tr=>{ const c=[...tr.children].filter(x=>x.localName==='tc').map(tc=>paraText(tc)); return bidi?c:c.reverse(); }); };
+  const textOf=el=>el?clean(tags(el,'t').map(x=>x.textContent).join('')):'';
+  blocks.forEach((b,bi)=>{
+    if(b.localName==='tbl'){
+      const r=infoFromTable(directRows(b));
+      if(r.people){ for(const p of r.people){ start(p.name); cur.pairs=p.pairs; } cur=null; return; }
+      if(r.name) start(r.name);
+      for(const p of r.pairs) addPair(cur?cur.pairs:orphan,p.h,p.v);
+      if(!r.pairs.length&&cur) unknownTables.push(entries.length);
+      last=null; return;
+    }
+    const t=textOf(b); if(!t) return;
+    const ps=tags(b,'pStyle')[0], sty=ps?(ps.getAttribute('w:val')||''):'';
+    const runs=tags(b,'r').filter(r=>tags(r,'t').some(x=>x.textContent.trim()));
+    const bold=runs.length>0&&runs.every(r=>tags(r,'b').some(x=>!/^(0|false)$/.test(x.getAttribute('w:val')||'')));
+    const nm=t.match(/^(?:שם(?: התלמיד(?:ה)?)?|תלמיד(?:ה)?)\s*[:׃-]\s*(.+)$/);
+    if(nm){ start(clean(nm[1])); return; }
+    const next=blocks[bi+1], nextT=textOf(next);
+    const strong=/heading|title|כותרת/i.test(sty)||bold||(!!next&&(next.localName==='tbl'||sureLabel(nextT.split(/[:׃]/)[0])));
+    const isKnown=known.length&&knownMatch(t,known)&&t.split(' ').length<=5;
+    const m=t.match(/^([^:׃]{2,45})[:׃]\s*(.*)$/);
+    if(isKnown||(strong&&nameShaped(t)&&!sureLabel(t)&&!m)){ start(t); return; }
+    const target=cur?cur.pairs:orphan;
+    if(m&&(sureLabel(m[1])||(cur&&cur.pairs.length&&looseLabel(m[1])))){ last=addPair(target,m[1],m[2]); return; }
+    if(sureLabel(t)&&t.split(' ').length<=5){ last=addPair(target,t,''); return; }
+    if(last){ last.v=last.v?last.v+'\n'+t:t; }
+  });
+  return {entries:entries.map(e=>deckEntry(e.name,e.pairs,known)), skipped, unknownTables};
 }
 
 /* ---------- PowerPoint ---------- */
