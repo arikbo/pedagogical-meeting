@@ -256,7 +256,7 @@ footer a:hover{text-decoration:underline}
   </div>
   <div class="infobox">
     <p><b>כל הדוחות לאותה כיתה ולאותה תקופה.</b></p>
-    <p><b>תמונת מצב אישית</b> (פרופיל תלמיד, חוזקות, אתגרים, מענים, דרכי פעולה מומלצות ועוד) אפשר למלא לכל תלמיד בשלב 4, ״התלמידים״, אחרי שהדוחות עולים. אפשר גם להעתיק אותו אוטומטית מהישיבה הקודמת: גוררים את המצגת הקודמת או מסמך עם המידע (PowerPoint, Word או PDF) יחד עם הדוחות. לא משנה איך נקראות הכותרות שם: האתר משייך אותן לפי הניסוח, ובשלב 3 אפשר לתקן.</p>
+    <p><b>תמונת מצב אישית</b> (פרופיל תלמיד, חוזקות, אתגרים, מענים, דרכי פעולה מומלצות ועוד) אפשר למלא לכל תלמיד בשלב 4, ״התלמידים״, אחרי שהדוחות עולים. אפשר גם להעתיק אותו אוטומטית מהישיבה הקודמת: גוררים את המצגת הקודמת או מסמך עם המידע (PowerPoint, Word או PDF) יחד עם הדוחות. לא משנה איך המורה כתב שם את הטבלה: האתר קורא כל משפט ומכניס אותו לשורה המתאימה (פרופיל, חוזקות, אתגרים, ביקור סדיר, מענים, דרכי פעולה), ואפשר לתקן בשלב 4. המצגת הקודמת לא מוסיפה תלמידים: המידע נכנס רק לתלמידים שברשימת הכיתה מהדוחות.</p>
   </div>
   <div class="samplebar"><div id="sampleBanner" class="sample" hidden><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
     <button class="btn small" type="button" id="bSample">רוצים לראות קודם איך זה נראה? הצגת דוגמה</button></div>
@@ -313,7 +313,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 27.10.2026 · 19:05</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 27.10.2026 · 20:45</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -444,6 +444,96 @@ function rerouteInfo(val, locked={}){
     val[f]=String(val[f]).split('\n').map(l=>l.replace(/\s+([.,:;!?])/g,'$1').replace(/,(?=[א-תA-Za-z])/g,', ').replace(/\s{2,}/g,' ').replace(/^[-–•*\s]+/,'').replace(/[,;\s]+$/,'').trim())
       .filter(l=>l&&!seen.has(l)&&seen.add(l)).join('\n'); }
   return val;
+}
+
+/* ---------- a teacher's free text → the rows of our table, sentence by sentence ----------
+   Every teacher writes the info differently (other headers, rows or columns, header before or after the text),
+   so the header is only a hint: each sentence is read and goes to the row it is about.
+   items: [{t:'text', hint:'iEmo'|null}] → {iGen:'…', iStr:'…', iEmo:'…', iAtt:'…', iAns:'…', iRec:'…'} */
+const CL={
+  /* ביקור סדיר: absences, lateness, trips abroad that keep the student away */
+  att:new RegExp([ATT_WORDS.source,'יחסר|תחסר|יעדר|תיעדר|נעדר|נעדרת','חו"ל|חו״ל|לחו[״"]?ל|טס(?:ים|ה)?\\s+ל','מכתב מחנך','איחורים|לאחר\\s+(?:ל|ב)'].join('|')),
+  /* מענים: what the school gives (קשת, שילוב, פרטני, CBT, סייעת, התאמות…) and outside help (מורה פרטית, שיעורים פרטיים) */
+  ans:new RegExp([ANS_WORDS.source,'מורה\\s+פרטי|מורה פרטית|שיעורים?\\s+פרטי|פרטיים|תגבור(?!\\s+במספר)|האזנה חוזרת|התעלמות משגיאות|הארכת זמן|תוספת\\s+(?:של\\s+)?זמן|עובדת סוציאלית|עו"ס|מתי"א|ליווי|חונך|חונכת|מנטור|קבוצת\\s+(?:cbt|רגשית|תמיכה)|כיתה קטנה'].join('|'),'i'),
+  /* אבחון / בריאות */
+  health:new RegExp([EMO_WORDS.source,'אוזן|שמיעה|שומע|שמיעתי|ראייה|משקפיים|גסטרו|כאבי|נשימה|פעימות|בעיית לב|חולה|אפיפן|תרופ|נוטל|נוטלת|ליטול|רפואי|בדיקות|השתלה|פציעה|נפצע|תאונה|רזת|רזה|משקל|אכילה|לאוכל|טרום|דלקת|פסיכודידקטי'].join('|')),
+  /* a point to act on */
+  rec:/(^|[\s,(])(צריך|צריכה|צריכים|כדאי|יש לשים|יש להקפיד|יש לעדכן|לשים לב|לשים דגש|לעדכן|לדבר|להוציא|לחבר|לקרב|לבדוק|מומלץ|מומלצת|להושיב|לשבת מקדימה|לשבת קדימה|לשבת מקדימה|ישיבה קדימה|מקום ישיבה|גבולות|לא להעיר|שלא להעיר|לא לאפשר|לאפשר|לעקוב|מעקב|לשלב|לעודד|לחזק|להקפיד|לוודא|לתת|ניתן לתת|חשוב ש)(?![א-ת])/,
+  /* difficulties: learning, behavior, social, emotional */
+  diff:new RegExp([DIFF_WORDS.source,'(^|[\\s,(])(אין\\s+(?:ל[והה]\\s+)?חבר|בודד|בודדה|דחוי|מופנם|מופנמת|מופנת|ביישן|ביישנית|רגיש|רגישה|נפיץ|מתפרצ|התפרצו|מציק|להציק|אלימ|חצוף|חוצפה|פטפטן|פטפטנית|מפטפט|וכחנ|לחוץ|לחוצה|לחץ|פחד|פוחד|חושש|חוששת|חוסר|עייף|עצלנ|מתנדנד|לא רגוע|לא רגועה|לא משלים|לא משלימה|לא מגויס|לא מגויסת|לא תמיד|לא מרוצה|רגשית מאוד|רגשי מאוד|לא אוהבת ללמוד|לא אוהב ללמוד|לא משקיע|לא משקיעה|שגיאות|להשתפר|לשפר|לשיפור|חלש|חלשה|מועט|מועטה|נמוכה|נמוך|נכשל|נכשלת|ירידה|מתעצבן|מתעצבנת|עצבני|להתעצבן|נרתע|מסרב|מסרבת|מבקש(?:ת)? לעבור|לעבור כיתה|בעיית|בעיה|קשיי|קשה ל)'].join('|')),
+  /* strengths, hobbies, positive traits */
+  str:new RegExp([STR_WORDS.source.replace(')(?![א-ת])','|עוזר|עוזרת|רצון|מוטיבציה|רוצה להצליח|רוצה ללמוד|מקובל|מקובלת|מקבול|חברותי|חברותית|מקסים|מקסימה|טוב לב|טובת לב|מנומס|מנומסת|מחונך|מחונכת|שקדן|שקדנית|מאורגן|מאורגנת|מסודר|מסודרת|רציני|רצינית|בוגר|בוגרת|מצחיק|מצחיקה|שמח|שמחה|ספורטאי|ספורטאית|משחק|משחקת|לומד|לומדת|מתעניין|מתעניינת|מכוון|מכוונת|יוצר|יוצרת|אמן|אמנית|מבריק|מבריקה|פעיל|פעילה|משתתף|משתתפת|תורם|תורמת|נתינה|אכפתי|אכפתית|דעתן|דעתנית|מנהיג|מנהיגה|התקבל|התקבלה|זכה|זכתה|מקום (?:ראשון|שני|שלישי)|נבחרת|ליגה|חוג|להקה|מנגן|כינור|פסנתר|ציור|לצייר|אומנות|אמנות|ריקוד|לרקוד|כדורגל|כדורסל|כדורעף|שחייה|שחמט|ג\'ודו|קרב מגע|היאבקות|טניס|תיאטרון|מוסיקה|מוזיקה|לשיר|לבשל|בישול|מחשבים|לתכנת)(?![א-ת])')].join('')),
+  /* family and background — the profile */
+  fam:/(^|[\s,(])(ה?הורים|ההורה|הורות|נשואים|נשואה|גרושים|גרושה|פרודים|ידועים בציבור|חד הורית|חד-הורית|יחידנית|אם|האם|אמא|אימא|האמא|אב|האב|אבא|האבא|אב חורג|אחים|אח|אחות|אחיות|תאום|תאומה|בכור|בכורה|זקונים|אמצעי|אמצעית|יחיד|יחידה|ילדים|סבתא|סבא|משפחה|המשפחה|משפחתי|עלה|עלתה|עלו|עולה|עולים|נולד|נולדה|גר|גרה|גרים|מתגורר|מתגוררת|עובד|עובדת|כלכלי|כלכלית|חברים|חברות|חבריו|חברותיה|חבריה|חברו|חברתה|התחבר|התחברה|מחובר|מחוברת|מתחבר|מתחברת|חברה של|חבר של|דוברי|דוברות|מבקש(?:ת|ים)? שיקראו|לקרוא לו|לקרוא לה|הגיע|הגיעה|עבר|עברה)(?![א-ת])/,
+  /* about a brother or sister / a parent, not the student ("אח בן 4 על הרצף", "האב עבר תאונה") */
+  kin:/(^|[\s,(])(ו?ה?אח|ו?ה?אחות|ו?ה?אחים|אחיו|אחותו|אחיה|אחותה|אחיותיה|אחיותיו|ה?אב(?:א)?\s+(?:עבר|חולה|נפטר|עומד)|ה?אם\s+(?:חולה|נפטרה|עברה))(?![א-ת])/
+};
+const NEG_STR=/(^|\s)(לא|אינו|אינה|אין|בלי|פחות)\s/;
+/* the row a piece of text is about, or null when it says nothing clear */
+function infoKind(s){
+  const t=' '+clean(s)+' ';
+  if(CL.att.test(t)&&!/^\s*(?:ה?הורים|אב|אם)\s/.test(t)) return 'iAtt';
+  if(CL.ans.test(t)&&!/מתקשה|קושי|קשיים/.test(t.replace(CL.ans,''))) return 'iAns';
+  if(/(^|\s)ש?לא\s+(?:להעיר|לאפשר|להושיב|לשלוח)/.test(t)) return 'iRec';
+  /* about a parent ("האם עובדת כמנהלת…, האב עצמאי"): the profile, unless it is about the student's health or a request */
+  if(/^\s*(?:ה?הורים|האם|האב|אמא|אבא|האמא|האבא|אימא|אב|אם|אב חורג)\s/.test(t)){
+    if(CL.health.test(t)&&!CL.kin.test(t)) return 'iEmo';
+    if(CL.rec.test(t)) return 'iRec';
+    return 'iGen';
+  }
+  /* wanting to learn / succeed is a strength ("רוצה להתחיל לדבר עברית"), unless it is about a weak point */
+  if(/(^|\s)(רוצה|רוצים|מעוניין|מעוניינת|שואף|שואפת)\s/.test(t)&&!CL.diff.test(t)&&!CL.health.test(t)) return 'iStr';
+  if(CL.health.test(t)) return CL.kin.test(t)?'iGen':'iEmo';
+  if(CL.rec.test(t)) return 'iRec';
+  if(CL.diff.test(t)) return CL.kin.test(t)?'iGen':'iEmo';
+  if(CL.ans.test(t)) return 'iAns';
+  if(CL.str.test(t)&&!NEG_STR.test(t)) return 'iStr';
+  if(CL.fam.test(t)) return 'iGen';
+  if(CL.str.test(t)) return 'iGen'; /* "לא אוהב ספורט" — about the student, not a strength */
+  return null;
+}
+/* a sentence that mixes things ("הורים נשואים, טובה בכדורגל", "קשיים לימודיים, עוזרת בכיתה"):
+   its parts go to their own rows; a part that says nothing clear stays with the part before it */
+function splitByKind(s){
+  const parts=s.split(/\s*,\s*|\s+[-–]\s+|\s+\/\s*|\s*\/\s+|\s*;\s*/).map(x=>x.trim()).filter(Boolean);
+  if(parts.length<2) return [{t:s,k:infoKind(s)}];
+  /* a lone word ("אומנות", "בעיה") says too little to stand on its own: it stays with the part before it */
+  const ks=parts.map(p=>p.split(' ').length>1?infoKind(p):null), strong=new Set(ks.filter(Boolean));
+  if(strong.size<=1) return [{t:s,k:[...strong][0]||null,weak:infoKind(s)}];
+  let last=ks.find(Boolean); const out=[];
+  parts.forEach((p,i)=>{ const k=ks[i]||last; last=k; const prev=out[out.length-1];
+    if(prev&&prev.k===k) prev.t+=', '+p; else out.push({t:p,k}); });
+  return out;
+}
+/* neat text: no space before punctuation, no dangling bracket or comma */
+function tidyInfo(x){
+  let t=String(x).replace(/^(?:אך|אבל|אולם)\s+/,'').replace(/\s+([.,:;!?)])/g,'$1').replace(/\(\s+/g,'(').replace(/[,;\s]+$/,'').replace(/^[,;.\s]+/,'').trim();
+  const o=(t.match(/\(/g)||[]).length, c=(t.match(/\)/g)||[]).length;
+  if(o!==c) t=t.replace(/[()]/g,'').replace(/\s{2,}/g,' ').trim();
+  return t;
+}
+const EMPTY_INFO=/^(אין|תקין|איו|רגיל|רגילה|-|—|–|ללא|אין מידע|לא ידוע|אין הערות|אין בעיות|בסדר|אין חריגים)\.?$/;
+function classifyInfo(items){
+  const out={iGen:[],iStr:[],iEmo:[],iAtt:[],iAns:[],iRec:[]};
+  for(const it of items){
+    for(const line of cleanML(it.t).split('\n')){
+      for(const s0 of sentencesOf(line)){
+        const s=s0.replace(/^[-–•*·\s]+/,'').trim();
+        if(!s||EMPTY_INFO.test(s)) continue;
+        /* a long sentence with no full stops: the part about a מענה / attendance on its own */
+        const parts=[]; for(const p of splitByKind(s)){
+          const cut=(p.k==='iAns'||p.k==='iAtt')?splitLong(p.t,p.k==='iAns'?CL.ans:CL.att):null;
+          if(cut&&cut.rest){ parts.push({t:cut.part,k:p.k}); for(const q of splitByKind(cut.rest)) parts.push(q); } else parts.push(p);
+        }
+        for(const p of parts){
+          const k=p.k||(it.hint&&out[it.hint]?it.hint:p.weak||'iGen');
+          const tx=tidyInfo(p.t);
+          if(tx&&!EMPTY_INFO.test(tx)&&!out[k].includes(tx)) out[k].push(tx);
+        }
+      }
+    }
+  }
+  return Object.fromEntries(Object.entries(out).map(([k,v])=>[k,v.join('\n')]));
 }
 
 function clean(s){ return String(s==null?'':s).replace(/[‎‏‪-‮]/g,'').replace(/\s+/g,' ').trim(); }
@@ -592,7 +682,16 @@ function buildStudents(files, opts){
   const autoLinks=[], unmatched=new Map(), aliasOf={};
   /* a name from another report that matches no one on the class list gets NO slide of its own
      (that is how duplicates were made); the teacher can link it to a student or add it on purpose */
-  const resolveKey=(file,k,nm)=>{
+  const anchorNames=[...anchors].map(k=>({key:k,name:k}));
+  const resolveKey=(file,k,nm,row)=>{
+    /* an old deck / document never adds a student: its info goes only to students on the class list */
+    if(file.kind==='deck'){
+      if(anchors.has(k)) return k;
+      const man=opts.links?.[k]; if(man&&anchors.has(man)){ aliasOf[k]=man; return man; }
+      if(!anchors.size) return opts.noLink?.[k]?k:null;
+      /* the name may be another line of the slide */
+      for(const a of row?.alts||[]){ const ak=nameKey(a); if(anchors.has(ak)) return ak; const h=knownMatch(a,anchorNames); if(h) return h.key; }
+    }
     if(anchorIds.has(file.id)||!anchors.size||anchors.has(k)) return k;
     const man=opts.links?.[k]; if(man&&anchors.has(man)){ aliasOf[k]=man; return man; }
     if(!opts.noLink?.[k]){ const f=fuzzyFind(k,anchors); if(f){ autoLinks.push({raw:k,rawName:nm,to:f,file:file.name}); aliasOf[k]=f; return f; } }
@@ -606,7 +705,7 @@ function buildStudents(files, opts){
       const nm=rowName(file,row); if(!nm||nm.length<2) continue;
       if(/^(סה"כ|סה״כ|ממוצע|סיכום)/.test(nm)||/הופק|:/.test(nm)) continue;
       if(scoreHeader('name',nm)>0||scoreHeader('first',nm)>0||scoreHeader('last',nm)>0) continue; /* repeated header row */
-      const key=resolveKey(file,nameKey(nm),nm); if(key==null) continue;
+      const key=resolveKey(file,nameKey(nm),nm,row); if(key==null) continue;
       if(!byKey.has(key)) byKey.set(key,{key,name:nm,src:{},files:new Set(),grades:[]});
       const st=byKey.get(key); st.files.add(file.id);
       for(const f of FIELDS){
@@ -1054,7 +1153,9 @@ function addPair(pairs,h,v){
 }
 const NAME_STOP=/כיתה|בס"ד|בס״ד|ממוצע|נכשל|מתמטיקה|אנגלית|עברית|לשון|מדעים|הקבצ|הישגים|מידע|כללי|אירוע|צל"ש|צל״ש|מצוינות|בעיות|ביקור|קשיים|מענים|תלמיד|ישיבה|פדגוגית|ציון|מקצוע|חיסור|איחור|נבנה|מחנך|תיכון|עיריית|שכבה|מחצית|רגשיים|חריגות|סדיר|אחרים|הערות|ליבה|קבוצה|פרופיל|אתגרים|דרכי|מומלצות|תמונת|מצב|חוזקות|משפחה|רקע/;
 const NAME_RE=/^[א-ת'"`׳״\-]+$/;
-function nameShaped(t){ const w=clean(t).split(' '); return w.length>=2&&w.length<=4&&w.every(x=>NAME_RE.test(x))&&!NAME_STOP.test(clean(t))&&!['name','first','last'].some(f=>scoreHeader(f,clean(t))>0); }
+/* everyday words of the teachers' text that are never part of a name ("אין חברים", "הורים נשואים") */
+const NAME_STOPW=/(^|\s)(אין|יש|לא|תקין|מקובל|מקובלת|הורים|ההורים|נשואים|גרושים|חברים|חברות|חבר|חברה|אוהב|אוהבת|טוב|טובה|מורים|מורי|אווירה|שילוב|פרטני|שלבים|אבחון|ילד|ילדה|שקט|שקטה|עולה|חדש|חדשה|מתקשה|קושי|בעברית|במתמטיקה|באנגלית|מעוניין|מעוניינת|רוצה|הוא|היא|של|עם|את|על|גם|מאוד|רב|לרב|בכיתה|בשכבה|ילדים|אחים|בכור|בכורה|רגיל|אחר|אחרים)(?=\s|$)/;
+function nameShaped(t){ const w=clean(t).split(' '); return w.length>=2&&w.length<=4&&w.every(x=>NAME_RE.test(x))&&!NAME_STOP.test(clean(t))&&!NAME_STOPW.test(clean(t))&&!['name','first','last'].some(f=>scoreHeader(f,clean(t))>0); }
 function knownMatch(text, known){
   const k=nameKey(text); const toks=k.split(' ');
   return known.find(s=>s.key===k) || (toks.length<=5 ? known.find(s=>{ const st=s.key.split(' '); return st.length>=2 && st.every(t=>toks.includes(t)); }) : null);
@@ -1189,7 +1290,7 @@ function pdfDeckPage(items, flip){
   }
   return {pairs, cands, starters:starters.length};
 }
-if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,parseTeachersReport,parseAssessReport,pickName,infoFromTable,pairsFromBlocks,pdfDeckPage,deckAoa,infoLabelStart,infoFieldFor,guessInfoMap,sureLabel,rerouteInfo};
+if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,buildStudents,nameKey,gradeColumns,scoreHeader,pdfItemsToAoa,parseSadin,parseEventsReport,parseTeachersReport,parseAssessReport,pickName,infoFromTable,pairsFromBlocks,pdfDeckPage,deckAoa,infoLabelStart,infoFieldFor,guessInfoMap,sureLabel,rerouteInfo,classifyInfo,infoKind,splitByKind};
 </script>
 
 <script>
@@ -1423,7 +1524,12 @@ function renderChecks(){
   const box=$('#issues'); box.innerHTML='';
   const realFiles=state.files.filter(f=>!state.sample);
   /* each teacher titles the general-info table differently: show where every header goes, and let them change it */
-  for(const f of state.files.filter(f=>f.infoMap&&f.infoMap.some(Boolean))){
+  if(!state.sample&&state.files.some(f=>f.kind==='deck')&&!state.files.some(f=>f.kind!=='deck'&&f.rows?.length)){
+    const el=document.createElement('div'); el.className='issue missing';
+    el.innerHTML=`<div class="issue-title">המידע מהמצגת הקודמת נקרא, אבל עוד אין רשימת כיתה</div><span class="hint">מצגת קודמת לא יוצרת תלמידים חדשים: המידע שבה נכנס לתלמידים שברשימת הכיתה. העלו גם את סדין הציונים (98) או את דוח 58, והמידע ייכנס לשקף של כל תלמיד.</span>`;
+    box.appendChild(el);
+  }
+  for(const f of state.files.filter(f=>f.infoMap&&f.infoMap.some(Boolean)&&!f.classified)){
     const el=document.createElement('div'); el.className='issue '+(f.infoGuess?.some((g,i)=>g&&f.infoMap[i]&&f.infoMap[i]!=='skip')?'missing':'done');
     el.innerHTML=`<div class="issue-title">המידע הכללי מ־${esc(f.name)}: לאן נכנסת כל כותרת</div>
       <span class="hint">כל מורה כותב כותרות משלו, אז שייכנו לפי הניסוח. אם כותרת לא במקום, בחרו שורה אחרת. השינוי חל על כל התלמידים בקובץ. שתי כותרות באותה שורה יופיעו זו אחר זו, כל אחת עם שמה.</span>
@@ -1882,6 +1988,62 @@ function repeatedSet(lists){ /* things that show up on most slides = logos */
   lists.forEach(l=>new Set(l).forEach(t=>cnt[t]=(cnt[t]||0)+1));
   return new Set(Object.keys(cnt).filter(t=>n>=3&&cnt[t]>=Math.max(2,Math.ceil(n*0.5))));
 }
+/* every text line of a slide, in the order it was written (text boxes, then tables) */
+function slideLines(s){
+  const out=[];
+  for(const b of s.blocks||[]) for(const l of String(b).split('\n')){ const t=clean(l); if(t) out.push(t); }
+  for(const t of s.tables||[]) for(const r of t) for(const c of r) for(const l of String(c).split('\n')){ const x=clean(l); if(x) out.push(x); }
+  return out;
+}
+/* headers at line level: a line that repeats on most slides is a header, even when it sits in the same box as the
+   teacher's text ("הורים נשואים / כללי, מצב משפחתי, חוזקות"). A short answer that repeats ("אין", "תקין") is not. */
+function deckLineLabels(slides){
+  const withText=slides.filter(s=>slideLines(s).length>=4), n=withText.length, cnt={};
+  for(const s of withText) new Set(slideLines(s)).forEach(t=>cnt[t]=(cnt[t]||0)+1);
+  const out=new Set();
+  /* the real headers are on (almost) every slide; a common answer ("הורים נשואים") is on fewer */
+  const top=Math.max(0,...Object.entries(cnt).filter(([t])=>!DECOR.test(t)&&!EMPTY_INFO.test(t)).map(([,c])=>c));
+  for(const [t,c] of Object.entries(cnt)){
+    if(n<3||c<Math.max(3,n*0.5,top*0.75)||DECOR.test(t)||EMPTY_INFO.test(t)) continue;
+    const w=labelText(t.replace(/\.$/,''));
+    if(w.split(' ').length>8||w.length>60||/\d/.test(w)||NOT_INFO_HEAD.test(w)) continue;
+    if(!infoFieldFor(w).sure&&c<n*0.8) continue;
+    out.add(t);
+  }
+  return out;
+}
+/* does the header come before its text or after it? Decided once for the whole deck. */
+function labelDirection(slides, L){
+  let lead=0, trail=0, block=0, n=0;
+  for(const s of slides){
+    const seq=slideLines(s).filter(t=>!DECOR.test(t)&&!(nameShaped(t)&&!L.has(t))).map(t=>L.has(t)?'L':'V');
+    if(seq.filter(x=>x==='L').length<2) continue; n++;
+    /* all the headers one after the other (a header column): the order of lines says nothing */
+    if(/L{3,}/.test(seq.join(''))&&seq.join('').replace(/L{3,}/,'').indexOf('L')<0){ block++; continue; }
+    if(seq[0]==='L') lead++; else if(seq[seq.length-1]==='L') trail++;
+  }
+  if(block>n/2) return 0;
+  return trail>lead?1:-1;
+}
+/* one slide by its lines: each line of text goes to the header before it (dir -1) or after it (dir 1) */
+function pairsFromLines(s, L, dir, name){
+  const pairs=[], key=t=>labelText(t.replace(/\.$/,''));
+  const lines=slideLines(s).filter(t=>!DECOR.test(t)&&!(name&&(t===clean(name)||nameKey(t)===nameKey(name))));
+  let cur=null, buf=[];
+  for(const t of lines){
+    if(L.has(t)){
+      const p=addPair(pairs,key(t),'');
+      if(dir>0){ if(buf.length){ p.v=cleanML([p.v,...buf].filter(Boolean).join('\n')); buf=[]; } }
+      else cur=p;
+      continue;
+    }
+    if(dir>0) buf.push(t); else if(cur) cur.v=cur.v?cur.v+'\n'+t:t;
+  }
+  if(buf.length&&pairs.length){ const p=pairs[pairs.length-1]; p.v=cleanML([p.v,...buf].filter(Boolean).join('\n')); }
+  return pairs;
+}
+/* short lines of a slide that could hold the student's name, for matching to the class list later */
+function nameAlts(s, L){ return [...new Set(slideLines(s).filter(t=>!L?.has(t)&&!DECOR.test(t)&&t.split(' ').length<=5&&/[א-ת]/.test(t)&&!/\d/.test(t)))].slice(0,40); }
 function knownStudents(){ return built.students.filter(s=>s.files.some(id=>state.files.find(f=>f.id===id&&f.kind!=='deck'))).map(s=>({key:s.key,name:s.name})); }
 function deckEntry(name, pairs, known){
   const hasInfo=pairs.some(p=>p.v);
@@ -1898,9 +2060,11 @@ function slideEntries(s, known, entries, skipped, unknownTables){
   }
   const fromTable=pairs.length>0;
   /* the name sits away from the headers' rows (a title); text beside a header is info, never the name */
-  const away=s.labels?nameCandidates(s.shapes||[], s.labels):null;
+  const away=s.labels&&!s.byLines?nameCandidates(s.shapes||[], s.labels):null;
   const name=tname?(knownMatch(tname,known)?.name||tname)
-    :(away&&away.length&&pickName(away, known))||pickName(s.texts.filter(t=>!s.labels?.has(clean(t.text))), known);
+    :(away&&away.length&&pickName(away, known))||pickName(s.texts.filter(t=>!s.labels?.has(clean(t.text))&&!s.lineLabels?.has(clean(t.text))), known);
+  /* headers inside the text boxes: read the slide line by line */
+  if(!pairs.length&&s.byLines){ for(const p of pairsFromLines(s, s.lineLabels, s.dir, name)) addPair(pairs,p.h,p.v); }
   if(!pairs.length&&s.shapes&&s.labels){ const sp=pairsFromShapes(s.shapes, s.labels, name); if(sp) for(const p of sp) addPair(pairs,p.h,p.v); }
   if(!pairs.length&&s.blocks) for(const p of pairsFromBlocks(s.blocks)) addPair(pairs,p.h,p.v);
   if(!pairs.length&&name&&s.tables.some(t=>t.length>=1&&!t.flat().some(c=>NOT_INFO_HEAD.test(labelText(String(c).split('\n')[0]))))) unknownTables.push(s.num);
@@ -1916,19 +2080,26 @@ async function readPptxDeck(file){
     slides.push({num:slides.length+1, ...parsePptxSlide(p, await zip.file(p).async('string'), zip.file(rp)?await zip.file(rp).async('string'):'')});
   }
   const logos=repeatedSet(slides.map(s=>s.pics.map(x=>x.target)));
-  const labels=deckLabels(slides); for(const s of slides) s.labels=labels;
+  const labels=deckLabels(slides);
+  /* headers that share a box with the teacher's text: then the slide is read line by line */
+  const lineLabels=deckLineLabels(slides);
+  const mixed=slides.filter(s=>(s.shapes||[]).some(b=>{ const ls=b.text.split('\n').map(clean).filter(Boolean); return ls.length>1&&ls.some(l=>lineLabels.has(l))&&ls.some(l=>!lineLabels.has(l)); })).length;
+  let byLines=lineLabels.size>=2&&(mixed>=Math.max(2,slides.length*0.2)||labels.size<2);
+  let dir=byLines?labelDirection(slides,lineLabels):-1; if(!dir){ byLines=false; dir=-1; }
+  for(const s of slides){ s.labels=labels; s.lineLabels=lineLabels; s.byLines=byLines; s.dir=dir; }
   const known=knownStudents(), entries=[], skipped=[], unknownTables=[];
   for(const s of slides){
     const {name,pairs,fromTable,notInfo}=slideEntries(s, known, entries, skipped, unknownTables);
     if(notInfo) continue;
     const pic=s.pics.filter(x=>!logos.has(x.target)&&IMG_EXT.test(x.target)&&x.area>0&&x.aspect>=0.4&&x.aspect<=2.5).sort((a,b)=>b.area-a.area)[0];
     const e=deckEntry(name, pairs, known);
-    if(!name){ if(e.hasInfo&&fromTable) skipped.push(s.num); continue; }
+    e.alts=nameAlts(s, new Set([...labels,...lineLabels])); e.slide=s.num;
+    if(!name){ if(e.hasInfo) skipped.push(s.num); continue; }
     if(!(e.hasInfo||e.matched||pic)) continue;
     if(pic){ const ext=pic.target.split('.').pop().toLowerCase(); const blob=new Blob([await zip.file(pic.target).async('uint8array')],{type:'image/'+(ext==='jpg'?'jpeg':ext)}); e.photo=await shrink(await fileToDataURL(blob)); }
     entries.push(e);
   }
-  return {entries, skipped, unknownTables};
+  return {entries, skipped, unknownTables, labels:[...labels,...lineLabels]};
 }
 function imageRects(opList){
   const O=pdfjsLib.OPS, U=pdfjsLib.Util; let ctm=[1,0,0,1,0,0]; const st=[], out=[];
@@ -2081,22 +2252,33 @@ function noteData(fi,msgs,notes){
 function addDeck(name,res,notes,msgs){
   const kindWord=/\.docx$/i.test(name)?'מסמך':/\.pdf$/i.test(name)?'קובץ':'מצגת';
   if(!res.entries.length){
-    (msgs||notes).push(res.unknownTables?.length?`${name}: נמצאה טבלה, אבל לא זיהינו בה כותרות של מידע על התלמיד (למשל חוזקות, קשיים, רקע). כתבו כותרת מעל כל עמודה או לצד כל שורה ונסו שוב.`:`${name}: לא נמצאו ב${kindWord} תלמידים עם שם.`);
+    (msgs||notes).push(res.unknownTables?.length?`${name}: נמצאה טבלה, אבל לא זיהינו בה כותרות של מידע על התלמיד (למשל חוזקות, קשיים, רקע). כתבו כותרת מעל כל עמודה או לצד כל שורה ונסו שוב.`:`${name}: לא זוהו ב${kindWord} שמות של תלמידים.`);
     return;
   }
   /* the same student on two slides: one entry */
-  const merged=[]; for(const e of res.entries){ const m=merged.find(x=>x.name===e.name); if(!m){ merged.push({...e,pairs:e.pairs.map(p=>({...p}))}); continue; } for(const p of e.pairs) addPair(m.pairs,p.h,p.v); if(!m.photo&&e.photo) m.photo=e.photo; }
-  const aoa=deckAoa(merged);
-  const file=addFileFromAoa(name, aoa); file.kind='deck'; file.photoKeys=[]; file.photoData={};
-  /* keep only the name column mapped; every other column is the teacher's own info header */
+  const merged=[]; for(const e of res.entries){ const m=merged.find(x=>x.name===e.name); if(!m){ merged.push({...e,pairs:e.pairs.map(p=>({...p})),alts:[...(e.alts||[])]}); continue; } for(const p of e.pairs) addPair(m.pairs,p.h,p.v); if(!m.photo&&e.photo) m.photo=e.photo; m.alts.push(...(e.alts||[])); }
+  /* the teacher's headers are only hints: every sentence goes to the row it is about (classifyInfo).
+     A header's own words never go into the table. */
+  const heads=new Set([...(res.labels||[]),...merged.flatMap(e=>e.pairs.map(p=>p.h))].map(h=>labelText(clean(h).replace(/\.$/,''))));
+  const isHead=t=>{ const w=labelText(clean(t).replace(/\.$/,'')); return heads.has(w)||Object.values(INFO_HEAD).includes(w); };
+  const stripHead=t=>{ const m=clean(t).match(/^([^:׃]{2,45})[:׃]\s*(.*)$/); return m&&(isHead(m[1])||sureLabel(m[1]))?m[2]:t; };
+  for(const e of merged){
+    const items=e.pairs.map(p=>{ const r=infoFieldFor(p.h); const hint=r&&r.sure&&INFO.includes(r.f)?r.f:(r&&r.sure&&r.f==='iExc'?'iEmo':null);
+      return {t:String(p.v||'').split('\n').filter(l=>clean(l)&&!isHead(l)).map(stripHead).join('\n'), hint}; });
+    e.info=classifyInfo(items);
+    e.hasInfo=INFO.some(f=>e.info[f]);
+  }
+  const aoa=[['שם',...INFO.map(f=>FLABEL[f])], ...merged.filter(e=>e.name).map(e=>[e.name,...INFO.map(f=>e.info[f]||'')])];
+  const file=addFileFromAoa(name, aoa); file.kind='deck'; file.photoKeys=[]; file.photoData={}; file.classified=true;
+  /* keep only the name column mapped; the other columns are already our rows */
   for(const k of Object.keys(file.mapping)) if(!['name','first','last'].includes(k)) file.mapping[k]=-1;
   file.headers=aoa[0].map(clean); file.mapping.name=0; file.mapping.first=file.mapping.last=-1;
-  const g=guessInfoMap(file.headers,true); file.infoMap=g.map; file.infoGuess=g.guess;
+  file.infoMap=[null,...INFO]; file.infoGuess=file.infoMap.map(()=>false);
+  /* other lines of the slide that may be the name, for matching to the class list once it is loaded */
+  for(const r of file.rows){ const e=merged.find(x=>x.name===clean(r[0])); if(e) r.alts=[e.name,...e.alts]; }
   for(const e of merged) if(e.photo){ const k=setPhoto(e.name,e.photo); file.photoKeys.push(k); file.photoData[k]=e.photo; }
   const withInfo=merged.filter(e=>e.hasInfo).length;
-  const heads=file.headers.slice(1).map((h,i)=>`${h} ← ${FLABEL[file.infoMap[i+1]]}`);
-  notes.push(`${name}: ${kindWord}, ${merged.length} תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות.`
-    +(heads.length?` כותרות שזוהו: ${heads.join(' · ')} (אפשר לשנות בשלב 3).`:'')
+  notes.push(`${name}: ${kindWord}, ${merged.length} שקפי תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות. כל משפט שויך לשורה בטבלה לפי התוכן שלו (אפשר לתקן בשלב 4). המידע נכנס רק לתלמידים שברשימת הכיתה מהדוחות.`
     +(res.skipped.length?` לא זוהה שם תלמיד בשקפים ${res.skipped.join(', ')}.`:'')
     +(res.unknownTables?.length?` בשקפים ${res.unknownTables.join(', ')} יש טבלה בלי כותרות מוכרות.`:''));
 }
