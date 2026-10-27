@@ -309,7 +309,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״מידע כללי״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 24.10.2026 · 21:15</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 27.10.2026 · 12:20</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -327,22 +327,23 @@ const FIELDS = [
   {id:'name', label:'שם מלא'}, {id:'first', label:'שם פרטי'}, {id:'last', label:'שם משפחה'},
   {id:'cls', label:'כיתה'}, {id:'avg', label:'ממוצע כללי'},
   {id:'math', label:'מתמטיקה'}, {id:'lang', label:'עברית'}, {id:'eng', label:'אנגלית'}, {id:'sci', label:'מדעים'},
-  {id:'geo', label:'גאוגרפיה'}, {id:'hist', label:'היסטוריה'}, {id:'gender', label:'מין (בן/בת)'},
+  {id:'geo', label:'גאוגרפיה'}, {id:'hist', label:'היסטוריה'}, {id:'lit', label:'ספרות'}, {id:'gender', label:'מין (בן/בת)'},
   {id:'fails', label:'מספר נכשלים'}, {id:'late', label:'איחורים'}, {id:'abs', label:'חיסורים'}, {id:'events', label:'אירועי שיעור'},
   {id:'gMath', label:'הקבצה במתמטיקה'}, {id:'gEng', label:'הקבצה באנגלית'},
   {id:'iGen', label:'כללי'}, {id:'iStr', label:'חוזקות'}, {id:'iExc', label:'בעיות חריגות'}, {id:'iAtt', label:'ביקור סדיר'},
   {id:'iEmo', label:'קשיים'}, {id:'iAns', label:'מענים'}
 ];
 const FLABEL = Object.fromEntries(FIELDS.map(f=>[f.id,f.label]));
-const CORE = ['math','lang','eng','sci','geo','hist'];
-/* core subjects by grade: ז = math, English, Hebrew, geography (+ science when graded); ח/ט = math, English, Hebrew, history, science */
+const CORE = ['math','lang','eng','sci','geo','hist','lit'];
+/* core subjects by grade: ז = math, English, Hebrew, geography (+ science when graded); ח = math, English, Hebrew, literature, science; ט = math, English, Hebrew, history, science */
 function coreFor(s, cls){
   const g=(clean(cls||s.cls||'').match(/[\u05D0-\u05EA]/)||[''])[0];
   if(g==='ז') return ['math','eng','lang','geo', ...(s.sci!=null?['sci']:[])];
+  if(g==='ח') return ['math','eng','lang','lit','sci'];
   return ['math','eng','lang','hist','sci'];
 }
 const INFO = ['iGen','iStr','iExc','iAtt','iEmo','iAns'];
-const NUMERIC = ['avg','math','lang','eng','sci','geo','hist','fails','late','abs','events'];
+const NUMERIC = ['avg','math','lang','eng','sci','geo','hist','lit','fails','late','abs','events'];
 
 function clean(s){ return String(s==null?'':s).replace(/[‎‏‪-‮]/g,'').replace(/\s+/g,' ').trim(); }
 /* like clean, but keeps line breaks (for the general-info texts) */
@@ -374,6 +375,7 @@ function scoreHeader(field, h){
     case 'sci': return !grp&&(has('מדעים')||h==='מדע'||has('מדע וטכנולוגיה'))?10:0;
     case 'geo': return has('גאוגרפיה')||has('גיאוגרפיה')||has('ג״ג')||has('ג"ג')||has("ג''ג")?10:0;
     case 'hist': return has('היסטוריה')||has('הסטוריה')?10:0;
+    case 'lit': return !grp&&has('ספרות')?10:0;
     case 'gender': return h==='מין'||has('מגדר')||h==='בן/בת'||h==='בן / בת'||h==='מין התלמיד'?10:0;
     case 'fails': return has('נכשל')||has('שליליים')?10:0;
     case 'late': return has('איחור')?10:0;
@@ -572,7 +574,7 @@ function buildStudents(files, opts){
     students.push({
       key:st.key, name:st.name, cls:val.cls||'', avg, avgSource, fails, failSubjects,
       late:toNum(val.late), abs:toNum(val.abs), events:toNum(val.events),
-      math:toNum(val.math), lang:toNum(val.lang), eng:toNum(val.eng), sci:toNum(val.sci), geo:toNum(val.geo), hist:toNum(val.hist),
+      math:toNum(val.math), lang:toNum(val.lang), eng:toNum(val.eng), sci:toNum(val.sci), geo:toNum(val.geo), hist:toNum(val.hist), lit:toNum(val.lit),
       gMath:val.gMath||'', gEng:val.gEng||'',
       iGen:val.iGen||'', iStr:val.iStr||'', iExc:val.iExc||'', iAtt:val.iAtt||'', iEmo:val.iEmo||'', iAns:val.iAns||'',
       evs:st.evs||null, assess:st.assess||null,
@@ -1753,7 +1755,7 @@ async function handleDeck(list){
 /* ---------- PowerPoint ---------- */
 const C={ink:'1E2A44',soft:'5A6785',faint:'9AA3B8',bg:'F3F5FA',white:'FFFFFF',line:'DDE3EF',band:'EEF3FC',
   good:'15803D',warn:'B45309',bad:'B91C1C',blue:'2449B8',track:'E5E9F2'};
-const BARC={math:'2F5BD8',lang:'E07B24',eng:'C2367A',sci:'2E9B57',geo:'0E8A8A',hist:'8A5A2B'};
+const BARC={math:'2F5BD8',lang:'E07B24',eng:'C2367A',sci:'2E9B57',geo:'0E8A8A',hist:'8A5A2B',lit:'7A4EB8'};
 const T=(o)=>Object.assign({fontFace:'Arial',color:C.ink,rtlMode:true,lang:'he-IL',align:'right',valign:'middle',margin:0},o);
 function imgSize(d){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res({w:i.width,h:i.height}); i.onerror=()=>res({w:1,h:1}); i.src=d; }); }
 
