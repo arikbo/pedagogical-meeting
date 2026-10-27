@@ -354,8 +354,25 @@ const NUMERIC = ['avg','math','lang','eng','sci','geo','hist','lit','fails','lat
 /* ---------- the school's own words: a sentence that mentions them belongs to a fixed row, whatever the teacher's header ----------
    קשת / שילוב / פרטני are the school's מענים ("מקבל שעתיים שילוב", "3 ש' פרטני", "בתוכנית קשת").
    חיסורים / איחורים are ביקור סדיר, not פרופיל תלמיד. */
-const ANS_WORDS=/(^|[^א-ת])(?:[והלמש]{0,2}קשת|[ובהלמש]{0,2}(?:שילוב|שלוב)(?!\s+עם)|[ובהלמש]{0,2}פרטנ[א-ת]*)(?![א-ת])/;
-const ATT_WORDS=/חיסור|איחור|היעדרו|העדרו|מחסיר|מחסירה/;
+/* also learned from the teachers' decks: שלבים, CBT, סייעת, שעות עולים, מורת שמיעה, קבוצה רגשית, חונכות / פר"ח */
+const ANS_WORDS=new RegExp([
+  '(^|[^א-ת])(?:[והלמש]{0,2}קשת|[והלמש]{0,2}(?:שילוב|שלוב)|ו?ב(?:שילוב|שלוב)(?!\\s+עם)|[ובהלמש]{0,2}פרטנ[א-ת]*|[והלמש]{0,2}שלבים|[ובהלמש]{0,2}סייעת|[ובהלמש]{0,2}חונכות|פר"ח|פר״ח)(?![א-ת])',
+  '\\bcbt\\b','שעות\\s*(?:ל)?עולים','שעות\\s*עולה','מורת\\s*(?:ה)?שמי?עה','קבוצה\\s+רגשית','קבוצת\\s+רגשית'
+].join('|'),'i');
+/* ביקור סדיר: חיסורים (also "חסורים"), איחורים, מחסיר/החסירה, מאחר/ת (not "מאחר ש" = since), "מרבה לאחר", היעדרות, הגעה בזמן */
+const ATT_WORDS=/חי?סור|חסיר|איחור|מאחר(?:ת|ים|ות)?(?![א-ת])(?!\s+ש)|(?:מרבה|נוטה|ממשיך|ממשיכה)\s+(?:לאחר|להיעדר|להעדר|להחסיר)|היעדרו|העדרו|להיעדר|להעדר|ביקור סדיר|הגעה\s+(?:בזמן|לבית)|מעקב הגעה/;
+/* a long sentence with no full stops ("...בשיעורי ספורט יקבל שעות שילוב"): take out only the part about the מענה */
+const ANS_START=/^ו?(?:מקבל|מקבלת|יקבל|תקבל|קיבל|קיבלה|קבל|לומד|לומדת|משובץ|משובצת|יש|\d+|\d+שעות|שעה|שעתיים|שעות|בכיתה)$/;
+function splitLong(s, re){
+  const w=s.split(' '); if(w.length<=14) return null;
+  const hit=w.findIndex((x,i)=>re.test(w.slice(i,i+3).join(' '))&&!re.test(w.slice(i+1,i+3).join(' ')));
+  if(hit<0) return null;
+  let a=hit; for(let i=hit;i>=Math.max(0,hit-4);i--) if(ANS_START.test(w[i].replace(/[,(]/g,''))){ a=i; }
+  let b=w.findIndex((x,i)=>i>=hit&&/[,;]$/.test(x)); if(b<0) b=w.length-1;
+  const part=w.slice(a,b+1).join(' ').replace(/[,;]$/,'');
+  const rest=[...w.slice(0,a),...w.slice(b+1)].join(' ').trim();
+  return {part, rest};
+}
 const ANS_FROM=['iGen','iStr','iEmo','iExc','iRec'];   /* rows a מענה sentence is taken out of */
 const ATT_FROM=['iGen','iStr','iEmo','iExc'];          /* rows an attendance sentence is taken out of (not מענים / המלצות: "מעקב חיסורים" there is a מענה) */
 function sentencesOf(line){ return line.split(/(?<=[.;!?])\s+/).map(x=>x.trim()).filter(Boolean); }
@@ -368,9 +385,11 @@ function rerouteInfo(val, locked={}){
     for(const line of String(val[f]).split('\n')){
       const keep=[];
       for(const s of sentencesOf(line)){
-        if(ANS_FROM.includes(f)&&!locked.iAns&&ANS_WORDS.test(s)) add.iAns.push(s);
-        else if(ATT_FROM.includes(f)&&!locked.iAtt&&ATT_WORDS.test(s)) add.iAtt.push(s);
-        else keep.push(s);
+        const to=ANS_FROM.includes(f)&&!locked.iAns&&ANS_WORDS.test(s)?'iAns':ATT_FROM.includes(f)&&!locked.iAtt&&ATT_WORDS.test(s)?'iAtt':null;
+        if(!to){ keep.push(s); continue; }
+        const cut=splitLong(s, to==='iAns'?ANS_WORDS:ATT_WORDS);
+        if(cut){ add[to].push(cut.part); if(cut.rest) keep.push(cut.rest); }
+        else add[to].push(s);
       }
       if(keep.length) keepLines.push(keep.join(' '));
     }
@@ -955,11 +974,11 @@ const INFO_HEAD={iGen:'פרופיל תלמיד',iStr:'חוזקות',iEmo:'אתג
    the stem that appears FIRST in the header wins ("מענים לקשיים" → מענים, "קשיים חברתיים" → אתגרים). */
 const INFO_WORDS=[
   ['iAns',['מענ','קשת','פרטנ','טיפול','תמיכ','התאמות','ליווי','סיוע','עזרה','תגבור','שיעורי עזר','יועצ','פסיכולוג','מתי"א','שילוב','הנגש','הקלות','התערבות']],
-  ['iRec',['המלצ','מומלצ','דרכי פעולה','דרך פעולה','דרכי','יעד','מטרות','תוכנית','תכנית','להמשך','צעדים','הצע','מה עושים']],
-  ['iEmo',['קשי','קושי','חולש','אתגר','בעי','לשיפור','שיפור','רגשי','משמעת','חריג','מגבל','לקות','לקויות','הפרע','דאג','חשש','סיכון','מצוק']],
+  ['iRec',['המלצ','מומלצ','דגש','דרכי פעולה','דרך פעולה','דרכי','יעד','מטרות','תוכנית','תכנית','להמשך','צעדים','הצע','מה עושים']],
+  ['iEmo',['קשי','קושי','חולש','אבחו','אבחנ','בריאות','רפוא','אתגר','בעי','לשיפור','שיפור','רגשי','משמעת','חריג','מגבל','לקות','לקויות','הפרע','דאג','חשש','סיכון','מצוק']],
   ['iStr',['חוזק','חזק','תחביב','כישרו','כשרו','כישור','יכולות','מצטיין','הצלח','תחומי עניין','עניין','אוהב','כוחות','נקודות אור','משאב','טוב','מצליח']],
   ['iAtt',['ביקור','נוכחות','חיסור','היעדר','העדר','איחור']],
-  ['iGen',['פרופיל','כללי','רקע','משפח','הורים','אחים','בית','אישי','היכרות','תיאור','על התלמיד','חברתי','חבר','התנהגות','תמונת מצב','מידע','הערות','הערה','נוסף','אחר','סיכום','לדעת','חשוב','מי ']]
+  ['iGen',['פרופיל','כללי','רקע','משפח','לימודי','הורים','אחים','בית','אישי','היכרות','תיאור','על התלמיד','חברתי','חבר','התנהגות','תמונת מצב','מידע','הערות','הערה','נוסף','אחר','סיכום','לדעת','חשוב','מי ']]
 ];
 /* headers that are never general info (a grades table, the teachers table, the name row) */
 const NOT_INFO_HEAD=/^(שם|תלמיד|תלמידה|כיתה|שכבה|מקצוע|ציון|ציונים|מורה|מורים|ממוצע|תאריך|מחנך|מחנכת|הקבצה|קבוצה)(\s|$|[:׃(])/;
