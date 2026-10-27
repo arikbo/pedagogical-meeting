@@ -357,7 +357,7 @@ const NUMERIC = ['avg','math','lang','eng','sci','geo','hist','lit','fails','lat
 /* also learned from the teachers' decks: שלבים, CBT, סייעת, שעות עולים, מורת שמיעה, קבוצה רגשית, חונכות / פר"ח */
 const ANS_WORDS=new RegExp([
   '(^|[^א-ת])(?:[והלמש]{0,2}קשת|[והלמש]{0,2}(?:שילוב|שלוב)|ו?ב(?:שילוב|שלוב)(?!\\s+עם)|[ובהלמש]{0,2}פרטנ[א-ת]*|[והלמש]{0,2}שלבים|[ובהלמש]{0,2}סייעת|[ובהלמש]{0,2}חונכות|פר"ח|פר״ח)(?![א-ת])',
-  '\\bcbt\\b','שעות\\s*(?:ל)?עולים','שעות\\s*עולה','מורת\\s*(?:ה)?שמי?עה','קבוצה\\s+רגשית','קבוצת\\s+רגשית'
+  '\\bcbt\\b','תוספת זמן','התאמות','הקראה','בעל פה','להשלים (?:לו|לה) את המבחן','שעות\\s*(?:ל)?עולים','שעות\\s*עולה','מורת\\s*(?:ה)?שמי?עה','קבוצה\\s+רגשית','קבוצת\\s+רגשית'
 ].join('|'),'i');
 /* ביקור סדיר: חיסורים (also "חסורים"), איחורים, מחסיר/החסירה, מאחר/ת (not "מאחר ש" = since), "מרבה לאחר", היעדרות, הגעה בזמן */
 const ATT_WORDS=/חי?סור|חסיר|איחור|מאחר(?:ת|ים|ות)?(?![א-ת])(?!\s+ש)|(?:מרבה|נוטה|ממשיך|ממשיכה)\s+(?:לאחר|להיעדר|להעדר|להחסיר)|היעדרו|העדרו|להיעדר|להעדר|ביקור סדיר|הגעה\s+(?:בזמן|לבית)|מעקב הגעה/;
@@ -373,20 +373,55 @@ function splitLong(s, re){
   const rest=[...w.slice(0,a),...w.slice(b+1)].join(' ').trim();
   return {part, rest};
 }
+/* אבחון / בריאות → אתגרים (when it is about the student, not a brother or sister: "אח בן 4 על הרצף" stays in the profile) */
+const EMO_WORDS=/אבחון|מאובחנ|אובחנ|אובחן|הפרעו?ת קשב|קשב וריכוז|ריטלין|פוקלין|קונצרטה|דיפרנציאל|לקות|לקוי|אלרגי|אסתמה|צליאק|סכרת|ניתוח|על הרצף|אוטיזם|חרדה|חרדות|מצב רפואי|בעיה רפואית|בעייה רפואית|מצב בריאותי/;
+const KIN=/(^|[\s,(])(ו?ה?אח|ו?ה?אחות|ו?ה?אחים|אחיו|אחותו|אחיה|אחותה|אחיותיה|אחיותיו)(?![א-ת])/;
+const EMO_FROM=['iGen','iStr'];
+/* strengths and hobbies written in the profile ("כללי, מצב משפחתי, חוזקות") → חוזקות; not when negated ("לא אוהב ספורט") */
+const STR_WORDS=/(^|[\s,(])(אוהב|אוהבת|טוב|טובה|חזק|חזקה|מצטיין|מצטיינת|כישרון|מוכשר|מוכשרת|ספורטיבי|ספורטיבית|מתאמן|מתאמנת|רוקד|רוקדת|מנגן|מנגנת|שר|שרה|מצייר|מציירת|תחביב|תחביבים|נבון|נבונה|חכם|חכמה|אחראי|אחראית|סקרן|סקרנית|נעים|נעימה|חייכן|חייכנית|עצמאי|עצמאית|משקיע|משקיעה|מוכשר|יצירתי|יצירתית)(?![א-ת])/;
+const NEG=/(^|\s)(לא|אינו|אינה|אין|בלי)\s/;
 const ANS_FROM=['iGen','iStr','iEmo','iExc','iRec'];   /* rows a מענה sentence is taken out of */
 const ATT_FROM=['iGen','iStr','iEmo','iExc'];          /* rows an attendance sentence is taken out of (not מענים / המלצות: "מעקב חיסורים" there is a מענה) */
-function sentencesOf(line){ return line.split(/(?<=[.;!?])\s+/).map(x=>x.trim()).filter(Boolean); }
+function sentencesOf(line){ return line.split(/(?<=[.;!?])\s+|(?<=[א-ת\d][.!?])(?=[א-ת])/).map(x=>x.trim()).filter(Boolean); }
+/* a difficulty written under מענים ("מתקשה בעברית") is an אתגר, not a מענה */
+const DIFF_WORDS=/(^|[\s,(])(מתקשה|מתקשים|קושי|קשיים|קשה לו|קשה לה|בעיה|בעייה|בעיות|בעייתי|בעייתית|מתפרץ|מתפרצת|מפריע|מפריעה)(?![א-ת])/;
+/* a point to act on ("צריכה תגבור", "לעדכן את האמא") */
+const REC_WORDS=/(^|[\s,(])(צריך|צריכה|צריכים|כדאי|יש לשים לב|לשים לב|לעדכן|לדבר|להוציא|לחבר|לקרב|לבדוק|מומלץ)(?![א-ת])/;
+const EMPTY_VAL=/^(אין|תקין|איו|רגיל|-|—|ללא)\.?$/;
 /* val: {iGen:'...', ...}; locked: rows the teacher typed by hand (never moved into or out of) */
 function rerouteInfo(val, locked={}){
-  const add={iAns:[],iAtt:[]};
-  for(const f of new Set([...ANS_FROM,...ATT_FROM])){
+  const add={iAns:[],iAtt:[],iEmo:[],iStr:[],iRec:[]};
+  /* ביקור סדיר, דגשים: what is not about attendance goes where it belongs ("אין" / "תקין" stay) */
+  if(val.iAtt&&!locked.iAtt){
+    const stay=[];
+    for(const l of String(val.iAtt).split('\n')){
+      if(ATT_WORDS.test(l)||EMPTY_VAL.test(clean(l))){ stay.push(l); continue; }
+      const t=!locked.iAns&&ANS_WORDS.test(l)?'iAns':!locked.iEmo&&(DIFF_WORDS.test(l)||EMO_WORDS.test(l))?'iEmo'
+        :!locked.iRec&&REC_WORDS.test(l)?'iRec':!locked.iStr&&STR_WORDS.test(l)&&!NEG.test(l)?'iStr':null;
+      if(t) add[t].push(l); else stay.push(l);
+    }
+    val.iAtt=stay.join('\n');
+  }
+  for(const f of new Set([...ANS_FROM,...ATT_FROM,...EMO_FROM])){
     if(locked[f]||!val[f]) continue;
     const keepLines=[];
     for(const line of String(val[f]).split('\n')){
       const keep=[];
-      for(const s of sentencesOf(line)){
-        const to=ANS_FROM.includes(f)&&!locked.iAns&&ANS_WORDS.test(s)?'iAns':ATT_FROM.includes(f)&&!locked.iAtt&&ATT_WORDS.test(s)?'iAtt':null;
+      const where=s=>ANS_FROM.includes(f)&&!locked.iAns&&ANS_WORDS.test(s)?'iAns'
+          :ATT_FROM.includes(f)&&!locked.iAtt&&ATT_WORDS.test(s)?'iAtt'
+          :EMO_FROM.includes(f)&&!locked.iEmo&&!locked.iExc&&(EMO_WORDS.test(s)||(f==='iGen'&&DIFF_WORDS.test(s)&&!/^ה?הורים/.test(s)))&&!KIN.test(s)?'iEmo'
+          :f==='iGen'&&!locked.iStr&&STR_WORDS.test(s)&&!NEG.test(s)&&!KIN.test(s)&&!/^הורים|^ההורים|^אם |^האם |^אב |^האב /.test(s)?'iStr':null;
+      for(const s0 of sentencesOf(line)){
+        /* "הורים נשואים / רגישה לסביבה / אוהבת אומנות", "הורים נשואים, טובה בכדורגל." — each part on its own */
+        const sep=/\s*\/\s*/.test(s0)?/\s*\/\s*/:/^(ה?הורים|אם|האם|אב|האב)\s/.test(s0)?/\s*,\s*|\s+-\s+/:null;
+        const parts=sep?s0.split(sep).map(x=>x.trim()).filter(Boolean):[s0];
+        if(parts.length>1&&!where(parts[0])&&parts.slice(1).some(p=>where(p))){
+          const stay=[]; for(const p of parts){ const t=where(p); if(t) add[t].push(p.replace(/[.,]$/,'')); else stay.push(p); }
+          if(stay.length) keep.push(stay.join(sep.source.includes('/')?' / ':', ')); continue;
+        }
+        const s=s0, to=where(s);
         if(!to){ keep.push(s); continue; }
+        if(to==='iEmo'||to==='iStr'){ add[to].push(s); continue; }
         const cut=splitLong(s, to==='iAns'?ANS_WORDS:ATT_WORDS);
         if(cut){ add[to].push(cut.part); if(cut.rest) keep.push(cut.rest); }
         else add[to].push(s);
@@ -395,10 +430,19 @@ function rerouteInfo(val, locked={}){
     }
     val[f]=keepLines.join('\n');
   }
+  if(val.iAns&&!locked.iAns&&!locked.iEmo){
+    const stay=[]; for(const l of String(val.iAns).split('\n')){ if(DIFF_WORDS.test(l)&&!ANS_WORDS.test(l)) add.iEmo.push(l); else stay.push(l); }
+    val.iAns=stay.join('\n');
+  }
   for(const [f,list] of Object.entries(add)){
     const have=String(val[f]||''); const extra=list.filter(s=>!have.includes(s));
     if(extra.length) val[f]=[have,...extra].filter(Boolean).join('\n');
   }
+  /* neat text: no space before a full stop or comma, no comma at the end of a line, no line twice */
+  for(const f of INFO_IN){ if(locked[f]||!val[f]) continue;
+    const seen=new Set();
+    val[f]=String(val[f]).split('\n').map(l=>l.replace(/\s+([.,:;!?])/g,'$1').replace(/,(?=[א-תA-Za-z])/g,', ').replace(/\s{2,}/g,' ').replace(/^[-–•*\s]+/,'').replace(/[,;\s]+$/,'').trim())
+      .filter(l=>l&&!seen.has(l)&&seen.add(l)).join('\n'); }
   return val;
 }
 
@@ -575,10 +619,8 @@ function buildStudents(files, opts){
       if(file.infoMap){ /* the teacher's own headers → rows of the new table; two headers into one row keep their titles */
         const by={};
         file.infoMap.forEach((fid,ci)=>{ if(!fid||fid==='skip') return; const v=cleanML(row[ci]); if(v) (by[fid] ||= []).push({h:file.headers[ci],v}); });
-        for(const [fid,parts] of Object.entries(by)){
-          const many=file.infoMap.filter(x=>x===fid).length>1;
-          (st.src[fid] ||= []).push({file:file.id,fileName:file.name,val:parts.map(p=>many?`${p.h}: ${p.v}`:p.v).join('\n')});
-        }
+        for(const [fid,parts] of Object.entries(by)) /* only the teacher's text — never the header's words */
+          (st.src[fid] ||= []).push({file:file.id,fileName:file.name,val:parts.map(p=>p.v).join('\n')});
       }
       for(const ci of gcols){ const x=toNum(row[ci]); if(x!=null) st.grades.push({subject:clean(file.headers[ci]),val:x,file:file.id}); }
       if(file.groupCols) file.headers.forEach((hd,ci)=>{ const m=hd.match(/^ציון קבוצה#(\d+)$/); if(!m) return; const x=toNum(row[ci]); if(x!=null) (st.gg ||= []).push({...file.groupCols[+m[1]],grade:x}); });
@@ -982,7 +1024,7 @@ const INFO_WORDS=[
 ];
 /* headers that are never general info (a grades table, the teachers table, the name row) */
 const NOT_INFO_HEAD=/^(שם|תלמיד|תלמידה|כיתה|שכבה|מקצוע|ציון|ציונים|מורה|מורים|ממוצע|תאריך|מחנך|מחנכת|הקבצה|קבוצה)(\s|$|[:׃(])/;
-function labelText(s){ return clean(s).replace(/[:׃\-–]+$/,'').trim(); }
+function labelText(s){ let w=clean(s).replace(/[:׃\-–]+$/,'').trim(); if(typeof multiHead==='function'&&multiHead(w)) w=w.replace(/\.$/,''); return w; }
 /* header text → which row of the new table; sure=false means no known word (a guess: פרופיל תלמיד) */
 function infoFieldFor(h){
   const w=labelText(h); if(!w) return null;
@@ -992,7 +1034,10 @@ function infoFieldFor(h){
 }
 /* short text that can be a header (not a sentence) */
 const SUBJECT_HEAD=['math','lang','eng','sci','geo','hist','lit'];
-function isLabel(s){ const w=labelText(String(s??'').split('\n').join(' ')); if(!w||/[.!?,]$/.test(w)||/\d/.test(w)) return false;
+/* "בעיות חריגות, אבחון, מצב בריאותי." — a header of several parts, each a known word, may end with a full stop */
+function multiHead(w){ if(!/\.$/.test(w)||!w.includes(',')) return false; const parts=w.replace(/\.$/,'').split(/\s*,\s*/).filter(Boolean);
+  return parts.length>=2&&parts.every(p=>p.split(' ').length<=3)&&parts.filter(p=>INFO_WORDS.some(([,st])=>st.some(x=>p.includes(x)))).length>=2; }
+function isLabel(s){ let w=labelText(String(s??'').split('\n').join(' ')); if(multiHead(w)) w=w.replace(/\.$/,''); if(!w||/[.!?,]$/.test(w)||/\d/.test(w)) return false;
   if(SUBJECT_HEAD.some(f=>scoreHeader(f,w)>0)) return false; /* a grades/teachers table, not general info */
   return w.split(' ').length<=6&&w.length<=45; }
 /* a short header with no known word ("מה כדאי לדעת:") — taken only next to real headers, as a guess */
@@ -1738,10 +1783,11 @@ function parsePptxSlide(path, xml, relsXml){
     for(const r of tags(rd,'Relationship')) if(r.getAttribute('TargetMode')!=='External') rels[r.getAttribute('Id')]=resolvePart(path,r.getAttribute('Target')); }
   const tables=tags(doc,'tbl').map(tbl=>{ const rtl=tags(tbl,'tblPr')[0]?.getAttribute('rtl')==='1';
     return tags(tbl,'tr').map(tr=>{ const cells=tags(tr,'tc').map(tc=>paraText(tc)); return rtl?cells:cells.reverse(); }); }); /* Hebrew order: right to left */
-  const texts=[], blocks=[];
+  const texts=[], blocks=[], shapes=[];
   for(const sp of tags(doc,'sp')){
     const tb=tags(sp,'txBody')[0]; if(!tb) continue;
     blocks.push(paraText(tb));
+    const box=shapeBox(sp); if(box&&clean(paraText(tb))) shapes.push({...box, text:cleanML(paraText(tb))});
     const size=Math.max(0,...[...tags(tb,'rPr'),...tags(tb,'defRPr'),...tags(tb,'endParaRPr')].map(r=>Number(r.getAttribute('sz'))||0))/100;
     for(const line of paraText(tb).split('\n')) if(line.trim()) texts.push({text:line,size});
   }
@@ -1754,7 +1800,81 @@ function parsePptxSlide(path, xml, relsXml){
     if(host){ const ext=tags(host,'ext').find(e=>e.parentNode&&e.parentNode.localName==='xfrm'); if(ext){ cx=Number(ext.getAttribute('cx'))||0; cy=Number(ext.getAttribute('cy'))||0; } }
     pics.push({target:rels[id],area:cx*cy,aspect:cy?cx/cy:0});
   }
-  return {tables,texts,blocks,pics};
+  return {tables,texts,blocks,pics,shapes};
+}
+/* where a text box sits on the slide (EMU), including boxes inside groups */
+function xfrmOf(el){ const x=[...el.children].find(c=>/spPr$|grpSpPr$/.test(c.localName)); return x?[...x.children].find(c=>c.localName==='xfrm'):null; }
+function num(el,n,a){ const c=el&&[...el.children].find(c=>c.localName===n); return c?Number(c.getAttribute(a))||0:null; }
+function shapeBox(sp){
+  const xf=xfrmOf(sp); if(!xf) return null;
+  let x=num(xf,'off','x'), y=num(xf,'off','y'), w=num(xf,'ext','cx'), h=num(xf,'ext','cy');
+  if(x==null||w==null) return null;
+  for(let g=sp.parentNode; g&&g.localName!=='spTree'; g=g.parentNode){
+    if(g.localName!=='grpSp') continue;
+    const gx=xfrmOf(g); if(!gx) continue;
+    const ox=num(gx,'off','x'),oy=num(gx,'off','y'),ew=num(gx,'ext','cx'),eh=num(gx,'ext','cy'),cx=num(gx,'chOff','x'),cy=num(gx,'chOff','y'),cw=num(gx,'chExt','cx'),ch=num(gx,'chExt','cy');
+    const kx=cw?ew/cw:1, ky=ch?eh/ch:1;
+    x=ox+(x-(cx||0))*kx; y=oy+(y-(cy||0))*ky; w*=kx; h*=ky;
+  }
+  return {x,y,w,h};
+}
+/* slide decorations that are never info or a header */
+const DECOR=/^(בס"ד|בס״ד)$|^כיתה\s|^מחנכ?ת?\s*[:׃]|^מחנכים|תשפ|ישיבת|נבנה על ידי|^מידע כללי$|^תמונת מצב/;
+/* headers = the texts that repeat on most student slides (a student's own text never does) */
+function deckLabels(slides){
+  const n=slides.filter(s=>s.shapes?.length>=3).length, cnt={};
+  for(const s of slides) new Set((s.shapes||[]).map(b=>clean(b.text.split('\n').join(' ')))).forEach(t=>cnt[t]=(cnt[t]||0)+1);
+  const out=new Set();
+  for(const [t,c] of Object.entries(cnt)){
+    if(n<3||c<Math.max(3,n*0.5)||DECOR.test(t)) continue;
+    const w=labelText(t.replace(/\.$/,''));
+    if(w.split(' ').length<=8&&w.length<=60&&!NOT_INFO_HEAD.test(w)&&!/\d/.test(w)) out.add(t);
+  }
+  return out;
+}
+/* text boxes not beside any header (title, name): [{text,size}] for pickName */
+function nameCandidates(shapes, labels){
+  const key=b=>clean(b.text.split('\n').join(' '));
+  const L=shapes.filter(b=>labels.has(key(b))); if(L.length<2) return null;
+  const ys=L.map(l=>l.y+l.h/2), xs=L.map(l=>l.x+l.w/2), side=(Math.max(...ys)-Math.min(...ys))>=(Math.max(...xs)-Math.min(...xs));
+  const ov=(a1,a2,b1,b2)=>Math.max(0,Math.min(a2,b2)-Math.max(a1,b1));
+  return shapes.filter(b=>!labels.has(key(b))&&!DECOR.test(key(b))&&!L.some(l=>side?ov(b.y,b.y+b.h,l.y,l.y+l.h)>0.3*Math.min(b.h,l.h):ov(b.x,b.x+b.w,l.x,l.x+l.w)>0.3*Math.min(b.w,l.w)&&b.y>l.y))
+    .flatMap(b=>b.text.split('\n').map(t=>({text:t,size:b.h})));
+}
+/* one slide: each text box goes to the header beside it (headers down the side) or above it (headers along the top) */
+function pairsFromShapes(shapes, labels, nameText){
+  const key=b=>clean(b.text.split('\n').join(' '));
+  const L=shapes.filter(b=>labels.has(key(b)));
+  if(L.length<2) return null;
+  const V=shapes.filter(b=>!labels.has(key(b))&&!DECOR.test(key(b))&&key(b)!==clean(nameText||'')&&!(nameText&&nameKey(key(b))===nameKey(nameText)));
+  const cy=b=>b.y+b.h/2, cx=b=>b.x+b.w/2;
+  const ys=L.map(cy), xs=L.map(cx), spread=a=>Math.max(...a)-Math.min(...a);
+  const side=spread(ys)>=spread(xs); /* headers stacked one under the other */
+  const ov=(a1,a2,b1,b2)=>Math.max(0,Math.min(a2,b2)-Math.max(a1,b1));
+  const pairs=[]; for(const l of L) addPair(pairs, labelText(key(l).replace(/\.$/,'')), '');
+  const put=(l,t)=>{ const p=pairs.find(p=>p.h===labelText(key(l).replace(/\.$/,''))); const c=cleanML(t); if(c) p.v=p.v?p.v+'\n'+c:c; };
+  const lsorted=[...L].sort((a,b)=>side?a.y-b.y:b.x-a.x);
+  for(const v of V){
+    const span=side?[v.y,v.y+v.h]:[v.x,v.x+v.w];
+    const hits=lsorted.map(l=>({l,o:side?ov(v.y,v.y+v.h,l.y,l.y+l.h):ov(v.x,v.x+v.w,l.x,l.x+l.w)})).filter(h=>h.o>0);
+    if(!side&&v.y+v.h<=Math.min(...L.map(l=>l.y))) continue; /* above the headers: a title */
+    if(!hits.length){
+      /* nothing overlaps: the nearest header, if it is close */
+      const d=l=>side?Math.abs(cy(v)-cy(l)):Math.abs(cx(v)-cx(l)); const best=[...L].sort((a,b)=>d(a)-d(b))[0];
+      const gap=side?Math.max(...L.map(l=>l.h))*1.5:Math.max(...L.map(l=>l.w));
+      if(best&&d(best)<=gap) put(best,v.text);
+      continue;
+    }
+    const big=hits.filter(h=>h.o>=0.3*(side?h.l.h:h.l.w));
+    if(side&&big.length>=2){ /* one tall box beside several headers: its lines go by height */
+      const lines=v.text.split('\n'); const lh=v.h/lines.length;
+      lines.forEach((t,i)=>{ const yy=v.y+lh*(i+0.5); const l=[...L].sort((a,b)=>Math.abs(cy(a)-yy)-Math.abs(cy(b)-yy))[0]; put(l,t); });
+    } else put(hits.sort((a,b)=>b.o-a.o)[0].l, v.text);
+  }
+  /* a header's own words never go into the table */
+  const heads=new Set([...labels].map(t=>labelText(t.replace(/\.$/,''))));
+  for(const p of pairs) p.v=p.v.split('\n').filter(t=>!heads.has(labelText(clean(t).replace(/\.$/,'')))).join('\n');
+  return pairs;
 }
 const IMG_EXT=/\.(png|jpe?g|gif|webp|bmp)$/i;
 function repeatedSet(lists){ /* things that show up on most slides = logos */
@@ -1777,8 +1897,12 @@ function slideEntries(s, known, entries, skipped, unknownTables){
     if(r.name&&!tname) tname=r.name;
   }
   const fromTable=pairs.length>0;
+  /* the name sits away from the headers' rows (a title); text beside a header is info, never the name */
+  const away=s.labels?nameCandidates(s.shapes||[], s.labels):null;
+  const name=tname?(knownMatch(tname,known)?.name||tname)
+    :(away&&away.length&&pickName(away, known))||pickName(s.texts.filter(t=>!s.labels?.has(clean(t.text))), known);
+  if(!pairs.length&&s.shapes&&s.labels){ const sp=pairsFromShapes(s.shapes, s.labels, name); if(sp) for(const p of sp) addPair(pairs,p.h,p.v); }
   if(!pairs.length&&s.blocks) for(const p of pairsFromBlocks(s.blocks)) addPair(pairs,p.h,p.v);
-  const name=tname?(knownMatch(tname,known)?.name||tname):pickName(s.texts, known);
   if(!pairs.length&&name&&s.tables.some(t=>t.length>=1&&!t.flat().some(c=>NOT_INFO_HEAD.test(labelText(String(c).split('\n')[0]))))) unknownTables.push(s.num);
   return {name, pairs, fromTable, notInfo:notInfo&&!pairs.length}; /* a teachers/grades slide */
 }
@@ -1792,6 +1916,7 @@ async function readPptxDeck(file){
     slides.push({num:slides.length+1, ...parsePptxSlide(p, await zip.file(p).async('string'), zip.file(rp)?await zip.file(rp).async('string'):'')});
   }
   const logos=repeatedSet(slides.map(s=>s.pics.map(x=>x.target)));
+  const labels=deckLabels(slides); for(const s of slides) s.labels=labels;
   const known=knownStudents(), entries=[], skipped=[], unknownTables=[];
   for(const s of slides){
     const {name,pairs,fromTable,notInfo}=slideEntries(s, known, entries, skipped, unknownTables);
