@@ -679,6 +679,7 @@ function buildStudents(files, opts){
       if(!anchors.has(k)&&!opts.links?.[k]&&!fuzzyFind(k,anchors)) add.push(k); }
     for(const k of add) anchors.add(k);
   }
+  let deckOnly=false;
   const autoLinks=[], unmatched=new Map(), aliasOf={};
   /* a name from another report that matches no one on the class list gets NO slide of its own
      (that is how duplicates were made); the teacher can link it to a student or add it on purpose */
@@ -688,7 +689,8 @@ function buildStudents(files, opts){
     if(file.kind==='deck'){
       if(anchors.has(k)) return k;
       const man=opts.links?.[k]; if(man&&anchors.has(man)){ aliasOf[k]=man; return man; }
-      if(!anchors.size) return opts.noLink?.[k]?k:null;
+      /* test mode: only decks were uploaded (no class list yet), so the deck's own names become the students */
+      if(!anchors.size){ deckOnly=true; return k; }
       /* the name may be another line of the slide */
       for(const a of row?.alts||[]){ const ak=nameKey(a); if(anchors.has(ak)) return ak; const h=knownMatch(a,anchorNames); if(h) return h.key; }
     }
@@ -811,7 +813,7 @@ function buildStudents(files, opts){
   for(const f of dataFiles){ if(f.kind==='deck'||f.mapping.cls<0) continue;
     const cnt={}; for(const row of f.rows){ const c=clean(row[f.mapping.cls]).replace(/["'״׳\s]/g,''); if(c&&!/\d{5,}/.test(c)) cnt[c]=(cnt[c]||0)+1; }
     const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]; if(top) classes.push({file:f.name,cls:top[0]}); }
-  return {students,conflicts,missing,eventTypes,classes,
+  return {students,conflicts,missing,eventTypes,classes,deckOnly,
     autoLinks:autoLinks.map(l=>({...l,toName:nameOf(l.to)})),
     unmatched:[...unmatched.values()],
     roster:[...anchors].map(k=>({key:k,name:nameOf(k)})).sort((a,b)=>a.name.localeCompare(b.name,'he'))};
@@ -1526,7 +1528,7 @@ function renderChecks(){
   /* each teacher titles the general-info table differently: show where every header goes, and let them change it */
   if(!state.sample&&state.files.some(f=>f.kind==='deck')&&!state.files.some(f=>f.kind!=='deck'&&f.rows?.length)){
     const el=document.createElement('div'); el.className='issue missing';
-    el.innerHTML=`<div class="issue-title">המידע מהמצגת הקודמת נקרא, אבל עוד אין רשימת כיתה</div><span class="hint">מצגת קודמת לא יוצרת תלמידים חדשים: המידע שבה נכנס לתלמידים שברשימת הכיתה. העלו גם את סדין הציונים (98) או את דוח 58, והמידע ייכנס לשקף של כל תלמיד.</span>`;
+    el.innerHTML=`<div class="issue-title">מצב בדיקה: התלמידים נלקחו מהמצגת הקודמת בלבד</div><span class="hint">אין עדיין רשימת כיתה, אז לצורך בדיקה כל תלמיד שבמצגת קיבל שקף, עם השם, התמונה והמידע שבה (בלי ציונים). כשתעלו גם את סדין הציונים (98) או את דוח 58, המידע ייכנס רק לתלמידים שברשימת הכיתה, והשמות מהמצגת לא יוסיפו תלמידים.</span>`;
     box.appendChild(el);
   }
   for(const f of state.files.filter(f=>f.infoMap&&f.infoMap.some(Boolean)&&!f.classified)){
@@ -1716,6 +1718,7 @@ function updateStatus(){
   const mixed=new Set((built.classes||[]).map(c=>c.cls)).size>1;
   const noTeacher=!state.sample&&state.files.length&&!clean($('#sTeacher').value);
   $('#status').textContent = busyCount>0 ? 'קורא את הקבצים… המצגת תהיה זמינה בעוד רגע.'
+    : (built.deckOnly&&n) ? `מצב בדיקה: ${n} שקפי תלמידים מהמצגת הקודמת בלבד, ${ph} עם תמונה (בלי ציונים).`
     : noTeacher ? 'לא מולא שם המחנך/ת. אנא הזינו שם/שמות (שלב 2).'
     : mixed ? 'שימו לב: הדוחות שייכים לכיתות שונות. ראו ״בדיקת נתונים״.'
     : !n ? 'העלו דוחות כדי ליצור מצגת.'
