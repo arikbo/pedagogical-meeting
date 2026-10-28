@@ -313,7 +313,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 27.10.2026 · 20:45</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 20:55</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -693,6 +693,8 @@ function buildStudents(files, opts){
       if(!anchors.size){ deckOnly=true; return k; }
       /* the name may be another line of the slide */
       for(const a of row?.alts||[]){ const ak=nameKey(a); if(anchors.has(ak)) return ak; const h=knownMatch(a,anchorNames); if(h) return h.key; }
+      /* a name read from a picture (OCR) may be off by a letter or two */
+      if(row?.ocr){ const f=fuzzyFind(k,anchors); if(f){ aliasOf[k]=f; return f; } }
     }
     if(anchorIds.has(file.id)||!anchors.size||anchors.has(k)) return k;
     const man=opts.links?.[k]; if(man&&anchors.has(man)){ aliasOf[k]=man; return man; }
@@ -1896,7 +1898,7 @@ function parsePptxSlide(path, xml, relsXml){
   for(const sp of tags(doc,'sp')){
     const tb=tags(sp,'txBody')[0]; if(!tb) continue;
     blocks.push(paraText(tb));
-    const box=shapeBox(sp); if(box&&clean(paraText(tb))) shapes.push({...box, text:cleanML(paraText(tb))});
+    const box=shapeBox(sp); if(box&&clean(paraText(tb))) shapes.push({...box, text:cleanML(paraText(tb)), nm:clean(tags(sp,'cNvPr')[0]?.getAttribute('name')||'')});
     const size=Math.max(0,...[...tags(tb,'rPr'),...tags(tb,'defRPr'),...tags(tb,'endParaRPr')].map(r=>Number(r.getAttribute('sz'))||0))/100;
     for(const line of paraText(tb).split('\n')) if(line.trim()) texts.push({text:line,size});
   }
@@ -1905,9 +1907,10 @@ function parsePptxSlide(path, xml, relsXml){
   for(const b of tags(doc,'blip')){
     const id=b.getAttributeNS(RNS,'embed'); if(!id||!rels[id]) continue;
     let host=b.parentNode; while(host&&host.localName!=='pic'&&host.localName!=='sp') host=host.parentNode;
-    let cx=0,cy=0;
-    if(host){ const ext=tags(host,'ext').find(e=>e.parentNode&&e.parentNode.localName==='xfrm'); if(ext){ cx=Number(ext.getAttribute('cx'))||0; cy=Number(ext.getAttribute('cy'))||0; } }
-    pics.push({target:rels[id],area:cx*cy,aspect:cy?cx/cy:0});
+    let cx=0,cy=0,y=0;
+    if(host){ const ext=tags(host,'ext').find(e=>e.parentNode&&e.parentNode.localName==='xfrm'); if(ext){ cx=Number(ext.getAttribute('cx'))||0; cy=Number(ext.getAttribute('cy'))||0; }
+      const bx=host.localName==='pic'||host.localName==='sp'?shapeBox(host):null; if(bx) y=bx.y; }
+    pics.push({target:rels[id],area:cx*cy,aspect:cy?cx/cy:0,y});
   }
   return {tables,texts,blocks,pics,shapes};
 }
@@ -1928,7 +1931,7 @@ function shapeBox(sp){
   return {x,y,w,h};
 }
 /* slide decorations that are never info or a header */
-const DECOR=/^(בס"ד|בס״ד)$|^כיתה\s|^מחנכ?ת?\s*[:׃]|^מחנכים|תשפ|ישיבת|נבנה על ידי|^מידע כללי$|^תמונת מצב/;
+const DECOR=/^(בס"ד|בס״ד)$|^כיתה\s|^מחנכ?ת?\s*[:׃]|^מחנכים|תשפ|ישיבת|נבנה על ידי|^מידע כללי$|^תמונת מצב|לשימוש (?:ה)?צוות|^שקופית\s*\d+$/;
 /* headers = the texts that repeat on most student slides (a student's own text never does) */
 function deckLabels(slides){
   const n=slides.filter(s=>s.shapes?.length>=3).length, cnt={};
@@ -1949,6 +1952,22 @@ function nameCandidates(shapes, labels){
   const ov=(a1,a2,b1,b2)=>Math.max(0,Math.min(a2,b2)-Math.max(a1,b1));
   return shapes.filter(b=>!labels.has(key(b))&&!DECOR.test(key(b))&&!L.some(l=>side?ov(b.y,b.y+b.h,l.y,l.y+l.h)>0.3*Math.min(b.h,l.h):ov(b.x,b.x+b.w,l.x,l.x+l.w)>0.3*Math.min(b.w,l.w)&&b.y>l.y))
     .flatMap(b=>b.text.split('\n').map(t=>({text:t,size:b.h})));
+}
+/* text boxes whose own (internal) name is their header: "ניתן לעריכה - חוזקות ומשאבים".
+   Some decks draw the headers as pictures, so the box's name is the only place the header is written.
+   A box named "כותרת - ..." is the header itself, not the student's text. */
+const BOX_HEAD_SKIP=/^(כותרת|תחתית|כותרת עליונה|כותרת תחתונה|title|footer|header|subtitle)$/i;
+function boxHeader(nm){
+  const n=clean(nm); if(!n) return null;
+  const m=n.match(/^(.*?)\s+[-–]\s+(.+)$/);
+  const pre=m?clean(m[1]):'', head=clean(m?m[2]:n);
+  if(BOX_HEAD_SKIP.test(pre)||/^(שם|name)$/i.test(pre)) return null;
+  return sureLabel(head)?labelText(head):null;
+}
+function namedPairs(s){
+  const pairs=[]; let n=0;
+  for(const b of s.shapes||[]){ const h=boxHeader(b.nm); if(!h) continue; n++; addPair(pairs,h,b.text); }
+  return n>=2?pairs:null;
 }
 /* one slide: each text box goes to the header beside it (headers down the side) or above it (headers along the top) */
 function pairsFromShapes(shapes, labels, nameText){
@@ -2053,8 +2072,11 @@ function deckEntry(name, pairs, known){
   return {name, pairs, hasInfo, matched:known.some(k=>k.name===name)};
 }
 /* one slide / page → entries (usually one student; a table may list several) */
+/* the teachers' slide ("מורים מקצועיים", "מורי הכיתה", "צוות המורים") is never a student */
+const STAFF_TITLE=/^(?:ה?מורים(?:\s+ה?מקצועיים|\s+של\b.*|\s+ה?כיתה)?|מורי\s+ה?כיתה(?:\s.*)?|צוות(?:\s+ה?מורים|\s+ה?כיתה)?)$/;
 function slideEntries(s, known, entries, skipped, unknownTables){
   let pairs=[], tname='', notInfo=false;
+  if(slideLines(s).some(t=>t.split(' ').length<=4&&STAFF_TITLE.test(t))) return {name:'',pairs:[],fromTable:false,notInfo:true};
   for(const t of s.tables){
     const r=infoFromTable(t); if(r.notInfo) notInfo=true;
     if(r.people){ for(const p of r.people){ const k=knownMatch(p.name,known); entries.push(deckEntry(k?k.name:p.name,p.pairs,known)); } continue; }
@@ -2062,6 +2084,14 @@ function slideEntries(s, known, entries, skipped, unknownTables){
     if(r.name&&!tname) tname=r.name;
   }
   const fromTable=pairs.length>0;
+  /* boxes named after their header (the header itself is a picture) */
+  const named=!pairs.length?namedPairs(s):null;
+  if(named){
+    for(const p of named) addPair(pairs,p.h,p.v);
+    const info=new Set((s.shapes||[]).filter(b=>boxHeader(b.nm)||BOX_HEAD_SKIP.test(clean(b.nm).split(/\s+[-–]\s+/)[0])).flatMap(b=>b.text.split('\n').map(clean)));
+    const nm=pickName(s.texts.filter(t=>!info.has(clean(t.text))&&!DECOR.test(clean(t.text))), known);
+    return {name:nm, pairs, fromTable:false, named:true};
+  }
   /* the name sits away from the headers' rows (a title); text beside a header is info, never the name */
   const away=s.labels&&!s.byLines?nameCandidates(s.shapes||[], s.labels):null;
   const name=tname?(knownMatch(tname,known)?.name||tname)
@@ -2072,6 +2102,43 @@ function slideEntries(s, known, entries, skipped, unknownTables){
   if(!pairs.length&&s.blocks) for(const p of pairsFromBlocks(s.blocks)) addPair(pairs,p.h,p.v);
   if(!pairs.length&&name&&s.tables.some(t=>t.length>=1&&!t.flat().some(c=>NOT_INFO_HEAD.test(labelText(String(c).split('\n')[0]))))) unknownTables.push(s.num);
   return {name, pairs, fromTable, notInfo:notInfo&&!pairs.length}; /* a teachers/grades slide */
+}
+/* a student's name drawn as a picture (no text to read): read it with OCR, inside the browser — the picture never leaves it */
+const OCR_JS='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+let ocrWorker=null, ocrFailed=false;
+async function getOcr(){
+  if(ocrFailed) return null;
+  try{
+    if(!window.Tesseract) await loadScript(OCR_JS);
+    if(!ocrWorker){ ocrWorker=await Tesseract.createWorker('heb',1); await ocrWorker.setParameters({tessedit_pageseg_mode:'7'}); }
+    return ocrWorker;
+  }catch(e){ console.error(e); ocrFailed=true; return null; }
+}
+async function ocrName(bytes, type){
+  const w=await getOcr(); if(!w) return '';
+  const url=URL.createObjectURL(new Blob([bytes],{type}));
+  try{
+    const img=await new Promise((ok,no)=>{ const i=new Image(); i.onload=()=>ok(i); i.onerror=no; i.src=url; });
+    /* dark letters on a transparent picture: put them on white first */
+    const k=Math.min(3,Math.max(1,90/img.naturalHeight)), c=document.createElement('canvas');
+    c.width=Math.round(img.naturalWidth*k); c.height=Math.round(img.naturalHeight*k);
+    const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height);
+    const {data}=await w.recognize(c);
+    return ocrClean(data.text);
+  }catch(e){ console.error(e); return ''; } finally{ URL.revokeObjectURL(url); }
+}
+function ocrClean(t){
+  const lines=String(t||'').split('\n').map(l=>clean(l.replace(/[^א-ת'"׳״\- ]/g,' '))).filter(l=>l.replace(/[^א-ת]/g,'').length>=3);
+  return lines.sort((a,b)=>b.length-a.length)[0]||'';
+}
+/* the picture that holds the name: a wide one (text), not on every slide (headers, logos), highest on the slide */
+function namePicture(s, logos){
+  return s.pics.filter(x=>!logos.has(x.target)&&/\.(png|jpe?g|gif|webp|bmp)$/i.test(x.target)&&x.aspect>=3).sort((a,b)=>a.y-b.y||b.area-a.area)[0]||null;
+}
+/* OCR may misread a letter or two: the closest name on the class list, when it is clearly the closest */
+function ocrMatch(t, known){
+  const hit=knownMatch(t,known); if(hit) return hit.name;
+  const f=fuzzyFind(nameKey(t), known.map(k=>k.key)); return f?known.find(k=>k.key===f).name:'';
 }
 async function readPptxDeck(file){
   const zip=await JSZip.loadAsync(await file.arrayBuffer());
@@ -2090,19 +2157,29 @@ async function readPptxDeck(file){
   let byLines=lineLabels.size>=2&&(mixed>=Math.max(2,slides.length*0.2)||labels.size<2);
   let dir=byLines?labelDirection(slides,lineLabels):-1; if(!dir){ byLines=false; dir=-1; }
   for(const s of slides){ s.labels=labels; s.lineLabels=lineLabels; s.byLines=byLines; s.dir=dir; }
-  const known=knownStudents(), entries=[], skipped=[], unknownTables=[];
+  const known=knownStudents(), entries=[], skipped=[], unknownTables=[]; let ocrCount=0, ocrMissed=0;
   for(const s of slides){
-    const {name,pairs,fromTable,notInfo}=slideEntries(s, known, entries, skipped, unknownTables);
+    let {name,pairs,fromTable,notInfo,named}=slideEntries(s, known, entries, skipped, unknownTables);
     if(notInfo) continue;
+    let ocr=false;
+    if(!name&&named&&pairs.some(p=>p.v)){
+      const np=namePicture(s, logos);
+      if(np){
+        if(!ocrCount&&!ocrMissed) $('#photoInfo').textContent=`${file.name}: שמות התלמידים כתובים בשקפים כתמונה, מזהה אותם…`;
+        const ext=np.target.split('.').pop().toLowerCase();
+        const t=await ocrName(await zip.file(np.target).async('uint8array'),'image/'+(ext==='jpg'?'jpeg':ext));
+        if(t){ name=ocrMatch(t,known)||t; ocr=true; ocrCount++; } else ocrMissed++;
+      }
+    }
     const pic=s.pics.filter(x=>!logos.has(x.target)&&IMG_EXT.test(x.target)&&x.area>0&&x.aspect>=0.4&&x.aspect<=2.5).sort((a,b)=>b.area-a.area)[0];
     const e=deckEntry(name, pairs, known);
-    e.alts=nameAlts(s, new Set([...labels,...lineLabels])); e.slide=s.num;
+    e.alts=nameAlts(s, new Set([...labels,...lineLabels])); e.slide=s.num; e.ocr=ocr;
     if(!name){ if(e.hasInfo) skipped.push(s.num); continue; }
     if(!(e.hasInfo||e.matched||pic)) continue;
     if(pic){ const ext=pic.target.split('.').pop().toLowerCase(); const blob=new Blob([await zip.file(pic.target).async('uint8array')],{type:'image/'+(ext==='jpg'?'jpeg':ext)}); e.photo=await shrink(await fileToDataURL(blob)); }
     entries.push(e);
   }
-  return {entries, skipped, unknownTables, labels:[...labels,...lineLabels]};
+  return {entries, skipped, unknownTables, labels:[...labels,...lineLabels], ocrCount, ocrMissed};
 }
 function imageRects(opList){
   const O=pdfjsLib.OPS, U=pdfjsLib.Util; let ctm=[1,0,0,1,0,0]; const st=[], out=[];
@@ -2252,6 +2329,14 @@ function noteData(fi,msgs,notes){
   if(!(fi.mapping.name>=0||fi.mapping.first>=0||fi.mapping.last>=0)) msgs.push(`${fi.name}: לא זוהתה עמודת שם. פתחו ״התאמת עמודות״ ובחרו אותה.`);
   else notes.push(`${fi.name}: ${fi.kind==='sadin'?'סדין ציונים':fi.kind==='events'?'מונה אירועי שיעור':fi.kind==='assess'?'ציונים שוטפים':fi.kind==='groups'?'שיוך לקבוצות (הקבצות ומין)':'דוח'}, ${fi.rows.length} שורות.`);
 }
+/* which row a header points to. A header of several parts ("ביקור סדיר, בריאות ואלרגיות") points to the part that is
+   about health: attendance sentences are recognized by their own words (חיסורים, איחורים) anyway. */
+function headHint(h){
+  const parts=labelText(h).replace(/\.$/,'').split(/\s*,\s*|\s+ו(?=[א-ת])/).filter(Boolean);
+  const fs=[...new Set(parts.map(p=>{ const r=infoFieldFor(p); return r&&r.sure?(r.f==='iExc'?'iEmo':r.f):null; }).filter(f=>f&&INFO.includes(f)))];
+  if(fs.includes('iAtt')&&fs.includes('iEmo')) return 'iEmo';
+  const r=infoFieldFor(h); return r&&r.sure?(r.f==='iExc'?'iEmo':INFO.includes(r.f)?r.f:null):null;
+}
 function addDeck(name,res,notes,msgs){
   const kindWord=/\.docx$/i.test(name)?'מסמך':/\.pdf$/i.test(name)?'קובץ':'מצגת';
   if(!res.entries.length){
@@ -2264,9 +2349,10 @@ function addDeck(name,res,notes,msgs){
      A header's own words never go into the table. */
   const heads=new Set([...(res.labels||[]),...merged.flatMap(e=>e.pairs.map(p=>p.h))].map(h=>labelText(clean(h).replace(/\.$/,''))));
   const isHead=t=>{ const w=labelText(clean(t).replace(/\.$/,'')); return heads.has(w)||Object.values(INFO_HEAD).includes(w); };
-  const stripHead=t=>{ const m=clean(t).match(/^([^:׃]{2,45})[:׃]\s*(.*)$/); return m&&(isHead(m[1])||sureLabel(m[1]))?m[2]:t; };
+  /* "חוזקות: ..." loses its header; "הגיע עם מספר חברים: אורי, ..." is a sentence and stays whole */
+  const stripHead=t=>{ const m=clean(t).match(/^([^:׃]{2,45})[:׃]\s*(.*)$/); return m&&(isHead(m[1])||(sureLabel(m[1])&&m[1].trim().split(/\s+/).length<=3))?m[2]:t; };
   for(const e of merged){
-    const items=e.pairs.map(p=>{ const r=infoFieldFor(p.h); const hint=r&&r.sure&&INFO.includes(r.f)?r.f:(r&&r.sure&&r.f==='iExc'?'iEmo':null);
+    const items=e.pairs.map(p=>{ const hint=headHint(p.h);
       return {t:String(p.v||'').split('\n').filter(l=>clean(l)&&!isHead(l)).map(stripHead).join('\n'), hint}; });
     e.info=classifyInfo(items);
     e.hasInfo=INFO.some(f=>e.info[f]);
@@ -2278,12 +2364,14 @@ function addDeck(name,res,notes,msgs){
   file.headers=aoa[0].map(clean); file.mapping.name=0; file.mapping.first=file.mapping.last=-1;
   file.infoMap=[null,...INFO]; file.infoGuess=file.infoMap.map(()=>false);
   /* other lines of the slide that may be the name, for matching to the class list once it is loaded */
-  for(const r of file.rows){ const e=merged.find(x=>x.name===clean(r[0])); if(e) r.alts=[e.name,...e.alts]; }
+  for(const r of file.rows){ const e=merged.find(x=>x.name===clean(r[0])); if(e){ r.alts=[e.name,...e.alts]; r.ocr=!!e.ocr; } }
   for(const e of merged) if(e.photo){ const k=setPhoto(e.name,e.photo); file.photoKeys.push(k); file.photoData[k]=e.photo; }
   const withInfo=merged.filter(e=>e.hasInfo).length;
   notes.push(`${name}: ${kindWord}, ${merged.length} שקפי תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות. כל משפט שויך לשורה בטבלה לפי התוכן שלו (אפשר לתקן בשלב 4). המידע נכנס רק לתלמידים שברשימת הכיתה מהדוחות.`
     +(res.skipped.length?` לא זוהה שם תלמיד בשקפים ${res.skipped.join(', ')}.`:'')
-    +(res.unknownTables?.length?` בשקפים ${res.unknownTables.join(', ')} יש טבלה בלי כותרות מוכרות.`:''));
+    +(res.unknownTables?.length?` בשקפים ${res.unknownTables.join(', ')} יש טבלה בלי כותרות מוכרות.`:'')
+    +(res.ocrCount?` שמות התלמידים כתובים בשקפים כתמונה, ${res.ocrCount} זוהו אוטומטית: כדאי לבדוק אותם בשלב 4.`:'')
+    +(res.ocrMissed?` ב-${res.ocrMissed} שקפים השם כתוב כתמונה ולא הצלחנו לזהות אותו (בדקו את החיבור לאינטרנט ונסו שוב).`:''));
 }
 
 /* a Word document: a section per student (name line, then "חוזקות: ..." lines or a small table),
