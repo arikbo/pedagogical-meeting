@@ -356,8 +356,12 @@ const NUMERIC = ['avg','math','lang','eng','sci','geo','hist','lit','fails','lat
    חיסורים / איחורים are ביקור סדיר, not פרופיל תלמיד. */
 /* also learned from the teachers' decks: שלבים, CBT, סייעת, שעות עולים, מורת שמיעה, קבוצה רגשית, חונכות / פר"ח */
 const ANS_WORDS=new RegExp([
-  '(^|[^א-ת])(?:[והלמש]{0,2}קשת|[והלמש]{0,2}(?:שילוב|שלוב)|ו?ב(?:שילוב|שלוב)(?!\\s+עם)|[ובהלמש]{0,2}פרטנ[א-ת]*|[והלמש]{0,2}שלבים|[ובהלמש]{0,2}סייעת|[ובהלמש]{0,2}חונכות|פר"ח|פר״ח)(?![א-ת])',
-  '\\bcbt\\b','תוספת זמן','התאמות','הקראה','בעל פה','להשלים (?:לו|לה) את המבחן','שעות\\s*(?:ל)?עולים','שעות\\s*עולה','מורת\\s*(?:ה)?שמי?עה','קבוצה\\s+רגשית','קבוצת\\s+רגשית'
+  /* whole words only, with ו/ב/ל/ה in front. plain קשת never with ב ("בקשת", "לבקשת ההורים" = a request); קש"ת may ("בקש"ת") */
+  '(^|[^א-ת])(?:[והלמש]{0,2}קשת|[ובהלמש]{0,2}קש["״\']ת|[ובהלמש]{0,2}עולים|[והלמש]{0,2}(?:שילוב|שלוב)|ו?ב(?:שילוב|שלוב)(?!\\s+עם)|[ובהלמש]{0,2}פרטנ[א-ת]*|[והלמש]{0,2}שלבים|[ובהלמש]{0,2}סייעת|[ובהלמש]{0,2}חונכות|פר"ח|פר״ח)(?![א-ת])',
+  '\\bcbt\\b','תוספת זמן','התאמות','הקראה','בעל פה','להשלים (?:לו|לה) את המבחן','שעות\\s*(?:ל)?עולים','שעות\\s*עולה','מורת\\s*(?:ה)?שמי?עה','קבוצה\\s+רגשית','קבוצת\\s+רגשית',
+  /* "יוצאת לשיחות", "מקיימת שיחות" (with the counselor…) — but not talks with a parent ("מקיימת שיחות עם אמא") */
+  '(?:יוצא|יוצאת|יוצאים|יוצאות|יצא|יצאה)\\s+לשיח(?:ה|ות)(?![^.;\\n]{0,30}(?:אמא|אימא|אמו|אמה|אבא|אביו|אביה|הורים|הוריו|הוריה))',
+  '(?:מקיים|מקיימת|מקיימים|מקיימות|קיים|קיימה)\\s+שיחות(?![^.;\\n]{0,30}(?:אמא|אימא|אמו|אמה|אבא|אביו|אביה|הורים|הוריו|הוריה))'
 ].join('|'),'i');
 /* ביקור סדיר: חיסורים (also "חסורים"), איחורים, מחסיר/החסירה, מאחר/ת (not "מאחר ש" = since), "מרבה לאחר", היעדרות, הגעה בזמן */
 const ATT_WORDS=/חי?סור|חסיר|איחור|מאחר(?:ת|ים|ות)?(?![א-ת])(?!\s+ש)|(?:מרבה|נוטה|ממשיך|ממשיכה)\s+(?:לאחר|להיעדר|להעדר|להחסיר)|היעדרו|העדרו|להיעדר|להעדר|ביקור סדיר|הגעה\s+(?:בזמן|לבית)|מעקב הגעה/;
@@ -783,10 +787,12 @@ function buildStudents(files, opts){
     }
     let fails=toNum(val.fails), failSubjects=[];
     const gradeMap = Object.keys(uniq).length ? uniq : Object.fromEntries(CORE.map(c=>[FLABEL[c],toNum(val[c])]).filter(([,x])=>x!=null));
-    failSubjects = Object.entries(gradeMap).filter(([,x])=>x<pass).map(([s])=>s);
+    /* the failed subjects with their grades, lowest first (for the hover note and the hidden 'נכשלים' slide) */
+    const failList = Object.entries(gradeMap).filter(([,x])=>x<pass).map(([s,g])=>({s,g})).sort((a,b)=>a.g-b.g);
+    failSubjects = failList.map(x=>x.s);
     if(fails==null) fails = Object.keys(gradeMap).length ? failSubjects.length : null;
     students.push({
-      key:st.key, name:st.name, cls:val.cls||'', avg, avgSource, fails, failSubjects,
+      key:st.key, name:st.name, cls:val.cls||'', avg, avgSource, fails, failSubjects, failList,
       late:toNum(val.late), abs:toNum(val.abs), events:toNum(val.events),
       math:toNum(val.math), lang:toNum(val.lang), eng:toNum(val.eng), sci:toNum(val.sci), geo:toNum(val.geo), hist:toNum(val.hist), lit:toNum(val.lit),
       gMath:val.gMath||'', gEng:val.gEng||'',
@@ -1643,7 +1649,7 @@ function renderStudents(){
       <div class="who"><b>${esc(s.name)}</b><span>${esc(s.cls||'כיתה לא ידועה')}</span></div></div>
       <div class="nums">
         <div class="n"><b>${fmt(s.avg)}</b><span>ממוצע${s.avgSource!=='report'?'*':''}</span></div>
-        <div class="n fail"><b>${fmt(s.fails)}</b><span>נכשלים</span></div>
+        <div class="n fail"${s.failList?.length?` title="${esc(s.failList.map(x=>x.s+' '+fmt(x.g)).join(' · '))}"`:''}><b>${fmt(s.fails)}</b><span>נכשלים</span></div>
         <div class="n pos"><b>${posSum(s)??'&nbsp;'}</b><span>${esc(posLabel())}</span></div></div>
       ${negTypes().length?`<div class="evs">${negTypes().map(t=>`<span class="ev">${esc(t)} <b>${s.evs?.[t]??'–'}</b></span>`).join('')}</div>`:''}
       <div class="bars">${bars}</div>
@@ -1708,7 +1714,7 @@ function fillFromAssess(students,pass){
       const by={}; for(const a of s.assess) (by[a.subject] ||= []).push(a);
       const per=Object.values(by).map(wavg).filter(x=>x!=null);
       if(per.length){ s.avg=Math.round(per.reduce((a,b)=>a+b,0)/per.length*10)/10; s.avgSource='assess'; }
-      if(s.fails==null&&per.length){ s.failSubjects=Object.entries(by).filter(([,l])=>wavg(l)<pass).map(([k])=>k); s.fails=s.failSubjects.length; }
+      if(s.fails==null&&per.length){ s.failList=Object.entries(by).map(([k,l])=>({s:k,g:wavg(l)})).filter(x=>x.g!=null&&x.g<pass).sort((a,b)=>a.g-b.g); s.failSubjects=s.failList.map(x=>x.s); s.fails=s.failSubjects.length; }
     }
   }
 }
@@ -2588,6 +2594,7 @@ async function generate(){
     const tw=1.5, tg=0.125, pos=posSum(st);
     tile(5.5+4.75-tw,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':st.avgSource==='assess'?' (מציונים שוטפים)':''),C.blue,'EAF0FF','C3D2F7',1.0,tw);
     tile(5.5+4.75-2*tw-tg,1.2,fmt(st.fails),failLabel,C.bad,'FDECEC','F2C2C2',1.0,tw);
+    const failTileX=5.5+4.75-2*tw-tg; /* the link on it is added below, once the hidden slides are numbered */
     tile(5.5,1.2,pos?String(pos):'',posLabel(),C.good,'E8F6EC','15803D',1.0,tw,true);
     let coreTitleY=2.36;
     const neg=negTypes();
@@ -2604,6 +2611,13 @@ async function generate(){
     }
     /* subjects with ongoing grades link to a hidden slide right after this one */
     const S=sl._slideNum, detail=coreFor(st,s.cls).filter(c=>assessFor(st,efField(st,c)).length), detailNum=Object.fromEntries(detail.map((c,i)=>[c,S+1+i]));
+    /* נכשלים: hovering shows the failed subjects and grades (ScreenTip, in the slideshow); clicking opens a hidden slide after the subject slides */
+    const failList=st.failList||[], failNum=failList.length?S+1+detail.length:null;
+    if(failNum){
+      const tip=failList.map(x=>x.s+' '+fmt(x.g)).join(' · ');
+      sl.addText('›',T({x:failTileX+tw-0.22,y:1.22,w:0.18,h:0.3,fontSize:14,bold:true,color:C.bad,align:'center'}));
+      sl.addShape(pptx.ShapeType.rect,{x:failTileX,y:1.2,w:tw,h:1.0,fill:{color:'FFFFFF',transparency:100},line:{color:'FFFFFF',transparency:100},hyperlink:{slide:failNum,tooltip:tip.length>250?tip.slice(0,247)+'…':tip}});
+    }
     sl.addText(detail.length?[{text:'מקצועות ליבה',options:{bold:true}},{text:'   · לחיצה על מקצוע מציגה את הציונים השוטפים',options:{bold:false,fontSize:10}}]:'מקצועות ליבה',T({x:5.5,y:coreTitleY,w:4.75,h:0.32,fontSize:12,bold:true,color:C.soft}));
     const core=coreFor(st,s.cls);
     const step=Math.min(0.66,(6.82-(coreTitleY+0.37))/core.length), rh=Math.min(0.56,step-0.06);
@@ -2676,6 +2690,32 @@ async function generate(){
       /* no link on this slide: a plain click (like the mouse wheel) is "next", which ends the one-slide
          custom show and returns to the student's slide (PowerPoint's "show and return") */
     }
+    /* hidden slide: the failed subjects (opened from the נכשלים tile) */
+    if(failNum){
+      const ds=pptx.addSlide(); ds.hidden=true; ds.background={color:PAGE};
+      ds.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:C.bad},line:{color:C.bad}});
+      bsd(ds);
+      ds.addText('נכשלים · '+failList.length+(failList.length===1?' מקצוע':' מקצועות'),T({x:2.0,y:0.45,w:10.5,h:0.6,fontSize:28,bold:true,color:C.bad}));
+      ds.addText([st.name,s.cls&&('כיתה '+s.cls),'ציון עובר '+pass].filter(Boolean).join('   ·   '),T({x:2.0,y:1.05,w:10.5,h:0.4,fontSize:16,color:C.soft}));
+      const dph=photoFor(st); if(dph) ds.addImage({data:dph,x:0.6,y:0.4,w:1.1,h:1.1,rounding:true});
+      /* one column up to 7 subjects, two columns above that; lowest grade first, from the right */
+      const n=failList.length, cols=n>7?2:1, per=Math.ceil(n/cols), top=1.8, avail=4.55;
+      const rh=Math.min(0.62,avail/per-0.1), gap=Math.min(0.12,avail/per-rh), cw=cols===2?5.85:8.5, x0=cols===2?12.5:10.75;
+      failList.forEach((it,i)=>{
+        const col=Math.floor(i/per), r=i%per, x=x0-(col+1)*cw-col*0.2, y=top+r*(rh+gap);
+        ds.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:rh,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.08});
+        ds.addText(it.s,T({x:x+cw-2.6,y,w:2.45,h:rh,fontSize:rh<0.45?13:16,bold:true,color:C.ink,fit:'shrink'}));
+        const trw=cw-2.6-1.15, bw=trw*Math.min(100,Math.max(0,it.g))/100;
+        ds.addShape(pptx.ShapeType.roundRect,{x:x+1.05,y:y+rh/2-0.05,w:trw,h:0.1,fill:{color:C.track},line:{color:C.track},rectRadius:0.05});
+        if(bw>0) ds.addShape(pptx.ShapeType.roundRect,{x:x+1.05+trw-bw,y:y+rh/2-0.05,w:bw,h:0.1,fill:{color:C.bad},line:{color:C.bad},rectRadius:0.05});
+        if(pass){ const px=x+1.05+trw-trw*pass/100; ds.addShape(pptx.ShapeType.line,{x:px,y:y+0.08,w:0,h:rh-0.16,line:{color:C.soft,width:1,dashType:'dash'}}); }
+        ds.addText(fmt(it.g),T({x:x+0.1,y,w:0.9,h:rh,fontSize:rh<0.45?16:22,bold:true,color:C.bad,align:'center'}));
+      });
+      if(st.fails!=null&&st.fails>n) ds.addText('בדוח מופיעים '+st.fails+' נכשלים; כאן מוצגים רק המקצועות שהציון שלהם נמצא בדוחות.',T({x:0.6,y:6.3,w:11.9,h:0.3,fontSize:11,color:C.soft,align:'center'}));
+      const whoBack=st.gender==='f'?'התלמידה':st.gender==='m'?'התלמיד':'התלמיד/ה';
+      ds.addText('לחצו בכל מקום על המסך כדי לחזור לשקף '+whoBack,T({x:0.6,y:6.58,w:11.9,h:0.3,fontSize:11,color:C.faint,align:'center'}));
+      if(s.credit) ds.addText(s.credit,T({x:0.33,y:6.95,w:5,h:0.3,fontSize:9,color:C.faint,align:'left'}));
+    }
   }
   const fname=`ישיבה פדגוגית ${s.cls||''} ${dateTxt}`.replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim();
   let blob;
@@ -2717,7 +2757,7 @@ async function returnShows(ab){
     });
     if(changed) zip.file('ppt/slides/'+f,out);
   }
-  const lst='<p:custShowLst>'+[...hidden].map(f=>`<p:custShow name="ציונים שוטפים ${showId[f]+1}" id="${showId[f]}"><p:sldLst><p:sld r:id="${ridOf[f]}"/></p:sldLst></p:custShow>`).join('')+'</p:custShowLst>';
+  const lst='<p:custShowLst>'+[...hidden].map(f=>`<p:custShow name="שקף מוסתר ${showId[f]+1}" id="${showId[f]}"><p:sldLst><p:sld r:id="${ridOf[f]}"/></p:sldLst></p:custShow>`).join('')+'</p:custShowLst>';
   const at=['<p:photoAlbum','<p:custDataLst','<p:kinsoku','<p:defaultTextStyle','<p:modifyVerifier','<p:extLst','</p:presentation>'].map(t=>pres.indexOf(t)).filter(i=>i>=0);
   const pos=Math.min(...at);
   zip.file('ppt/presentation.xml',pres.slice(0,pos)+lst+pres.slice(pos));
