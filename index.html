@@ -133,6 +133,7 @@ button.ph:hover{border-color:var(--accent)}
 .rep span{font-weight:700;font-size:15px;line-height:1.3}
 .rep em{font-style:normal;font-size:13px;color:var(--ink-soft)}
 .rep.opt{border-style:dashed;background:var(--surface)}
+.rep.opt.ok{border-style:solid;background:var(--good-bg)}
 .rep em strong{display:block;color:var(--bad);font-size:13px;margin-top:2px}
 .infobox{border-inline-start:4px solid var(--accent);background:var(--surface-2);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:4px}
 .infobox p{margin:0;font-size:15px;color:var(--ink-soft)}
@@ -251,6 +252,7 @@ footer a:hover{text-decoration:underline}
     <div class="rep" data-k="assess"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel · או דוח 34 <strong>לסמן: את כל המקצועות</strong></em></div>
     <div class="rep" data-k="photos"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF <strong>לשמור רק אחרי שכל התמונות נטענו במסך</strong></em></div>
     <div class="rep" data-k="groups"><b>58</b><span>שיוך תלמידי כיתה לקבוצות</span><em>Excel · הקבצות ובנים/בנות <strong>לסמן: את כל המקצועות</strong></em></div>
+    <div class="rep opt" data-k="deck"><b>+</b><span>מצגת או מסמך מהישיבה הקודמת <span class="hint">(לא חובה)</span></span><em>PowerPoint · Word · PDF · ממלא את תמונת המצב האישית. התמונות שבה לא מחליפות את דוח 61</em></div>
   </div>
   </div>
   </div>
@@ -313,7 +315,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 20:55</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 21:05</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -357,7 +359,7 @@ const NUMERIC = ['avg','math','lang','eng','sci','geo','hist','lit','fails','lat
 /* also learned from the teachers' decks: שלבים, CBT, סייעת, שעות עולים, מורת שמיעה, קבוצה רגשית, חונכות / פר"ח */
 const ANS_WORDS=new RegExp([
   /* whole words only, with ו/ב/ל/ה in front. plain קשת never with ב ("בקשת", "לבקשת ההורים" = a request); קש"ת may ("בקש"ת") */
-  '(^|[^א-ת])(?:[והלמש]{0,2}קשת|[ובהלמש]{0,2}קש["״\']ת|[והלמש]{0,2}(?:שילוב|שלוב)|ו?ב(?:שילוב|שלוב)(?!\\s+עם)|[ובהלמש]{0,2}פרטנ[א-ת]*|[והלמש]{0,2}שלבים|[ובהלמש]{0,2}סייעת|[ובהלמש]{0,2}חונכות|פר"ח|פר״ח)(?![א-ת])',
+  '(^|[^א-ת])(?:[והלמש]{0,2}קשת|[ובהלמש]{0,2}קש["״\']ת|[והלמש]{0,2}(?:שילוב|שלוב)|ו?ב(?:שילוב|שלוב)(?!\\s+עם)|[ובהלמש]{0,2}פרטנ[א-ת]*|[והלמש]{0,2}שלבים|[ובהלמש]{0,2}סייעת|[ובהלמש]{0,2}חונכות|[ובהלמש]{0,2}מהות|ו?ל?עולים(?!\\s+חדשים)|פר"ח|פר״ח)(?![א-ת])',
   '\\bcbt\\b','תוספת זמן','התאמות','הקראה','בעל פה','להשלים (?:לו|לה) את המבחן','שעות\\s*(?:ל)?עולים','שעות\\s*עולה','מורת\\s*(?:ה)?שמי?עה','קבוצה\\s+רגשית','קבוצת\\s+רגשית',
   /* "יוצאת לשיחות", "מקיימת שיחות" (with the counselor…) — but not talks with a parent ("מקיימת שיחות עם אמא") */
   '(?:יוצא|יוצאת|יוצאים|יוצאות|יצא|יצאה)\\s+לשיח(?:ה|ות)(?![^.;\\n]{0,30}(?:אמא|אימא|אמו|אמה|אבא|אביו|אביה|הורים|הוריו|הוריה))',
@@ -1456,7 +1458,7 @@ function addFileFromAoa(name, aoa){
   state.files.push(file); return file;
 }
 function loadSample(){
-  state.files=[]; state.choices={}; state.overrides={}; state.links={}; state.noLink={}; state.sample=true; state.photos={};
+  state.files=[]; state.choices={}; state.overrides={}; state.links={}; state.noLink={}; state.sample=true; state.roster61=false; state.photos={};
   addFileFromAoa('דוגמה – ציונים.xlsx',[
     ['דוח ציונים מחצית א׳ (דוגמה)'],[],
     ['שם התלמיד','כיתה','מתמטיקה','לשון','אנגלית','מדעים','היסטוריה','תנ״ך','ספרות','הקבצה מתמטיקה','הקבצה אנגלית'],
@@ -1494,8 +1496,10 @@ function renderFiles(){
   $('#bSample').hidden=state.sample||state.files.length>0;
   $('#stepCheck').hidden=$('#stepStu').hidden=!state.files.length;
   { const have={sadin:0,events:0,assess:0,groups:0}; if(!state.sample) for(const f of state.files) if(f.kind in have) have[f.kind]=1;
-    const ph=!state.sample&&Object.keys(state.photos||{}).length>0;
-    document.querySelectorAll('.rep[data-k]').forEach(el=>el.classList.toggle('ok',el.dataset.k==='photos'?ph:!!have[el.dataset.k])); }
+    if(!state.sample&&state.files.some(f=>f.kind==='deck')) have.deck=1;
+    /* 61 only from the אלפון PDF: photos from an old deck do not count (they may be on the wrong student) */
+    if(!state.sample&&state.roster61) have.photos=1;
+    document.querySelectorAll('.rep[data-k]').forEach(el=>el.classList.toggle('ok',!!have[el.dataset.k])); }
   if(!state.files.length){ box.innerHTML='<div class="empty">עוד לא הועלו דוחות.</div>'; return; }
   for(const f of state.files){
     const m=f.mapping, mapped=FIELDS.filter(x=>m[x.id]>=0);
@@ -1850,7 +1854,7 @@ async function handlePhotos(list,outNotes){
       try{
         $('#photoInfo').textContent='קורא תמונות מה-PDF…';
         const r=await rosterPhotosFromPdf(f);
-        for(const x of r.photos){ setPhoto(x.name,x.photo); ok++; }
+        for(const x of r.photos){ setPhoto(x.name,x.photo); ok++; } if(r.photos.length&&r.rows>=3) state.roster61=true;
         if(!r.images) notes.push(`ב-${f.name} אין תמונות. ייתכן שהתמונות לא נטענו לפני השמירה כ-PDF, או שלא הועלו תמונות לסמארט סקול.`);
       }catch(e){ console.error(e); notes.push(`לא הצלחנו לקרוא את ${f.name}.`); }
       continue;
@@ -2269,7 +2273,7 @@ async function handleAny(list){
 }
 async function handleAnyInner(list){
   const err=$('#fileErr'); err.hidden=true;
-  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.photoNames={}; state.photoText={}; state.photoLinks={}; state.links={}; state.noLink={}; state.sample=false; refresh(); }
+  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.photoNames={}; state.photoText={}; state.photoLinks={}; state.links={}; state.noLink={}; state.roster61=false; state.sample=false; refresh(); }
   const ext=f=>f.name.split('.').pop().toLowerCase();
   const data=list.filter(f=>/^(xlsx|xls|csv|htm|html)$/.test(ext(f)));
   const decks=list.filter(f=>/^(pptx|ppt|key)$/.test(ext(f)));
@@ -2284,7 +2288,7 @@ async function handleAnyInner(list){
     busy(`בודק מה יש ב-${f.name}…`);
     try{
       const ro=await rosterPhotosFromPdf(f);
-      if(ro.photos.length&&ro.rows>=3){ for(const x of ro.photos) setPhoto(x.name,x.photo,x.text); notes.push(`${f.name}: אלפון תמונות, נקראו ${ro.photos.length} תמונות.`); continue; }
+      if(ro.photos.length&&ro.rows>=3){ for(const x of ro.photos) setPhoto(x.name,x.photo,x.text); state.roster61=true; notes.push(`${f.name}: אלפון תמונות, נקראו ${ro.photos.length} תמונות.`); continue; }
       if(ro.isRoster){ msgs.push(`${f.name}: זה אלפון תלמידים, אבל לא נמצאו בו תמונות. שמרו אותו שוב כ-PDF כשהתמונות מופיעות במסך (פריסה לרוחב, התאמה לעמוד).`); continue; }
       const dk=await readPdfDeck(f);
       if(dk.entries.some(e=>e.hasInfo)){ addDeck(f.name,dk,notes); refresh(); continue; }
