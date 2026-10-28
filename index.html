@@ -316,7 +316,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 22:30</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 22:40</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -2636,7 +2636,7 @@ async function generate(){
     };
     /* the group/teacher is already on the right of the slide: the tile shows only the subject and its grade */
     const failShort=(st.failList||[]).map(x=>({s:subjShort(x.s),g:x.g}));
-    const failLabel = st.fails&&failShort.length&&failShort.length<=3 ? 'נכשלים: '+failShort.map(x=>x.s+' '+fmt(x.g)).join(', ') : 'נכשלים';
+    const failLabel = !st.fails||!failShort.length ? 'נכשלים' : failShort.length<=3 ? 'נכשלים: '+failShort.map(x=>x.s).join(', ') : 'נכשלים · ראו פירוט בלחיצה';
     /* the same top row for everyone: average, fails, צל״ש (empty when there are none) */
     const tw=1.5, tg=0.125, pos=posSum(st);
     tile(5.5+4.75-tw,1.2,fmt(st.avg),'ממוצע כללי'+(st.avgSource==='computed'?' (מחושב)':st.avgSource==='assess'?' (מציונים שוטפים)':''),C.blue,'EAF0FF','C3D2F7',1.0,tw);
