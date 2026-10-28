@@ -316,7 +316,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 21:15</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 22:15</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -793,9 +793,11 @@ function buildStudents(files, opts){
     /* the failed subjects with their grades, lowest first (for the hover note and the hidden 'נכשלים' slide) */
     const failList = Object.entries(gradeMap).filter(([,x])=>x<pass).map(([s,g])=>({s,g})).sort((a,b)=>a.g-b.g);
     failSubjects = failList.map(x=>x.s);
-    if(fails==null) fails = Object.keys(gradeMap).length ? failSubjects.length : null;
+    const noSheetGrades=!Object.keys(gradeMap).length;
+    if(noSheetGrades&&!fails) fails=null; /* "0 נכשלים" in a sheet with no grades yet (start of year) means nothing: count from the ongoing grades */
+    if(fails==null) fails = noSheetGrades ? null : failSubjects.length;
     students.push({
-      key:st.key, name:st.name, cls:val.cls||'', avg, avgSource, fails, failSubjects, failList,
+      key:st.key, name:st.name, cls:val.cls||'', avg, avgSource, fails, failSubjects, failList, noSheetGrades,
       late:toNum(val.late), abs:toNum(val.abs), events:toNum(val.events),
       math:toNum(val.math), lang:toNum(val.lang), eng:toNum(val.eng), sci:toNum(val.sci), geo:toNum(val.geo), hist:toNum(val.hist), lit:toNum(val.lit),
       gMath:val.gMath||'', gEng:val.gEng||'',
@@ -1732,8 +1734,30 @@ function fillFromAssess(students,pass){
       const by={}; for(const a of s.assess) (by[a.subject] ||= []).push(a);
       const per=Object.values(by).map(wavg).filter(x=>x!=null);
       if(per.length){ s.avg=Math.round(per.reduce((a,b)=>a+b,0)/per.length*10)/10; s.avgSource='assess'; }
-      if(s.fails==null&&per.length){ s.failList=Object.entries(by).map(([k,l])=>({s:k,g:wavg(l)})).filter(x=>x.g!=null&&x.g<pass).sort((a,b)=>a.g-b.g); s.failSubjects=s.failList.map(x=>x.s); s.fails=s.failSubjects.length; }
     }
+    if(s.fails==null||s.noSheetGrades){
+      const by={}; for(const a of s.assess) (by[a.subject] ||= []).push(a);
+      const per=Object.values(by).map(wavg).filter(x=>x!=null);
+      if(per.length){ s.failList=Object.entries(by).map(([k,l])=>({s:k,g:wavg(l)})).filter(x=>x.g!=null&&x.g<pass).sort((a,b)=>a.g-b.g); s.failSubjects=s.failList.map(x=>x.s); s.fails=s.failSubjects.length; }
+    }
+  }
+  reconcileFails(students,pass);
+}
+/* every core grade shown on the slide below the pass mark is a fail, also when it came from a group
+   column or from the ongoing grades: the נכשלים tile must agree with the red grades under it */
+function reconcileFails(students,pass){
+  for(const s of students){
+    const list=(s.failList||[]).map(x=>({...x}));
+    for(const c of CORE){
+      const f=efField(s,c), g=s[f]; if(g==null) continue;
+      const i=list.findIndex(x=>scoreHeader(f,x.s)>0);
+      if(g<pass){ if(i>=0) list[i].g=g; else list.push({s:FLABEL[f],g}); }
+      else if(i>=0) list.splice(i,1); /* the slide shows a passing grade (current group) — not a fail */
+    }
+    list.sort((a,b)=>a.g-b.g);
+    s.failList=list; s.failSubjects=list.map(x=>x.s);
+    if(list.length) s.fails=Math.max(s.fails??0,list.length);
+    else if(s.fails==null&&CORE.some(c=>s[c]!=null)) s.fails=0;
   }
 }
 let busyCount=0;
