@@ -56,6 +56,13 @@ h2{font-family:var(--display);font-size:24px;margin:0;font-weight:700}
 .btn:hover{border-color:var(--accent)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:18px;padding:12px 26px}
 .btn.primary:disabled{opacity:.5;cursor:not-allowed}
+.btn.gen{display:inline-flex;align-items:center;gap:10px}
+.btn.gen .ic-dl{width:20px;height:20px;flex:none}
+.btn.gen .spin{display:none;width:18px;height:18px;flex:none;border-radius:50%;border:2.5px solid currentColor;border-top-color:transparent;animation:spin .8s linear infinite}
+.btn.gen.busy,.btn.gen.busy:disabled{opacity:1;cursor:progress}
+.btn.gen.busy .ic-dl{display:none} .btn.gen.busy .spin{display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.btn.gen .spin{animation-duration:2.4s}}
 .btn.small{font-size:14px;padding:5px 12px}
 .btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.drop:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .files{display:flex;flex-direction:column;gap:12px}
@@ -316,12 +323,12 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 22:40</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 22:50</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
   <span id="status"></span>
-  <button class="btn primary" id="bGen" type="button">יצירת מצגת PowerPoint</button>
+  <button class="btn primary gen" id="bGen" type="button"><svg class="ic-dl" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="spin" aria-hidden="true"></span><span class="lbl">יצירת מצגת PowerPoint</span></button>
 </div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -2835,11 +2842,13 @@ $('#inLogos').onchange=e=>{ handleLogos([...e.target.files]); e.target.value='';
 $('#sTeacher').addEventListener('input',()=>{ state.teacherAuto=false; renderChecks(); updateStatus(); });
 $('#sClass').addEventListener('input',()=>{ state.clsAuto=false; renderThemes(); });
 $('#bGen').onclick=async()=>{
-  const b=$('#bGen'); b.disabled=true; const old=b.textContent; b.textContent='יוצר מצגת…';
+  const b=$('#bGen'), lbl=b.querySelector('.lbl'), old=lbl.textContent;
+  b.disabled=true; b.classList.add('busy'); b.setAttribute('aria-busy','true'); lbl.textContent='מכין את המצגת…';
+  await new Promise(r=>setTimeout(r,50)); /* let the spinner show before the heavy work starts */
   try{ const r=await generate();
     $('#status').textContent = r==='saved' ? 'המצגת נשמרה. פתחו אותה ב-PowerPoint.' : r==='declined' ? 'ההורדה בוטלה. לחצו שוב כדי לשמור את המצגת.' : 'לא הצלחנו לשמור את הקובץ. נסו שוב.'; }
   catch(e){ console.error(e); $('#status').textContent='יצירת המצגת נכשלה. רעננו את הדף ונסו שוב.'; }
-  b.disabled=false; b.textContent=old;
+  b.classList.remove('busy'); b.removeAttribute('aria-busy'); lbl.textContent=old; updateStatus();
 };
 state.sample=false; refresh();
 $('#bSample').onclick=()=>{ loadSample(); };
