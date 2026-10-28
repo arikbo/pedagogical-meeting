@@ -316,7 +316,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 21:10</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 28.10.2026 · 21:15</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1309,8 +1309,15 @@ if(typeof module!=='undefined') module.exports={FIELDS,autoMap,findHeaderRow,bui
 <script>
 /* ---------- app ---------- */
 const $=s=>document.querySelector(s);
-const state={ changed:[{key:'',text:''},{key:'',text:''},{key:'',text:''}], files:[], photos:{}, photoNames:{}, photoText:{}, photoLinks:{}, logos:[], choices:{}, overrides:{}, links:{}, noLink:{}, sample:true, nextId:1 };
-function setPhoto(name,data,text){ const k=nameKey(name); state.photos[k]=data; state.photoNames[k]=name; if(text) state.photoText[k]=text; return k; }
+const state={ changed:[{key:'',text:''},{key:'',text:''},{key:'',text:''}], files:[], photos:{}, photoSrc:{}, photoNames:{}, photoText:{}, photoLinks:{}, logos:[], choices:{}, overrides:{}, links:{}, noLink:{}, sample:true, nextId:1 };
+/* where a photo came from. A better source is never replaced by a worse one:
+   chosen by hand > image file named after the student > אלפון 61 > old deck (its names are sometimes misread).
+   The old deck only fills in students the אלפון has no photo for (not uploaded to Smart School). */
+const PHOTO_RANK={manual:4,file:3,roster:2,deck:1};
+const photoRank=k=>PHOTO_RANK[state.photoSrc?.[k]]||2;
+function setPhoto(name,data,text,src='roster'){ const k=nameKey(name);
+  if(state.photos[k]&&photoRank(k)>(PHOTO_RANK[src]||2)) return k;
+  state.photos[k]=data; (state.photoSrc||={})[k]=src; state.photoNames[k]=name; if(text) state.photoText[k]=text; return k; }
 /* photos whose name is not exactly a student's: fuzzy match (typo, reversed letters from a PDF), else listed for the teacher */
 let photoMap={}, lostPhotos=[];
 function revKey(k){ return k.split(' ').map(t=>[...t].reverse().join('')).sort().join(' '); }
@@ -1319,7 +1326,7 @@ function matchPhotos(){
   const keys=new Set(built.students.flatMap(s=>[s.key,...(s.aliasKeys||[])]));
   const owner={}; for(const s of built.students){ owner[s.key]=s.key; for(const a of s.aliasKeys||[]) owner[a]=s.key; }
   const studentKeys=built.students.map(s=>s.key);
-  for(const k of Object.keys(state.photos)){
+  for(const k of Object.keys(state.photos).sort((a,b)=>photoRank(b)-photoRank(a))){
     if(state.photoLinks[k]){ photoMap[state.photoLinks[k]]=k; continue; }
     if(keys.has(k)){ photoMap[owner[k]] ||= k; continue; }
     const rk=revKey(k); if(keys.has(rk)){ photoMap[owner[rk]] ||= k; continue; }
@@ -1333,6 +1340,7 @@ function matchPhotos(){
       const t=k.split(' ');
       if(t.length===1){ const hits=built.students.filter(s=>s.key.split(' ').includes(t[0])); if(hits.length===1) f=hits[0].key; }
     }
+    if(f&&photoMap[f]&&state.photoSrc?.[k]==='deck') continue; /* that student already has a better photo */
     if(f&&!photoMap[f]) photoMap[f]=k; else if(built.students.length) lostPhotos.push(k);
   }
   /* second pass: a photo whose name is only partly readable (e.g. just "יובל") goes to the one
@@ -1370,7 +1378,12 @@ function autoTeacher(){
   for(const n of raw){ const i=names.findIndex(m=>same(m,n)); if(i<0) names.push(n); else if(n.length>names[i].length) names[i]=n; }
   if(names.length){ inp.value=names.slice(0,2).join(' ו'); state.teacherAuto=true; }
 }
-function photoFor(s){ return state.photos[s.key] || (s.aliasKeys||[]).map(k=>state.photos[k]).find(Boolean) || (photoMap[s.key]&&state.photos[photoMap[s.key]]) || null; }
+function photoFor(s){
+  /* every photo that belongs to this student (own name, other spellings, fuzzy match): the best source wins */
+  const ks=[s.key,...(s.aliasKeys||[]),photoMap[s.key]].filter(k=>k&&state.photos[k]);
+  if(!ks.length) return null;
+  return state.photos[ks.reduce((a,b)=>photoRank(b)>photoRank(a)?b:a)];
+}
 let built={students:[],conflicts:[],missing:[],eventTypes:[]};
 let evHidden=new Set(); try{ evHidden=new Set(JSON.parse(localStorage.getItem('pm.evHidden')||'[]')); }catch(e){}
 /* types the teacher did not ask for are off unless switched on */
@@ -1459,7 +1472,7 @@ function addFileFromAoa(name, aoa){
   state.files.push(file); return file;
 }
 function loadSample(){
-  state.files=[]; state.choices={}; state.overrides={}; state.links={}; state.noLink={}; state.sample=true; state.roster61=false; state.photos={};
+  state.files=[]; state.choices={}; state.overrides={}; state.links={}; state.noLink={}; state.sample=true; state.roster61=false; state.photos={}; state.photoSrc={};
   addFileFromAoa('דוגמה – ציונים.xlsx',[
     ['דוח ציונים מחצית א׳ (דוגמה)'],[],
     ['שם התלמיד','כיתה','מתמטיקה','לשון','אנגלית','מדעים','היסטוריה','תנ״ך','ספרות','הקבצה מתמטיקה','הקבצה אנגלית'],
@@ -1663,7 +1676,7 @@ function renderStudents(){
       <details class="info"><summary>תמונת מצב אישית${INFO.some(f=>s[f])?' ✓':''}</summary><div class="info-fields"></div></details>`;
     card.querySelector('.ph').onclick=()=>{
       const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
-      inp.onchange=async()=>{ const f=inp.files[0]; if(!f) return; const d=await shrink(await fileToDataURL(f)); if(d){ state.photos[s.key]=d; refresh(); } };
+      inp.onchange=async()=>{ const f=inp.files[0]; if(!f) return; const d=await shrink(await fileToDataURL(f)); if(d){ state.photos[s.key]=d; (state.photoSrc||={})[s.key]='manual'; refresh(); } };
       inp.click();
     };
     const inf=card.querySelector('.info-fields');
@@ -1868,7 +1881,7 @@ async function handlePhotos(list,outNotes){
   }
   for(const it of items){
     const key=matchPhoto(it.name); if(!key){ miss.push(it.name.split('/').pop()); continue; }
-    const d=await shrink(await fileToDataURL(it.blob)); if(d){ state.photos[key]=d; ok++; } else miss.push(it.name.split('/').pop());
+    const d=await shrink(await fileToDataURL(it.blob)); if(d){ state.photos[key]=d; (state.photoSrc||={})[key]='file'; ok++; } else miss.push(it.name.split('/').pop());
   }
   const line = notes.join(' ')+` שויכו ${ok} תמונות.` + (miss.length?` לא שויכו: ${miss.slice(0,6).join(', ')}${miss.length>6?'…':''} (שם הקובץ צריך להיות שם התלמיד).`:'');
   if(outNotes) outNotes.push(line); else $('#deckInfo').textContent=line;
@@ -2274,7 +2287,7 @@ async function handleAny(list){
 }
 async function handleAnyInner(list){
   const err=$('#fileErr'); err.hidden=true;
-  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.photoNames={}; state.photoText={}; state.photoLinks={}; state.links={}; state.noLink={}; state.roster61=false; state.sample=false; refresh(); }
+  if(state.sample){ state.files=[]; state.choices={}; state.overrides={}; state.photos={}; state.photoSrc={}; state.photoNames={}; state.photoText={}; state.photoLinks={}; state.links={}; state.noLink={}; state.roster61=false; state.sample=false; refresh(); }
   const ext=f=>f.name.split('.').pop().toLowerCase();
   const data=list.filter(f=>/^(xlsx|xls|csv|htm|html)$/.test(ext(f)));
   const decks=list.filter(f=>/^(pptx|ppt|key)$/.test(ext(f)));
@@ -2376,7 +2389,7 @@ function addDeck(name,res,notes,msgs){
   file.infoMap=[null,...INFO]; file.infoGuess=file.infoMap.map(()=>false);
   /* other lines of the slide that may be the name, for matching to the class list once it is loaded */
   for(const r of file.rows){ const e=merged.find(x=>x.name===clean(r[0])); if(e){ r.alts=[e.name,...e.alts]; r.ocr=!!e.ocr; } }
-  for(const e of merged) if(e.photo){ const k=setPhoto(e.name,e.photo); file.photoKeys.push(k); file.photoData[k]=e.photo; }
+  for(const e of merged) if(e.photo){ const k=setPhoto(e.name,e.photo,'','deck'); file.photoKeys.push(k); file.photoData[k]=e.photo; }
   const withInfo=merged.filter(e=>e.hasInfo).length;
   notes.push(`${name}: ${kindWord}, ${merged.length} שקפי תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות. כל משפט שויך לשורה בטבלה לפי התוכן שלו (אפשר לתקן בשלב 4). המידע נכנס רק לתלמידים שברשימת הכיתה מהדוחות.`
     +(res.skipped.length?` לא זוהה שם תלמיד בשקפים ${res.skipped.join(', ')}.`:'')
