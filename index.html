@@ -286,6 +286,7 @@ footer a:hover{text-decoration:underline}
     <label>מחנך/ת (אם יש שניים: את שני השמות)<input type="text" id="sTeacher" placeholder="שם/שמות המחנכים"></label>
     <label>תאריך הישיבה<input type="date" id="sDate"></label>
     <label>סף חיסורים להדגשה בשורת ״ביקור סדיר״ <span class="hint">(מוגדר על 50; אפשר לשנות. מספר החיסורים מוצג לכל תלמיד, ומודגש באדום מהסף ומעלה)</span><input type="number" id="sAbsMin" min="0" step="1" inputmode="numeric" value="50"></label>
+    <label>סף איחורים להדגשה בשורת ״ביקור סדיר״ <span class="hint">(מוגדר על 10; אפשר לשנות. מספר האיחורים מוצג לכל תלמיד, ומודגש באדום מהסף ומעלה)</span><input type="number" id="sLateMin" min="0" step="1" inputmode="numeric" value="10"></label>
     <label>בית הספר<input type="text" id="sSchool" placeholder="שם בית הספר" value="עתידים"></label>
     <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה</label>
     <label class="check"><input type="checkbox" id="sTop3"> שקף 3 התלמידים המצטיינים לפי ממוצע</label>
@@ -325,7 +326,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 02.11.2026 · 18:50</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 02.11.2026 · 19:05</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1406,6 +1407,8 @@ const EV_OFF_DEFAULT=/לא התאמן|פלאפון|טלפון|פטפוט/;
 let evShown=new Set(); try{ evShown=new Set(JSON.parse(localStorage.getItem('pm.evShown')||'[]')); }catch(e){}
 function evIsHidden(t){ return evHidden.has(t)||(EV_OFF_DEFAULT.test(t)&&!evShown.has(t)); }
 function assessFor(s,field){ return (s.assess||[]).filter(a=>scoreHeader(field,a.subject)>0); }
+/* lateness: the "איחור" type from report 42, or a lateness column */
+function latesOf(s){ const t=(built.eventTypes||[]).find(x=>/איחור/.test(x)); const v=t?s.evs?.[t]:null; return v!=null?v:(s.late!=null?s.late:null); }
 function absencesOf(s){ const t=(built.eventTypes||[]).find(x=>/חיסור/.test(x)); const v=t?s.evs?.[t]:null; return v!=null?v:(s.abs!=null?s.abs:null); }
 function posTypes(){ return (built.eventTypes||[]).filter(t=>POSITIVE_EV.test(t)&&!evIsHidden(t)); }
 function negTypes(){ return (built.eventTypes||[]).filter(t=>!POSITIVE_EV.test(t)&&!evIsHidden(t)); }
@@ -1528,7 +1531,7 @@ function loadSample(){
 }
 function settings(){
   return { cls:clean($('#sClass').value), teacher:clean($('#sTeacher').value), date:$('#sDate').value,
-    school:clean($('#sSchool').value), showTeachers:$('#sTeachers').checked, showTop3:$('#sTop3').checked, pass:toNum($('#sPass').value)??55, absMin:toNum($('#sAbsMin').value)??50, credit:'', bsd:$('#sBsd').checked };
+    school:clean($('#sSchool').value), showTeachers:$('#sTeachers').checked, showTop3:$('#sTop3').checked, pass:toNum($('#sPass').value)??55, absMin:toNum($('#sAbsMin').value)??50, lateMin:toNum($('#sLateMin').value)??10, credit:'', bsd:$('#sBsd').checked };
 }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -2752,11 +2755,15 @@ async function generate(){
     /* left: general info table */
     sl.addShape(pptx.ShapeType.roundRect,{x:0.33,y:0.6,w:4.95,h:6.25,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.12});
     sl.addText('תמונת מצב אישית',T({x:0.5,y:0.7,w:4.6,h:0.45,fontSize:16,bold:true}));
-    const absN=absencesOf(st);
+    const absN=absencesOf(st), lateN=latesOf(st);
+    /* the counts are shown for everyone; from each threshold up the number is big and red */
+    const counts=[['חיסורים',absN,s.absMin],['איחורים',lateN,s.lateMin]].filter(c=>c[1]!=null);
+    const big=counts.length>1?18:22;
+    const attLabel=[{text:FLABEL.iAtt,options:{bold:true,breakLine:counts.length>0}}];
+    counts.forEach(([w,n,min],k)=>{ const hot=n>=min, last=k===counts.length-1;
+      attLabel.push({text:w+': ',options:{bold:hot,color:hot?C.bad:C.soft}},{text:String(n),options:{bold:true,color:hot?C.bad:C.ink,fontSize:hot?big:14,breakLine:!last}}); });
     const rows=INFO.map((f,i)=>{ const fill={color:i%2?TH.band:C.white};
-      /* the count is shown for everyone; from the threshold up it is big and red */
-      const hot=absN!=null&&absN>=s.absMin;
-      const label=f==='iAtt'&&absN!=null?[{text:FLABEL[f],options:{bold:true,breakLine:true}},{text:'חיסורים: ',options:{bold:hot,color:hot?C.bad:C.soft}},{text:String(absN),options:{bold:true,color:hot?C.bad:C.ink,fontSize:hot?22:14}}]:FLABEL[f];
+      const label=f==='iAtt'&&counts.length?attLabel:FLABEL[f];
       return [ {text:st[f]||'',options:T({fontSize:11,fill,valign:'top',margin:[4,6,4,6]})},
                {text:label,options:T({fontSize:11,bold:true,fill,valign:'top',margin:[4,6,4,6]})} ]; });
     sl.addTable(rows,{x:0.5,y:1.25,w:4.6,colW:[3.25,1.35],rowH:[0.95,0.85,0.9,0.95,0.9,0.95],border:{type:'solid',pt:0.75,color:'C9D3E6'},autoPage:false});
@@ -2895,7 +2902,7 @@ $('#bLogos').onclick=()=>$('#inLogos').click();
 try{ const sc=localStorage.getItem('pm.school'); if(sc!=null) $('#sSchool').value=sc; }catch(e){}
 $('#sSchool').addEventListener('input',()=>{ try{ localStorage.setItem('pm.school',$('#sSchool').value); }catch(e){} });
 $('#inLogos').onchange=e=>{ handleLogos([...e.target.files]); e.target.value=''; };
-['#sPass','#sAbsMin'].forEach(id=>$(id).addEventListener('input',refresh));
+['#sPass','#sAbsMin','#sLateMin'].forEach(id=>$(id).addEventListener('input',refresh));
 $('#sTeacher').addEventListener('input',()=>{ state.teacherAuto=false; renderChecks(); updateStatus(); });
 $('#sClass').addEventListener('input',()=>{ state.clsAuto=false; renderThemes(); });
 $('#bGen').onclick=async()=>{
