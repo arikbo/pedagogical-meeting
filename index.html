@@ -326,7 +326,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 02.11.2026 · 19:05</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 03.11.2026 · 12:10</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -352,8 +352,13 @@ const FIELDS = [
   {id:'iExc', label:'בעיות חריגות'} /* legacy column: read from old files and merged into אתגרים */
 ];
 const FLABEL = Object.fromEntries(FIELDS.map(f=>[f.id,f.label]));
+/* in ז' (from תשפ"ז) geography is called "מדעי כדור הארץ"; other grades keep "גאוגרפיה" */
+function subjLabel(c, cls){
+  const g=(clean(cls||'').match(/[\u05D0-\u05EA]/)||[''])[0];
+  return c==='geo'&&g==='ז'?'מדעי כדור הארץ':FLABEL[c];
+}
 const CORE = ['math','lang','eng','sci','geo','hist','lit'];
-/* core subjects by grade: ז = math, English, Hebrew, geography (+ science when graded); ח = math, English, Hebrew, literature, science; ט = math, English, Hebrew, history, science */
+/* core subjects by grade: ז = math, English, Hebrew, geography (shown as מדעי כדור הארץ) (+ science when graded); ח = math, English, Hebrew, literature, science; ט = math, English, Hebrew, history, science */
 function coreFor(s, cls){
   const g=(clean(cls||s.cls||'').match(/[\u05D0-\u05EA]/)||[''])[0];
   if(g==='ז') return ['math','eng','lang','geo', ...(s.sci!=null?['sci']:[])];
@@ -581,7 +586,7 @@ function scoreHeader(field, h){
     case 'lang': return !grp&&!has('אולפן')&&(has('לשון')||has('עברית')||h==='שפה'||has('הבעה'))?10:0;
     case 'eng': return !grp&&has('אנגלית')?10:0;
     case 'sci': return !grp&&(has('מדעים')||h==='מדע'||has('מדע וטכנולוגיה'))?10:0;
-    case 'geo': return has('גאוגרפיה')||has('גיאוגרפיה')||has('ג״ג')||has('ג"ג')||has("ג''ג")?10:0;
+    case 'geo': return has('גאוגרפיה')||has('גיאוגרפיה')||has('ג״ג')||has('ג"ג')||has("ג''ג")||has('כדור הארץ')||has('כדור-הארץ')||has('כדה"א')||has('כדה״א')?10:0;
     case 'hist': return has('היסטוריה')||has('הסטוריה')?10:0;
     case 'lit': return !grp&&has('ספרות')?10:0;
     case 'gender': return h==='מין'||has('מגדר')||h==='בן/בת'||h==='בן / בת'||h==='מין התלמיד'?10:0;
@@ -799,7 +804,7 @@ function buildStudents(files, opts){
       if(pool.length){ avg=pool.reduce((a,b)=>a+b,0)/pool.length; avgSource='computed'; }
     }
     let fails=toNum(val.fails), failSubjects=[];
-    const gradeMap = Object.keys(uniq).length ? uniq : Object.fromEntries(CORE.map(c=>[FLABEL[c],toNum(val[c])]).filter(([,x])=>x!=null));
+    const gradeMap = Object.keys(uniq).length ? uniq : Object.fromEntries(CORE.map(c=>[subjLabel(c,val.cls),toNum(val[c])]).filter(([,x])=>x!=null));
     /* the failed subjects with their grades, lowest first (for the hover note and the hidden 'נכשלים' slide) */
     const failList = Object.entries(gradeMap).filter(([,x])=>x<pass).map(([s,g])=>({s,g})).sort((a,b)=>a.g-b.g);
     failSubjects = failList.map(x=>x.s);
@@ -1692,7 +1697,7 @@ function renderStudents(){
     const card=document.createElement('article'); card.className='card';
     const ph=photoFor(s);
     const bars=coreFor(s,settings().cls).map(c=>{ const x=s[efField(s,c)], t=scoreTone(x,pass);
-      return `<div class="bar"><span>${FLABEL[c]}${efField(s,c)!==c?' (לומד/ת גאוגרפיה)':''}</span><span class="track"><span class="fill" style="width:${x??0}%;background:var(--${t==='none'?'line':t})"></span></span><span class="score" style="color:var(--${t==='none'?'ink-faint':t})">${x==null?'אין':fmt(x)}</span></div>`; }).join('');
+      return `<div class="bar"><span>${subjLabel(c,settings().cls||s.cls)}${efField(s,c)!==c?' (לומד/ת גאוגרפיה)':''}</span><span class="track"><span class="fill" style="width:${x??0}%;background:var(--${t==='none'?'line':t})"></span></span><span class="score" style="color:var(--${t==='none'?'ink-faint':t})">${x==null?'אין':fmt(x)}</span></div>`; }).join('');
     const tags=[s.gMath&&`<span class="chip">מתמטיקה: ${esc(s.gMath)}</span>`, s.gEng&&`<span class="chip">אנגלית: ${esc(s.gEng)}</span>`].filter(Boolean).join('');
     card.innerHTML=`<div class="card-top"><button class="ph" type="button" title="בחירת תמונה" aria-label="בחירת תמונה ל${esc(s.name)}">${ph?`<img src="${ph}" alt="">`:esc(initials(s.name))}</button>
       <div class="who"><b>${esc(s.name)}</b><span>${esc(s.cls||'כיתה לא ידועה')}</span></div></div>
@@ -1741,7 +1746,7 @@ function markSciAsGeo(students){
     s.sciAsGeo=false;
     const g=(clean(cls||s.cls||'').match(/[\u05D0-\u05EA]/)||[''])[0]; if(g!=='ט') continue;
     const list=[s.key,...(s.aliasKeys||[])].map(k=>subj[k]).find(Boolean);
-    const sciRe=/מדעים|פיזיקה|כימיה|ביולוגיה/, geoRe=/גאוגרפיה|גיאוגרפיה|ג״ג|ג"ג/;
+    const sciRe=/מדעים|פיזיקה|כימיה|ביולוגיה/, geoRe=/גאוגרפיה|גיאוגרפיה|ג״ג|ג"ג|כדור.הארץ|כדה["״]א/;
     const learnsSci=list?list.some(x=>sciRe.test(x)):(s.sci!=null||assessFor(s,'sci').length>0);
     const learnsGeo=list?list.some(x=>geoRe.test(x)):(s.geo!=null||assessFor(s,'geo').length>0);
     s.sciAsGeo=!learnsSci&&learnsGeo;
@@ -1782,7 +1787,7 @@ function reconcileFails(students,pass){
     for(const c of CORE){
       const f=efField(s,c), g=s[f]; if(g==null) continue;
       const i=list.findIndex(x=>scoreHeader(f,x.s)>0);
-      if(g<pass){ if(i>=0) list[i].g=g; else list.push({s:FLABEL[f],g}); }
+      if(g<pass){ if(i>=0) list[i].g=g; else list.push({s:subjLabel(f,s.cls||settings().cls),g}); }
       else if(i>=0) list.splice(i,1); /* the slide shows a passing grade (current group) — not a fail */
     }
     list.sort((a,b)=>a.g-b.g);
@@ -2741,8 +2746,10 @@ async function generate(){
       const lnk=detailNum[c]?{hyperlink:{slide:detailNum[c],tooltip:'ציונים שוטפים'}}:{};
       if(asGeo){ const who=st.gender==='f'?'לומדת':st.gender==='m'?'לומד':'לומד/ת';
         sl.addText([{text:FLABEL[c],options:{bold:true,fontSize:13,breakLine:true}},{text:who+' גאוגרפיה',options:{bold:true,fontSize:10.5,color:BARC.geo}}],T({x:8.5,y,w:1.55,h:rh,color:C.ink,lineSpacingMultiple:0.9})); } /* the whole row is the link, so no underline here */
+      else if(subjLabel(c,s.cls).length>10){ const lb=subjLabel(c,s.cls); /* "מדעי כדור הארץ": smaller and wider, like the geography note */
+        sl.addText(detailNum[c]?[{text:lb,options:{...lnk}}]:lb,T({x:8.5,y,w:1.55,h:rh,fontSize:12,bold:true,color:C.ink,lineSpacingMultiple:0.9})); }
       else sl.addText(detailNum[c]?[{text:FLABEL[c],options:{...lnk}}]:FLABEL[c],T({x:8.9,y,w:1.15,h:rh,fontSize:14,bold:true,color:C.ink}));
-      const trw=asGeo?1.95:2.4; /* a shorter track leaves room for the geography note */
+      const trw=asGeo||subjLabel(c,s.cls).length>10?1.95:2.4; /* a shorter track leaves room for the geography note */
       sl.addShape(pptx.ShapeType.roundRect,{x:6.45,y:y+rh/2-0.045,w:trw,h:0.09,fill:{color:C.track},line:{color:C.track},rectRadius:0.04});
       if(x!=null&&x>0){ const w=trw*Math.min(100,x)/100; sl.addShape(pptx.ShapeType.roundRect,{x:6.45+trw-w,y:y+rh/2-0.045,w,h:0.09,fill:{color:BARC[efField(st,c)]},line:{color:BARC[efField(st,c)]},rectRadius:0.04}); }
       sl.addText(detailNum[c]?[{text:x==null?'אין ציון':fmt(x),options:{...lnk}}]:(x==null?'אין ציון':fmt(x)),T({x:5.6,y,w:0.8,h:rh,fontSize:x==null?11:18,bold:x!=null,color:tone==='none'?C.faint:C[tone],align:'center'}));
@@ -2778,7 +2785,7 @@ async function generate(){
       bsd(ds);
       /* header: subject, student, photo */
       const grp=f==='math'?st.gMath:f==='eng'?st.gEng:'';
-      ds.addText('ציונים שוטפים · '+FLABEL[f]+(f!==c?' (במקום מדעים)':''),T({x:2.0,y:0.45,w:10.5,h:0.6,fontSize:28,bold:true,color:col}));
+      ds.addText('ציונים שוטפים · '+subjLabel(f,s.cls)+(f!==c?' (במקום מדעים)':''),T({x:2.0,y:0.45,w:10.5,h:0.6,fontSize:28,bold:true,color:col}));
       ds.addText([st.name,s.cls&&('כיתה '+s.cls),grp].filter(Boolean).join('   ·   '),T({x:2.0,y:1.05,w:10.5,h:0.4,fontSize:16,color:C.soft}));
       const dph=photoFor(st); if(dph) ds.addImage({data:dph,x:0.6,y:0.4,w:1.1,h:1.1,rounding:true});
       /* three key numbers */
