@@ -269,7 +269,7 @@ footer a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
-<div style="background:#B45309;color:#fff;text-align:center;padding:8px 12px;font-weight:700">עמוד בדיקה: מענים וקמפוס מדוח 58, מענים מדוח 64, ותפקידים ופעילויות (שלב 5). המורים משתמשים באתר הרגיל.</div>
+<div style="background:#B45309;color:#fff;text-align:center;padding:8px 12px;font-weight:700">עמוד בדיקה: מענים וקמפוס מדוח 58, מענים מדוח 64, ותפקידים ופעילויות (שלב 2). המורים משתמשים באתר הרגיל.</div>
 <div class="wrap">
 <header>
   <div class="brand">
@@ -326,6 +326,18 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">2</span><h2 id="h-changed">תלמידים שעברו שינוי</h2><span class="req">(חובה)</span></div>
   <p class="hint">בחרו 3 תלמידים שונים וכתבו לכל אחד משפט או שניים על השינוי. בלי זה לא ניתן ליצור את המצגת. השקף יופיע לפני שקפי התלמידים, עם התמונה של כל אחד והטקסט שכתבתם.</p>
     <div id="changedRows"></div>
+  <details class="more" id="rolesBox" hidden><summary>תפקידים ופעילויות <span class="hint" id="rolesSum" style="display:inline">(לא חובה)</span></summary>
+    <p class="hint" style="margin-bottom:10px">בחרו תלמידים לכל תפקיד. בשקף זה ייכתב בשורת ״חוזקות״, בלשון זכר או נקבה לפי דוח 58.</p>
+    <div class="roles-list" id="rolesList"></div>
+    <div class="role-add"><input type="text" id="roleNew" placeholder="תפקיד נוסף, למשל: משלחת לפולין" aria-label="שם תפקיד או פעילות נוספים"><button class="btn small dash" type="button" id="roleAddBtn">+ הוספה</button></div>
+  </details>
+  <dialog class="picker" id="roleDlg" aria-labelledby="pkTitle"><div class="pk">
+    <div class="pk-head"><h3 id="pkTitle"></h3><button class="pk-x" type="button" id="pkX" aria-label="סגירה בלי לשמור">✕</button></div>
+    <input type="search" id="pkSearch" placeholder="חיפוש לפי שם…" aria-label="חיפוש תלמיד">
+    <div class="pk-list" id="pkList"></div>
+    <span class="hint" id="pkHint"></span>
+    <div class="pk-foot"><span class="hint" id="pkCount"></span><button class="btn small" type="button" id="pkClear">ניקוי</button><button class="btn primary" type="button" id="pkDone">סיום</button></div>
+  </div></dialog>
 </section>
 
 <section class="step" id="stepCheck" aria-labelledby="h-check">
@@ -348,18 +360,6 @@ footer a:hover{text-decoration:underline}
     <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה</label>
     <label class="check"><input type="checkbox" id="sTop3"> שקף 3 התלמידים המצטיינים לפי ממוצע</label>
   </div>
-  <details class="more" id="rolesBox" hidden><summary>תפקידים ופעילויות <span class="hint" id="rolesSum" style="display:inline">(לא חובה)</span></summary>
-    <p class="hint" style="margin-bottom:10px">בחרו תלמידים לכל תפקיד. בשקף זה ייכתב בשורת ״חוזקות״, בלשון זכר או נקבה לפי דוח 58.</p>
-    <div class="roles-list" id="rolesList"></div>
-    <div class="role-add"><input type="text" id="roleNew" placeholder="תפקיד נוסף, למשל: משלחת לפולין" aria-label="שם תפקיד או פעילות נוספים"><button class="btn small dash" type="button" id="roleAddBtn">+ הוספה</button></div>
-  </details>
-  <dialog class="picker" id="roleDlg" aria-labelledby="pkTitle"><div class="pk">
-    <div class="pk-head"><h3 id="pkTitle"></h3><button class="pk-x" type="button" id="pkX" aria-label="סגירה בלי לשמור">✕</button></div>
-    <input type="search" id="pkSearch" placeholder="חיפוש לפי שם…" aria-label="חיפוש תלמיד">
-    <div class="pk-list" id="pkList"></div>
-    <span class="hint" id="pkHint"></span>
-    <div class="pk-foot"><span class="hint" id="pkCount"></span><button class="btn small" type="button" id="pkClear">ניקוי</button><button class="btn primary" type="button" id="pkDone">סיום</button></div>
-  </div></dialog>
   <div class="changed">
     <h3>צבע המצגת</h3>
     <div class="themes" id="themes"></div>
@@ -382,7 +382,7 @@ footer a:hover{text-decoration:underline}
   </div>
   </details>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 05.11.2026 · 00:10</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 05.11.2026 · 00:15</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1723,7 +1723,7 @@ function renderFiles(){
   $('#bSample').hidden=state.sample||state.files.length>0;
   { const slim=!state.sample&&state.files.length>0; $('#upl').classList.toggle('slim',slim);
     $('#dropData strong').textContent=slim?'גררו לכאן קבצים נוספים, או לחצו לבחירה':'גררו לכאן את כל הדוחות יחד, או לחצו לבחירה'; }
-  $('#stepCheck').hidden=$('#stepStu').hidden=$('#changedBox').hidden=!state.files.length;
+  $('#stepCheck').hidden=$('#stepStu').hidden=!state.files.length;
   { const have={sadin:0,events:0,assess:0,groups:0,schedule:0}; if(!state.sample) for(const f of state.files) if(f.kind in have) have[f.kind]=1;
     if(!state.sample&&state.files.some(f=>f.kind==='deck')) have.deck=1;
     /* 61 only from the אלפון PDF: photos from an old deck do not count (they may be on the wrong student) */

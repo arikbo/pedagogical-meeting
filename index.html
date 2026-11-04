@@ -1557,7 +1557,7 @@ function renderFiles(){
   const box=$('#files'); box.innerHTML='';
   $('#sampleBanner').hidden=!state.sample;
   $('#bSample').hidden=state.sample||state.files.length>0;
-  $('#stepCheck').hidden=$('#stepStu').hidden=$('#changedBox').hidden=!state.files.length;
+  $('#stepCheck').hidden=$('#stepStu').hidden=!state.files.length;
   { const have={sadin:0,events:0,assess:0,groups:0}; if(!state.sample) for(const f of state.files) if(f.kind in have) have[f.kind]=1;
     if(!state.sample&&state.files.some(f=>f.kind==='deck')) have.deck=1;
     /* 61 only from the אלפון PDF: photos from an old deck do not count (they may be on the wrong student) */
