@@ -166,10 +166,9 @@ button.ph:hover{border-color:var(--accent)}
 details.more{border:1px solid var(--line);border-radius:12px;padding:10px 14px}
 /* after the first upload the drop zone becomes a thin bar, and the report cards use the width */
 .upl.slim{display:flex;flex-direction:column;gap:12px}
-.upl.slim .drop.big{flex-direction:row;justify-content:center;padding:12px 16px;gap:10px;background:var(--surface-2)}
-.upl.slim .drop.big svg{width:22px;height:22px}
-.upl.slim .drop.big strong{font-size:16px;font-weight:500}
-.upl.slim .drop.big span{display:none}
+.upl.slim .drop.big{padding:20px 16px;gap:6px}
+.upl.slim .drop.big svg{width:30px;height:30px}
+.upl.slim .drop.big strong{font-size:18px}
 @media (min-width:1000px){ .upl.slim .upl-list .reps{grid-template-columns:repeat(2,1fr)} }
 /* roles and activities (מש״צים, מועצת תלמידים…) → the חוזקות row */
 .roles-list{display:flex;flex-direction:column}
@@ -217,6 +216,16 @@ header{padding-block:22px 0}
 .howto li{padding:8px 12px}
 @media (min-width:1000px){ header{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:center;column-gap:28px} .howto{margin:0;gap:8px} .howto li{flex-direction:column;align-items:flex-start;gap:6px;padding:10px 12px} }
 @media (max-width:640px){ .howto{gap:8px} .howto li{flex-direction:column;text-align:center;gap:6px;padding:10px 6px;font-size:0} .howto b{font-size:14px} .howto li::before{font-size:15px} .brand{gap:12px} .brand img{width:56px} .drop.big{padding:28px 14px} }
+/* compact header (test): the 3 steps are a small strip, not big boxes */
+header{padding-block:14px 0;gap:6px}
+h1{font-size:clamp(26px,4vw,34px)}
+.brand img{width:60px}
+.howto{display:flex;flex-wrap:wrap;gap:6px 8px;margin:2px 0 0}
+.howto li{padding:4px 12px 4px 8px;gap:8px;font-size:14px;border-radius:999px;flex-direction:row!important;align-items:center!important;text-align:start!important}
+.howto li::before{width:22px;height:22px;font-size:13px}
+.howto b{display:inline;font-size:14px;margin-inline-end:4px}
+@media (min-width:1000px){ header{display:flex!important;flex-direction:column;align-items:flex-start} header .brand{width:100%} .howto{justify-content:flex-start} }
+@media (max-width:640px){ .howto li{font-size:13px!important} .howto b{font-size:13px!important} }
 .deck{display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
 .deck-text{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}
 .deck h3{font-family:var(--display);font-size:19px;margin:0}
@@ -269,11 +278,11 @@ footer a:hover{text-decoration:underline}
       <span class="eyebrow">ישיבה פדגוגית · מצגת אוטומטית מדוחות סמארט סקול</span>
       <h1>מחולל ישיבה פדגוגית</h1>
       <p class="lede">מעלים את הדוחות ומורידים מצגת PowerPoint עם שקף לכל תלמיד.</p>
-      <div class="toprow"><span class="privacy">הקבצים מעובדים במחשב שלכם בלבד. שום נתון לא נשלח לשרת.</span><a class="guidelink" href="../guide/">מדריך קצר למורה ›</a></div>
+      <div class="toprow"><span class="privacy">הקבצים מעובדים במחשב שלכם בלבד. שום נתון לא נשלח לשרת.</span><a class="guidelink" href="guide/">מדריך קצר למורה ›</a></div>
     </div>
   </div>
   <ol class="howto" aria-label="איך זה עובד">
-    <li><span><b>מפיקים</b>5 דוחות מסמארט סקול</span></li>
+    <li><span><b>מפיקים</b>6 דוחות מסמארט סקול</span></li>
     <li><span><b>גוררים</b>את כולם יחד לאתר</span></li>
     <li><span><b>מורידים</b>מצגת מוכנה לישיבה</span></li>
   </ol>
@@ -372,7 +381,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 04.11.2026 · 20:40</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 04.11.2026 · 20:45</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
