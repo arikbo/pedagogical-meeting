@@ -228,7 +228,7 @@ footer a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
-<div style="background:#B45309;color:#fff;text-align:center;padding:8px 12px;font-weight:700">עמוד בדיקה: מענים מדוח 58 וגם מדוח 64 (מערכת שעות לתלמיד). המורים משתמשים באתר הרגיל.</div>
+<div style="background:#B45309;color:#fff;text-align:center;padding:8px 12px;font-weight:700">עמוד בדיקה: מענים וקמפוס מדוח 58, וגם מענים מדוח 64 (מערכת שעות לתלמיד). המורים משתמשים באתר הרגיל.</div>
 <div class="wrap">
 <header>
   <div class="brand">
@@ -262,7 +262,7 @@ footer a:hover{text-decoration:underline}
     <div class="rep" data-k="events"><b>42</b><span>מונה אירועים בשיעור לכיתה</span><em>Excel <strong>לסמן: טווח תאריכים (מתאריך–עד תאריך) ורק אירועים לא מוצדקים</strong></em></div>
     <div class="rep" data-k="assess"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel · או דוח 34 <strong>לסמן: את כל המקצועות</strong></em></div>
     <div class="rep" data-k="photos"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF <strong>לשמור רק אחרי שכל התמונות נטענו במסך</strong></em></div>
-    <div class="rep" data-k="groups"><b>58</b><span>שיוך תלמידי כיתה לקבוצות</span><em>Excel · הקבצות ובנים/בנות <strong>לסמן: את כל המקצועות</strong></em></div>
+    <div class="rep" data-k="groups"><b>58</b><span>שיוך תלמידי כיתה לקבוצות</span><em>Excel · הקבצות, בנים/בנות, מענים (שילוב, קש״ת…) וקמפוס <strong>לסמן: את כל המקצועות</strong></em></div>
     <div class="rep opt" data-k="schedule"><b>64</b><span>מערכת שעות לתלמיד <span class="hint">(לא חובה · בבדיקה)</span></span><em>PDF · ממלא את שורת ״מענים״: אולפן, עולים, שילוב, פרטני, קש״ת, מהות, CBT, עם מספר השעות והמורה</em></div>
     <div class="rep opt" data-k="deck"><b>+</b><span>מצגת או מסמך מהישיבה הקודמת <span class="hint">(לא חובה)</span></span><em>PowerPoint · Word · PDF · ממלא את תמונת המצב האישית. התמונות שבה לא מחליפות את דוח 61 <small class="tip">בקנבה או ב-Google Slides? מורידים כ-PowerPoint וגוררים לכאן. Slides: קובץ ← הורדה ← PowerPoint · קנבה: שיתוף ← הורדה ← PPTX</small></em></div>
   </div>
@@ -328,7 +328,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 04.11.2026 · 13:40</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 04.11.2026 · 19:30</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -685,6 +685,31 @@ function sameVal(field,a,b){
   if(NUMERIC.includes(field)){ const x=toNum(a),y=toNum(b); if(x!=null&&y!=null) return Math.abs(x-y)<0.05; }
   return clean(a).replace(/["'״׳\s]/g,'')===clean(b).replace(/["'״׳\s]/g,'');
 }
+/* the kind(s) of מענה a text names: "בתוכנית קשת", "קש״ת" and "קש"ת" are one kind */
+function ansKinds(t){
+  const s=sadinText(t), out=[], w=(re)=>new RegExp('(^|[^א-ת])[והבלמש]{0,2}(?:'+re+')(?![א-ת])').test(s);
+  if(w('שילוב|שלוב')) out.push('שילוב');
+  if(w('קשת|קש["״\'`׳]{1,2}ת')) out.push('קשת');
+  if(w('פרטני|פרטנית|פרטניות|פרטניים')) out.push('פרטני');
+  if(w('אולפן')) out.push('אולפן');
+  if(w('עולים')&&/שעות|שעה|ש'|ש׳/.test(s)) out.push('עולים');
+  if(w('מהות')) out.push('מהות');
+  if(/\bcbt\b/i.test(s)&&!out.includes('שילוב')) out.push('cbt');
+  return out;
+}
+/* add report מענים to the text: a new kind → its own line; a kind already written → the hours / teacher join that line */
+function mergeAns(text,items){
+  const lines=text?text.split('\n'):[];
+  for(const it of items){
+    const kinds=ansKinds(it.subj); if(!kinds.length){ if(!lines.includes(it.line)) lines.push(it.line); continue; }
+    const i=lines.findIndex(l=>ansKinds(l).some(k=>kinds.includes(k)));
+    if(i<0){ lines.push(it.line); continue; }
+    const tch=(it.detail.match(/\(([^)(]+)/)||['',''])[1].trim().split(/\s+/)[0];
+    if(lines[i].includes(it.line)||(tch&&lines[i].includes(tch))) continue; /* already there */
+    if(it.detail) lines[i]=lines[i].replace(/[\s.,]+$/,'')+(it.detail.startsWith('(')?' ':' · ')+it.detail;
+  }
+  return lines.join('\n');
+}
 /* merge all files → students + conflicts + missing */
 function buildStudents(files, opts){
   const pass = opts.pass ?? 55;
@@ -736,6 +761,7 @@ function buildStudents(files, opts){
       const key=resolveKey(file,nameKey(nm),nm,row); if(key==null) continue;
       if(!byKey.has(key)) byKey.set(key,{key,name:nm,src:{},files:new Set(),grades:[]});
       const st=byKey.get(key); st.files.add(file.id);
+      if(file.camp58){ const c=file.camp58[nameKey(nm)]; if(c?.length) st.camp=[...new Set([...(st.camp||[]),...c])]; }
       if(file.ans58){ const a=file.ans58[nameKey(nm)]; if(a?.length) st.ans58=[...(st.ans58||[]),...a.filter(x=>!(st.ans58||[]).includes(x))]; }
       if(file.sched&&USE64){ const a=file.sched[nameKey(nm)]; if(a?.length) st.sched=[...(st.sched||[]),...a.filter(x=>!(st.sched||[]).includes(x))]; }
       for(const f of FIELDS){
@@ -799,13 +825,21 @@ function buildStudents(files, opts){
     const ov=opts.overrides?.[st.key]||{};
     rerouteInfo(val, ov); /* קשת/שילוב/פרטני → מענים; חיסורים/איחורים → ביקור סדיר */
     /* report 64: the מענים in the student's timetable join the מענים row (a line the text already has is not repeated) */
-    /* report 58: מענים groups join too; when report 64 has the same מענה it wins (it has the weekly hours) */
+    /* reports 58 and 64: their מענים join the מענים row. Matched by the KIND of מענה (שילוב, קש״ת…), not by spelling:
+       64 wins over 58 (it has the weekly hours); a kind the text already names gets the hours / teacher added to that line */
     if((st.sched?.length||st.ans58?.length)&&!('iAns' in ov)){
-      const have=val.iAns||'', nk=t=>t.replace(/[\s"״'`׳–-]/g,'');
-      const s64=(st.sched||[]), subj64=s64.map(a=>nk(a.split(':')[0]));
-      const s58=(st.ans58||[]).filter(a=>{ const k=nk(a.replace(/\s*\(.*$/,'')); return !subj64.some(x=>x.includes(k)||k.includes(x)); });
-      const add=[...s64.filter(a=>!have.includes(a.split(':')[0])), ...s58.filter(a=>!have.includes(a.replace(/\s*\(.*$/,'')))];
-      if(add.length) val.iAns=[have,...add].filter(Boolean).join('\n'); }
+      const s64=st.sched||[], k64=new Set(s64.flatMap(a=>ansKinds(a.split(':')[0])));
+      const s58=(st.ans58||[]).filter(a=>!ansKinds(a.replace(/\s*\(.*$/,'')).some(k=>k64.has(k)));
+      val.iAns=mergeAns(val.iAns||'',[...s64.map(a=>({line:a,subj:a.split(':')[0],detail:a.slice(a.indexOf(':')+1).trim()})),
+        ...s58.map(a=>({line:a,subj:a.replace(/\s*\(.*$/,''),detail:(a.match(/\(.*\)$/)||[''])[0]}))]);
+    }
+    /* report 58: a קמפוס → חוזקות ("משתתף/ת בקמפוס כדורגל"), unless the text already names it */
+    if(st.camp?.length&&!('iStr' in ov)){
+      const g=clean(val.gender), verb=/^(נ|נקבה|בת)/.test(g)?'משתתפת':/^(ז|זכר|בן)/.test(g)?'משתתף':'משתתף/ת';
+      const have=val.iStr||'', nk=t=>t.replace(/[\s"״'`׳–-]/g,'');
+      const add=st.camp.filter(c=>{ const w=nk(c.replace(/^קמפוס\s*/,'')); return !(/קמפוס/.test(have)&&nk(have).includes(w)); }).map(c=>`${verb} ב${c}`);
+      if(add.length) val.iStr=[have,...add].filter(Boolean).join('\n');
+    }
     Object.assign(val,ov);
     /* average: from report, else computed from detected grade columns, else from core */
     let avg=toNum(val.avg), avgSource='report';
@@ -1094,6 +1128,9 @@ function parseGroupsReport(aoa){
       const subject=m[2].trim(), teacher=m[1].trim(), lv=(m[3].match(/\((?:רמה|קבוצה):\s*([^)]+)\)/)||['',''])[1].trim();
       const txt=subject+' '+lv; if(!ANS_SUBJ.test(txt)||/אסטרטגי/.test(txt)) return;
       ansCols.push({i,label:subject+(lv&&ANS_SUBJ.test(lv)&&!subject.includes(lv)?' – '+lv:''),teacher}); });
+    /* a קמפוס (כדורגל, תקשורת…) is an enrichment program: it goes to חוזקות, without the teacher */
+    const campCols=[]; row.forEach((c,i)=>{ const line=sadinText(String((aoa[r]||[])[i]??'').split('\n')[0]); const m=line.match(/^([^,]+),\s*([^,]+),/); if(m&&/^קמפוס/.test(m[2].trim())) campCols.push({i,label:m[2].trim()}); });
+    const campByName={};
     const out=[['שם התלמיד','כיתה','מין','הקבצה מתמטיקה','הקבצה אנגלית']];
     for(let k=r+1;k<aoa.length;k++){
       const rw=aoa[k]||[], name=stripNum(sadinText(rw[ni]));
@@ -1104,9 +1141,10 @@ function parseGroupsReport(aoa){
       out.push([name, ci>=0?sadinText(rw[ci]):'', sadinText(rw[gi]), gM, gE]);
       const ans=[]; for(const a of ansCols) if(/^x$/i.test(clean(rw[a.i]))){ const t=`${a.label}${a.teacher?` (${a.teacher})`:''}`; if(!ans.includes(t)) ans.push(t); }
       ansByName[nameKey(name)]=ans;
+      campByName[nameKey(name)]=[...new Set(campCols.filter(c=>/^x$/i.test(clean(rw[c.i]))).map(c=>c.label))];
       subjByName[nameKey(name)]=allCols.filter(g=>/^x$/i.test(clean(rw[g.i]))).map(g=>g.subject);
     }
-    return out.length>1?{aoa:out,teachers,subjByName,ansByName}:null;
+    return out.length>1?{aoa:out,teachers,subjByName,ansByName,campByName}:null;
   }
   return null;
 }
@@ -1575,7 +1613,7 @@ function addFileFromAoa(name, aoa){
       return vals.filter(v=>toNum(v)==null).length>=vals.length*0.6?f:null; });
     if(m.some(Boolean)){ infoMap=m; infoGuess=g.guess; INFO_IN.forEach(f=>{ mapping[f]=-1; }); }
   }
-  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind, infoMap, infoGuess, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, title, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined, subjByName:grRep?grRep.subjByName:undefined, ans58:grRep?grRep.ansByName:undefined};
+  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind, infoMap, infoGuess, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, title, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined, subjByName:grRep?grRep.subjByName:undefined, ans58:grRep?grRep.ansByName:undefined, camp58:grRep?grRep.campByName:undefined};
   state.files.push(file); return file;
 }
 function loadSample(){
