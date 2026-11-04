@@ -381,7 +381,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 04.11.2026 · 23:55</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 05.11.2026 · 00:05</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -751,6 +751,15 @@ function ansKinds(t){
   return out;
 }
 /* add report מענים to the text: a new kind → its own line; a kind already written → the hours / teacher join that line */
+/* hours named in a teacher's sentence: "שעתיים", "3 שעות", "שלוש שעות", "שעה אחת", "2 ש'" */
+function deckHours(t){
+  const s=sadinText(t), W={'אחת':1,'שתי':2,'שתיים':2,'שלוש':3,'ארבע':4,'חמש':5,'שש':6};
+  if(/(^|[^א-ת])שעתיים(?![א-ת])/.test(s)) return 2;
+  let m=s.match(/(\d+)\s*(?:שעות|ש['׳])/); if(m) return +m[1];
+  m=s.match(/(אחת|שתי|שתיים|שלוש|ארבע|חמש|שש)\s+שעות/); if(m) return W[m[1]];
+  if(/(^|[^א-ת])שעה(\s+אחת)?(?![א-ת])/.test(s)) return 1;
+  return 0;
+}
 function mergeAns(text,items){
   /* one line per מענה, worded as in the report. A short line from the deck that only names the same מענה
      ("בתוכנית קשת", "קשת עם אטיאס") is replaced by the report's line; a longer sentence that says more
@@ -761,7 +770,10 @@ function mergeAns(text,items){
     if(lines.some(l=>nk(l)===nk(it.line))) continue; /* the very same line */
     const kinds=ansKinds(it.subj);
     const i=kinds.length?lines.findIndex(l=>{ const k=ansKinds(l); return k.length===1&&kinds.includes(k[0])&&!OTHER.test(l)&&clean(l).split(' ').length<=8; }):-1;
-    if(i>=0) lines[i]=it.line; else lines.push(it.line);
+    if(i<0){ lines.push(it.line); continue; }
+    /* the deck says how many hours ("מקבל שעתיים שילוב") and the report does not (58): keep the hours */
+    const h=deckHours(lines[i]);
+    lines[i]=h&&!/ש['׳]/.test(it.line)?it.line.replace(/^([^(]+?)\s*(\(.*)?$/,(m,a,b)=>`${a}: ${h===1?"ש' 1":h+" ש'"}${b?' '+b:''}`):it.line;
   }
   return lines.join('\n');
 }
