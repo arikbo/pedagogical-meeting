@@ -327,7 +327,7 @@ footer a:hover{text-decoration:underline}
   </div>
   </details>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 04.11.2026 · 23:55</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 05.11.2026 · 00:20</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1557,7 +1557,7 @@ function renderFiles(){
   const box=$('#files'); box.innerHTML='';
   $('#sampleBanner').hidden=!state.sample;
   $('#bSample').hidden=state.sample||state.files.length>0;
-  $('#stepCheck').hidden=$('#stepStu').hidden=!state.files.length;
+  $('#stepCheck').hidden=$('#stepStu').hidden=$('#changedBox').hidden=!state.files.length;
   { const have={sadin:0,events:0,assess:0,groups:0}; if(!state.sample) for(const f of state.files) if(f.kind in have) have[f.kind]=1;
     if(!state.sample&&state.files.some(f=>f.kind==='deck')) have.deck=1;
     /* 61 only from the אלפון PDF: photos from an old deck do not count (they may be on the wrong student) */
