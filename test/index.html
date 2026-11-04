@@ -164,6 +164,38 @@ button.ph:hover{border-color:var(--accent)}
 .drop.big strong{font-size:21px}
 .samplebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 details.more{border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+/* after the first upload the drop zone becomes a thin bar, and the report cards use the width */
+.upl.slim{display:flex;flex-direction:column;gap:12px}
+.upl.slim .drop.big{flex-direction:row;justify-content:center;padding:12px 16px;gap:10px;background:var(--surface-2)}
+.upl.slim .drop.big svg{width:22px;height:22px}
+.upl.slim .drop.big strong{font-size:16px;font-weight:500}
+.upl.slim .drop.big span{display:none}
+@media (min-width:1000px){ .upl.slim .upl-list .reps{grid-template-columns:repeat(2,1fr)} }
+/* roles and activities (מש״צים, מועצת תלמידים…) → the חוזקות row */
+.roles-list{display:flex;flex-direction:column}
+.role-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line)}
+.role-row:first-child{border-top:none;padding-top:0}
+.role-name{font-family:var(--display);font-weight:500;min-width:140px}
+.role-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.rchip{display:inline-flex;align-items:center;gap:4px;font-size:14px;border-radius:999px;padding:2px 4px 2px 10px;background:var(--accent-soft);color:var(--accent)}
+.rchip button{border:none;background:none;color:inherit;opacity:.65;cursor:pointer;font-size:14px;padding:0 4px;border-radius:50%}
+.rchip button:hover{opacity:1}
+.role-none{color:var(--ink-faint);font-size:14px}
+.role-add{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
+.role-add input{font:inherit;font-size:15px;border:1px solid var(--line);border-radius:8px;padding:5px 10px;background:var(--surface);color:var(--ink);min-width:0;flex:1;max-width:280px}
+.btn.dash{border-style:dashed;color:var(--accent)}
+dialog.picker{border:none;border-radius:16px;padding:0;width:min(560px,calc(100vw - 32px));background:var(--surface);color:var(--ink);box-shadow:0 20px 50px rgba(0,0,0,.25)}
+dialog.picker::backdrop{background:rgba(20,28,48,.45)}
+.pk{display:flex;flex-direction:column;gap:12px;padding:20px}
+.pk-head{display:flex;align-items:center;gap:10px}
+.pk-head h3{margin:0;font-family:var(--display);font-size:19px;flex:1}
+.pk-x{border:none;background:none;font-size:22px;line-height:1;color:var(--ink-faint);cursor:pointer;padding:4px 8px;border-radius:8px}
+.pk input[type=search]{font:inherit;border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--surface);color:var(--ink)}
+.pk-list{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;max-height:min(46vh,340px);overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px}
+.pk-list label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.pk-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pk-foot .btn.primary{margin-inline-start:auto;font-size:16px;padding:8px 22px}
+@media (max-width:520px){ .pk-list{grid-template-columns:1fr} .role-name{min-width:0;flex-basis:100%} }
 details.more summary{cursor:pointer;font-family:var(--display);font-weight:500;color:var(--ink-soft)}
 details.more[open] summary{margin-bottom:12px}
 @media (min-width:1000px){
@@ -228,7 +260,7 @@ footer a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
-<div style="background:#B45309;color:#fff;text-align:center;padding:8px 12px;font-weight:700">עמוד בדיקה: מענים וקמפוס מדוח 58, וגם מענים מדוח 64 (מערכת שעות לתלמיד). המורים משתמשים באתר הרגיל.</div>
+<div style="background:#B45309;color:#fff;text-align:center;padding:8px 12px;font-weight:700">עמוד בדיקה: מענים וקמפוס מדוח 58, מענים מדוח 64, ותפקידים ופעילויות (שלב 2). המורים משתמשים באתר הרגיל.</div>
 <div class="wrap">
 <header>
   <div class="brand">
@@ -249,7 +281,7 @@ footer a:hover{text-decoration:underline}
 
 <section class="step" aria-labelledby="h-files">
   <div class="step-head"><span class="num">1</span><h2 id="h-files">הקבצים</h2></div>
-  <div class="upl">
+  <div class="upl" id="upl">
   <div class="drop big" id="dropData" tabindex="0" role="button" aria-label="העלאת דוחות">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
     <strong>גררו לכאן את כל הדוחות יחד, או לחצו לבחירה</strong>
@@ -293,6 +325,18 @@ footer a:hover{text-decoration:underline}
     <label class="check"><input type="checkbox" id="sTeachers" checked> שקף מורי הכיתה</label>
     <label class="check"><input type="checkbox" id="sTop3"> שקף 3 התלמידים המצטיינים לפי ממוצע</label>
   </div>
+  <details class="more" id="rolesBox" hidden><summary>תפקידים ופעילויות <span class="hint" id="rolesSum" style="display:inline">(לא חובה)</span></summary>
+    <p class="hint" style="margin-bottom:10px">בחרו תלמידים לכל תפקיד. בשקף זה ייכתב בשורת ״חוזקות״, בלשון זכר או נקבה לפי דוח 58.</p>
+    <div class="roles-list" id="rolesList"></div>
+    <div class="role-add"><input type="text" id="roleNew" placeholder="תפקיד נוסף, למשל: משלחת לפולין" aria-label="שם תפקיד או פעילות נוספים"><button class="btn small dash" type="button" id="roleAddBtn">+ הוספה</button></div>
+  </details>
+  <dialog class="picker" id="roleDlg" aria-labelledby="pkTitle"><div class="pk">
+    <div class="pk-head"><h3 id="pkTitle"></h3><button class="pk-x" type="button" id="pkX" aria-label="סגירה בלי לשמור">✕</button></div>
+    <input type="search" id="pkSearch" placeholder="חיפוש לפי שם…" aria-label="חיפוש תלמיד">
+    <div class="pk-list" id="pkList"></div>
+    <span class="hint" id="pkHint"></span>
+    <div class="pk-foot"><span class="hint" id="pkCount"></span><button class="btn small" type="button" id="pkClear">ניקוי</button><button class="btn primary" type="button" id="pkDone">סיום</button></div>
+  </div></dialog>
   <details class="more"><summary>אפשרויות נוספות</summary>
   <div class="form">
     <label>ציון נכשל: מתחת ל-<input type="number" id="sPass" value="55" min="0" max="100"></label>
@@ -328,7 +372,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 04.11.2026 · 19:30</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 04.11.2026 · 20:40</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -1653,6 +1697,8 @@ function renderFiles(){
   const box=$('#files'); box.innerHTML='';
   $('#sampleBanner').hidden=!state.sample;
   $('#bSample').hidden=state.sample||state.files.length>0;
+  { const slim=!state.sample&&state.files.length>0; $('#upl').classList.toggle('slim',slim);
+    $('#dropData strong').textContent=slim?'גררו לכאן קבצים נוספים, או לחצו לבחירה':'גררו לכאן את כל הדוחות יחד, או לחצו לבחירה'; }
   $('#stepCheck').hidden=$('#stepStu').hidden=!state.files.length;
   { const have={sadin:0,events:0,assess:0,groups:0,schedule:0}; if(!state.sample) for(const f of state.files) if(f.kind in have) have[f.kind]=1;
     if(!state.sample&&state.files.some(f=>f.kind==='deck')) have.deck=1;
@@ -1926,11 +1972,77 @@ function refresh(){
   built=buildStudents(state.files,{pass:settings().pass,choices:state.choices,overrides:state.overrides,links:state.links,noLink:state.noLink});
   fillFromAssess(built.students,settings().pass);
   markSciAsGeo(built.students);
+  applyRoles(built.students);
   matchPhotos();
   autoClass();
   autoTeacher();
-  renderFiles(); renderChecks(); renderEvPick(); renderChanged(); renderThemes(); renderStudents(); updateStatus();
+  renderFiles(); renderChecks(); renderEvPick(); renderChanged(); renderThemes(); renderRoles(); renderStudents(); updateStatus();
 }
+/* ---------- roles and activities: picked by hand per role, written into חוזקות ---------- */
+const ROLE_DEFAULTS=[
+  {name:'מש״צים',m:'מש״צ',f:'מש״צית',u:'מש״צ/ית'},
+  {name:'להקת בית הספר',m:'משתתף בלהקת בית הספר',f:'משתתפת בלהקת בית הספר',u:'משתתף/ת בלהקת בית הספר'},
+  {name:'מועצת תלמידים',m:'חבר מועצת התלמידים',f:'חברת מועצת התלמידים',u:'חבר/ת מועצת התלמידים'},
+  {name:'ממריאות',m:'משתתף בתוכנית ממריאות',f:'משתתפת בתוכנית ממריאות',u:'משתתף/ת בתוכנית ממריאות'}];
+state.roles=ROLE_DEFAULTS.map((r,i)=>({id:'r'+i,...r,keys:[]}));
+let roleSeq=ROLE_DEFAULTS.length, pkRole=null, pkSel=new Set();
+const rolePhrase=(r,g)=>g==='f'?r.f:g==='m'?r.m:r.u;
+function roleStudent(k){ return built.students.find(s=>s.key===k||(s.aliasKeys||[]).includes(k)); }
+function applyRoles(students){
+  for(const r of state.roles) for(const k of r.keys){
+    const s=students.find(x=>x.key===k||(x.aliasKeys||[]).includes(k)); if(!s) continue;
+    if(state.overrides[s.key]&&'iStr' in state.overrides[s.key]) continue; /* the teacher already edited חוזקות */
+    const ph=rolePhrase(r,s.gender); if((s.iStr||'').includes(ph)) continue;
+    s.iStr=[s.iStr,ph].filter(Boolean).join('\n');
+  }
+}
+function renderRoles(){
+  const box=$('#rolesBox'); if(!box) return;
+  const show=!state.sample&&built.students.length>0; box.hidden=!show; if(!show) return;
+  const picked=new Set(state.roles.flatMap(r=>r.keys.filter(k=>roleStudent(k))));
+  $('#rolesSum').textContent=picked.size?`(לא חובה · ${picked.size===1?'נבחר תלמיד אחד':picked.size+' תלמידים נבחרו'})`:'(לא חובה)';
+  $('#rolesList').innerHTML=state.roles.map(r=>{
+    const chips=r.keys.map(k=>roleStudent(k)).filter(Boolean).map(s=>`<span class="rchip">${esc(s.name)}<button type="button" data-rm="${esc(r.id)}" data-k="${esc(s.key)}" aria-label="הסרת ${esc(s.name)}">✕</button></span>`).join('');
+    return `<div class="role-row"><span class="role-name">${esc(r.name)}</span><span class="role-chips">${chips||'<span class="role-none">לא נבחרו</span>'}</span><button class="btn small" type="button" data-pick="${esc(r.id)}">בחירה</button></div>`;
+  }).join('');
+}
+function openPicker(id){
+  pkRole=state.roles.find(r=>r.id===id); if(!pkRole) return;
+  pkSel=new Set(pkRole.keys.map(k=>roleStudent(k)?.key).filter(Boolean));
+  $('#pkTitle').textContent=`${pkRole.name} · בחירת תלמידים`;
+  $('#pkHint').textContent=`בשקף ייכתב: ״${pkRole.u}״ (לפי בן/בת מדוח 58)`;
+  $('#pkSearch').value=''; drawPicker();
+  const d=$('#roleDlg'); if(d.showModal) d.showModal(); else d.setAttribute('open','');
+  setTimeout(()=>$('#pkSearch').focus(),30);
+}
+function drawPicker(){
+  const q=clean($('#pkSearch').value);
+  const list=built.students.filter(s=>!q||s.name.includes(q));
+  $('#pkList').innerHTML=list.map(s=>`<label><input type="checkbox" value="${esc(s.key)}" ${pkSel.has(s.key)?'checked':''}> ${esc(s.name)}</label>`).join('')||'<span class="role-none">לא נמצא תלמיד בשם הזה</span>';
+  $('#pkCount').textContent=pkSel.size?`${pkSel.size} נבחרו`:'אף אחד לא נבחר';
+}
+function closePicker(save){
+  if(save&&pkRole){ pkRole.keys=[...pkSel]; refresh(); }
+  const d=$('#roleDlg'); if(d.close) d.close(); else d.removeAttribute('open'); pkRole=null;
+}
+$('#rolesList').addEventListener('click',e=>{
+  const pick=e.target.closest('[data-pick]'); if(pick){ openPicker(pick.dataset.pick); return; }
+  const rm=e.target.closest('[data-rm]'); if(rm){ const r=state.roles.find(x=>x.id===rm.dataset.rm); if(r){ r.keys=r.keys.filter(k=>k!==rm.dataset.k&&roleStudent(k)?.key!==rm.dataset.k); refresh(); } }
+});
+$('#pkList').addEventListener('change',e=>{ const c=e.target; if(c.type!=='checkbox') return; if(c.checked) pkSel.add(c.value); else pkSel.delete(c.value); $('#pkCount').textContent=pkSel.size?`${pkSel.size} נבחרו`:'אף אחד לא נבחר'; });
+$('#pkSearch').addEventListener('input',drawPicker);
+$('#pkClear').onclick=()=>{ pkSel.clear(); drawPicker(); };
+$('#pkDone').onclick=()=>closePicker(true);
+$('#pkX').onclick=()=>closePicker(false);
+$('#roleDlg').addEventListener('cancel',e=>{ e.preventDefault(); closePicker(false); });
+function addRole(){
+  const n=clean($('#roleNew').value); if(!n) return;
+  const w=n.replace(/^ה(?=[א-ת])/,'ה');
+  state.roles.push({id:'r'+(roleSeq++),name:n,m:'משתתף ב'+w,f:'משתתפת ב'+w,u:'משתתף/ת ב'+w,keys:[]});
+  $('#roleNew').value=''; renderRoles(); openPicker(state.roles[state.roles.length-1].id);
+}
+$('#roleAddBtn').onclick=addRole;
+$('#roleNew').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addRole(); } });
 
 /* ---------- file reading ---------- */
 function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('script')); document.head.appendChild(s); }); }
