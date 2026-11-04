@@ -381,7 +381,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 04.11.2026 · 23:35</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 04.11.2026 · 23:45</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -752,10 +752,20 @@ function ansKinds(t){
 }
 /* add report מענים to the text: a new kind → its own line; a kind already written → the hours / teacher join that line */
 function mergeAns(text,items){
-  /* a מענה from the reports ALWAYS stays as its own line, whatever the deck or file already says;
-     only the very same line is not written twice */
+  /* one line per מענה. A מענה the text does not name yet → its own line. A מענה the text already names → the
+     report's details (hours, teacher) are added to that line, so nothing from the report is lost and nothing repeats */
   const lines=text?text.split('\n'):[], nk=t=>sadinText(t).replace(/[\s"״'`׳.,–-]/g,'');
-  for(const it of items) if(!lines.some(l=>nk(l)===nk(it.line))) lines.push(it.line);
+  for(const it of items){
+    if(lines.some(l=>nk(l).includes(nk(it.line)))) continue; /* the very same line is already there */
+    const kinds=ansKinds(it.subj);
+    const i=kinds.length?lines.findIndex(l=>ansKinds(l).some(k=>kinds.includes(k))):-1;
+    if(i<0){ lines.push(it.line); continue; }
+    const hours=(it.line.match(/(?:\d+\s*ש['׳]|ש['׳]\s*1)/)||[''])[0], tch=(it.line.match(/\((.+)\)\s*$/)||['',''])[1];
+    const add=[]; 
+    if(hours&&!nk(lines[i]).includes(nk(hours))) add.push(hours);
+    if(tch&&!nk(lines[i]).includes(nk(tch.split(/\s+/)[0]))) add.push('('+tch+')');
+    if(add.length) lines[i]=lines[i].replace(/[\s.,]+$/,'')+(add[0].startsWith('(')?' ':' · ')+add.join(' ');
+  }
   return lines.join('\n');
 }
 /* merge all files → students + conflicts + missing */
@@ -885,7 +895,7 @@ function buildStudents(files, opts){
     if(st.camp?.length&&!('iStr' in ov)){
       const g=clean(val.gender), verb=/^(נ|נקבה|בת)/.test(g)?'משתתפת':/^(ז|זכר|בן)/.test(g)?'משתתף':'משתתף/ת';
       const have=val.iStr||'', nk=t=>t.replace(/[\s"״'`׳–-]/g,'');
-      const add=st.camp.map(c=>`${verb} ב${c}`).filter(ph=>!have.split('\n').some(l=>nk(l)===nk(ph))); /* always kept, only the very same line is not repeated */
+      const add=st.camp.filter(c=>{ const w=nk(c.replace(/^קמפוס\s*/,'')); return !(/קמפוס/.test(have)&&nk(have).includes(w)); }).map(c=>`${verb} ב${c}`); /* once: not when the text already names this קמפוס */
       if(add.length) val.iStr=[have,...add].filter(Boolean).join('\n');
     }
     Object.assign(val,ov);
