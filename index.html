@@ -326,7 +326,7 @@ footer a:hover{text-decoration:underline}
   <div class="step-head"><span class="num">4</span><h2 id="h-stu">התלמידים</h2><span class="hint">פתחו ״תמונת מצב אישית״ כדי למלא או לתקן לפני יצירת המצגת.</span></div>
   <div class="students" id="students"></div>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 03.11.2026 · 12:10</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 04.11.2026 · 13:40</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -734,6 +734,7 @@ function buildStudents(files, opts){
       const key=resolveKey(file,nameKey(nm),nm,row); if(key==null) continue;
       if(!byKey.has(key)) byKey.set(key,{key,name:nm,src:{},files:new Set(),grades:[]});
       const st=byKey.get(key); st.files.add(file.id);
+      if(file.ans58){ const a=file.ans58[nameKey(nm)]; if(a?.length) st.ans58=[...(st.ans58||[]),...a.filter(x=>!(st.ans58||[]).includes(x))]; }
       for(const f of FIELDS){
         if(['name','first','last'].includes(f.id)) continue;
         if(file.infoMap&&INFO_IN.includes(f.id)) continue; /* this file's general info goes by its own headers, below */
@@ -794,6 +795,9 @@ function buildStudents(files, opts){
     }
     const ov=opts.overrides?.[st.key]||{};
     rerouteInfo(val, ov); /* קשת/שילוב/פרטני → מענים; חיסורים/איחורים → ביקור סדיר */
+    /* report 58: מענים groups (שילוב, CBT, קש"ת…) join the מענים row; one the text already names is not repeated */
+    if(st.ans58?.length&&!('iAns' in ov)){ const have=val.iAns||''; const add=st.ans58.filter(a=>!have.includes(a.replace(/\s*\(.*$/,'')));
+      if(add.length) val.iAns=[have,...add].filter(Boolean).join('\n'); }
     Object.assign(val,ov);
     /* average: from report, else computed from detected grade columns, else from core */
     let avg=toNum(val.avg), avgSource='report';
@@ -1060,6 +1064,7 @@ function parseAssess34(aoa){
 /* ---------- Smart School report 58: "שיוך תלמידי כיתה לקבוצות" ----------
    One column per teaching group ("teacher, subject, classes (רמה: הקבצה א`)"), an X for each member,
    then gender / class / ID / name. The current grouping comes from here; the ID column is never read. */
+const ANS_SUBJ=/(^|[^א-ת])(?:אולפן|עולים|פרטנ[א-ת]*|קשת|קש["״'`]{1,2}ת|מהות|שילוב|שלוב)(?![א-ת])|\bcbt\b/i;
 function parseGroupsReport(aoa){
   for(let r=0;r<Math.min(aoa.length,30);r++){
     const row=(aoa[r]||[]).map(clean);
@@ -1076,7 +1081,12 @@ function parseGroupsReport(aoa){
     });
     if(!teachers.length) return null;
     const allCols=[]; row.forEach((c,i)=>{ const line=sadinText(String((aoa[r]||[])[i]??'').split('\n')[0]); const m=line.match(/^([^,]+),\s*([^,]+),/); if(m) allCols.push({i,subject:m[2].trim()}); });
-    const subjByName={};
+    const subjByName={}, ansByName={};
+    /* מענים that are defined as groups (שילוב, CBT, קש"ת, פרטני…) appear as a column with an X */
+    const ansCols=[]; row.forEach((c,i)=>{ const line=sadinText(String((aoa[r]||[])[i]??'').split('\n')[0]); const m=line.match(/^([^,]+),\s*([^,]+),\s*(.*)$/); if(!m) return;
+      const subject=m[2].trim(), teacher=m[1].trim(), lv=(m[3].match(/\((?:רמה|קבוצה):\s*([^)]+)\)/)||['',''])[1].trim();
+      const txt=subject+' '+lv; if(!ANS_SUBJ.test(txt)||/אסטרטגי/.test(txt)) return;
+      ansCols.push({i,label:subject+(lv&&ANS_SUBJ.test(lv)&&!subject.includes(lv)?' – '+lv:''),teacher}); });
     const out=[['שם התלמיד','כיתה','מין','הקבצה מתמטיקה','הקבצה אנגלית']];
     for(let k=r+1;k<aoa.length;k++){
       const rw=aoa[k]||[], name=stripNum(sadinText(rw[ni]));
@@ -1085,9 +1095,11 @@ function parseGroupsReport(aoa){
       const gM=(mine.find(g=>/מתמטיקה|חשבון/.test(g.subject))||{}).group||'';
       const gE=(mine.find(g=>/^אנגלית$/.test(g.subject))||mine.find(g=>/אנגלית/.test(g.subject))||{}).group||'';
       out.push([name, ci>=0?sadinText(rw[ci]):'', sadinText(rw[gi]), gM, gE]);
+      const ans=[]; for(const a of ansCols) if(/^x$/i.test(clean(rw[a.i]))){ const t=`${a.label}${a.teacher?` (${a.teacher})`:''}`; if(!ans.includes(t)) ans.push(t); }
+      ansByName[nameKey(name)]=ans;
       subjByName[nameKey(name)]=allCols.filter(g=>/^x$/i.test(clean(rw[g.i]))).map(g=>g.subject);
     }
-    return out.length>1?{aoa:out,teachers,subjByName}:null;
+    return out.length>1?{aoa:out,teachers,subjByName,ansByName}:null;
   }
   return null;
 }
@@ -1504,7 +1516,7 @@ function addFileFromAoa(name, aoa){
       return vals.filter(v=>toNum(v)==null).length>=vals.length*0.6?f:null; });
     if(m.some(Boolean)){ infoMap=m; infoGuess=g.guess; INFO_IN.forEach(f=>{ mapping[f]=-1; }); }
   }
-  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind, infoMap, infoGuess, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, title, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined, subjByName:grRep?grRep.subjByName:undefined};
+  const file={id:'f'+(state.nextId++), name, headers:safeHeaders, rows, mapping, kind, infoMap, infoGuess, teachers:sadin?sadin.teachers:grRep?grRep.teachers:undefined, title, assessCols:asRep?asRep.cols:undefined, groupCols:sadin?sadin.groupCols:undefined, subjByName:grRep?grRep.subjByName:undefined, ans58:grRep?grRep.ansByName:undefined};
   state.files.push(file); return file;
 }
 function loadSample(){
@@ -1556,7 +1568,7 @@ function renderFiles(){
     const hasName=m.name>=0||m.first>=0||m.last>=0||f.kind==='teachers';
     const d=document.createElement('details'); d.className='file';
     d.innerHTML=`<summary><span class="fname">${esc(f.name)}</span>
-      <span class="chip">${f.kind==='deck'?`${/\.docx$/i.test(f.name)?'מסמך':'מצגת'} · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:f.kind==='teachers'?`מורי הכיתה · ${f.teachers.length}`:f.kind==='assess'?`ציונים שוטפים · ${f.assessCols.length} הערכות`:f.kind==='groups'?`שיוך לקבוצות · ${f.rows.length} תלמידים`:`${f.rows.length} שורות`}</span>
+      <span class="chip">${f.kind==='deck'?`${/\.docx$/i.test(f.name)?'מסמך':'מצגת'} · ${f.rows.length} תלמידים`:f.kind==='sadin'?`סדין ציונים · ${f.rows.length} תלמידים`:f.kind==='events'?`מונה אירועי שיעור · ${f.rows.length} תלמידים`:f.kind==='teachers'?`מורי הכיתה · ${f.teachers.length}`:f.kind==='assess'?`ציונים שוטפים · ${f.assessCols.length} הערכות`:f.kind==='groups'?`שיוך לקבוצות · ${f.rows.length} תלמידים · ${Object.values(f.ans58||{}).filter(a=>a.length).length} עם מענים`:`${f.rows.length} שורות`}</span>
       <span class="chip ${hasName?'ok':'bad'}">${hasName?mapped.length+' עמודות זוהו':'לא זוהתה עמודת שם'}</span>
       <span class="grow"></span><span class="chip">התאמת עמודות</span>
       <button class="btn small" type="button" data-del="${f.id}">הסרה</button></summary>
