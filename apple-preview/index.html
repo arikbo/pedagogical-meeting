@@ -253,25 +253,28 @@ footer a:hover{text-decoration:underline}
 body{-webkit-font-smoothing:antialiased;line-height:1.5}
 .wrap{gap:24px}
 
-/* פתיח: במרכז, כותרת גדולה */
-header{display:flex!important;flex-direction:column;align-items:center;text-align:center;padding-block:56px 20px;gap:22px}
-.brand{flex-direction:column;gap:14px}
-.brand img{width:64px}
-.brand-txt{align-items:center;gap:12px}
-.eyebrow{color:var(--ink-soft);font-weight:600;font-size:15px;letter-spacing:0}
-h1{font-size:clamp(38px,6.5vw,68px);font-weight:800;letter-spacing:-.025em;line-height:1.05}
-.lede{font-size:clamp(18px,2.4vw,22px);max-width:34ch;line-height:1.4}
-.toprow{justify-content:center}
-.privacy{font-size:14px;font-weight:500}
-.guidelink{border:0;padding:0;font-weight:500;color:var(--accent)}
+/* פתיח קומפקטי: לוגו וכותרת מימין, שלבים משמאל, הכל בשורה אחת כדי שהדוחות ייראו בלי גלילה */
+header{display:flex!important;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 28px;padding-block:20px 0}
+.brand{flex-direction:row;gap:14px;align-items:center;flex:1 1 380px;min-width:0}
+.howto{flex:0 1 auto}
+.brand img{width:52px}
+.brand-txt{gap:4px;align-items:flex-start}
+.eyebrow{color:var(--ink-soft);font-weight:600;font-size:13px;letter-spacing:0}
+h1{font-size:clamp(26px,3vw,32px);font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.lede{font-size:15px;color:var(--ink-soft)}
+.toprow{gap:10px 14px}
+.privacy{font-size:13px;font-weight:500;padding:4px 10px}
+.guidelink{border:0;padding:0;font-size:14px;font-weight:500;color:var(--accent)}
 .guidelink:hover{background:none;text-decoration:underline}
-.howto{display:flex!important;justify-content:center;gap:36px!important;margin:0!important}
-.howto li{background:none!important;border:0!important;padding:0!important;flex-direction:column;align-items:center!important;text-align:center;gap:6px!important}
-.howto li::before{background:var(--ink);color:var(--bg);width:28px;height:28px;font-size:14px}
-.howto b{font-weight:700}
+.howto{display:flex!important;gap:8px!important;margin:0!important}
+.howto li{background:var(--surface)!important;border:0!important;border-radius:16px!important;padding:10px 12px!important;flex-direction:row!important;align-items:center!important;gap:10px!important;font-size:13px!important;text-align:right}
+.howto li::before{background:var(--ink);color:var(--bg);width:24px;height:24px;font-size:12px}
+.howto b{font-weight:700;font-size:14px}
+@media (max-width:640px){.howto li{flex-direction:column!important;font-size:0!important}}
+.wrap{gap:18px}
 
 /* אריחי השלבים */
-section.step{border:0;border-radius:24px;padding:36px}
+section.step{border:0;border-radius:24px;padding:28px 32px}
 .num{background:none;color:var(--ink-soft);width:auto;height:auto;font-size:15px;font-weight:600}
 h2{font-size:30px;letter-spacing:-.02em}
 @media (max-width:520px){section.step{padding:22px}}
