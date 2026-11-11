@@ -542,6 +542,7 @@ function splitLong(s, re){
   const w=s.split(' '); if(w.length<=14) return null;
   const hit=w.findIndex((x,i)=>re.test(w.slice(i,i+3).join(' '))&&!re.test(w.slice(i+1,i+3).join(' ')));
   if(hit<0) return null;
+  const before=w.slice(0,hit).join(' '); if((before.match(/\(/g)||[]).length>(before.match(/\)/g)||[]).length) return null;
   let a=hit; for(let i=hit;i>=Math.max(0,hit-4);i--) if(ANS_START.test(w[i].replace(/[,(]/g,''))){ a=i; }
   let b=w.findIndex((x,i)=>i>=hit&&/[,;]$/.test(x)); if(b<0) b=w.length-1;
   const part=w.slice(a,b+1).join(' ').replace(/[,;]$/,'');
@@ -557,7 +558,7 @@ const STR_WORDS=/(^|[\s,(])(אוהב|אוהבת|טוב|טובה|חזק|חזקה|
 const NEG=/(^|\s)(לא|אינו|אינה|אין|בלי)\s/;
 const ANS_FROM=['iGen','iStr','iEmo','iExc','iRec'];   /* rows a מענה sentence is taken out of */
 const ATT_FROM=['iGen','iStr','iEmo','iExc'];          /* rows an attendance sentence is taken out of (not מענים / המלצות: "מעקב חיסורים" there is a מענה) */
-function sentencesOf(line){ return line.split(/(?<=[.;!?])\s+|(?<=[א-ת\d][.!?])(?=[א-ת])/).map(x=>x.trim()).filter(Boolean); }
+function sentencesOf(line){ return line.split(/(?<=[.;!?])\s+|(?<=[א-ת\d][.!?])(?=[א-ת])|(?<=[א-ת]{2}[.!?])(?=\d)/).map(x=>x.trim()).filter(Boolean); }
 /* a difficulty written under מענים ("מתקשה בעברית") is an אתגר, not a מענה */
 const DIFF_WORDS=/(^|[\s,(])(מתקשה|מתקשים|קושי|קשיים|קשה לו|קשה לה|בעיה|בעייה|בעיות|בעייתי|בעייתית|מתפרץ|מתפרצת|מפריע|מפריעה)(?![א-ת])/;
 /* a point to act on ("צריכה תגבור", "לעדכן את האמא") */
@@ -1368,8 +1369,8 @@ function parseSchedulePages(pages){
 /* ---------- a teachers list (e.g. Smart School report 66): columns teacher + subject ---------- */
 function parseTeachersReport(aoa){
   for(let r=0;r<Math.min(aoa.length,30);r++){
-    const row=(aoa[r]||[]).map(clean);
-    const ti=row.findIndex(c=>/^(שם )?(ה)?מורה|מורים/.test(c)), si=row.findIndex(c=>/מקצוע/.test(c));
+    const row=(aoa[r]||[]).map(clean), short=c=>c.split(' ').length<=4&&c.length<=30;
+    const ti=row.findIndex(c=>short(c)&&/^(שם )?(ה)?מורה|מורים/.test(c)), si=row.findIndex(c=>short(c)&&/מקצוע/.test(c));
     if(ti<0||si<0) continue;
     const out=[];
     for(let k=r+1;k<aoa.length;k++){
@@ -1752,14 +1753,16 @@ function renderEvPick(){
   });
 }
 
-function addFileFromAoa(name, aoa){
-  const title=aoa.slice(0,10).flat().map(c=>clean(c)).find(c=>/^דוח |אירועי הערכה/.test(c))||'';
-  const sadin=parseSadin(aoa), evRep=sadin?null:parseEventsReport(aoa), asRep=(sadin||evRep)?null:parseAssessReport(aoa);
+/* plain: a table we built ourselves from a teacher's deck / document — never a Smart School report.
+   (Its sentences can look like report headers: "מורה פרטית…" + "…סיוע מקצועי" once made a whole deck read as a teachers list, with 0 rows.) */
+function addFileFromAoa(name, aoa, plain=false){
+  const title=plain?'':aoa.slice(0,10).flat().map(c=>clean(c)).find(c=>/^דוח |אירועי הערכה/.test(c))||'';
+  const sadin=plain?null:parseSadin(aoa), evRep=(plain||sadin)?null:parseEventsReport(aoa), asRep=(plain||sadin||evRep)?null:parseAssessReport(aoa);
   if(asRep) aoa=asRep.aoa;
   if(sadin) aoa=sadin.aoa;
-  const grRep=(sadin||evRep||asRep)?null:parseGroupsReport(aoa);
+  const grRep=(plain||sadin||evRep||asRep)?null:parseGroupsReport(aoa);
   if(grRep) aoa=grRep.aoa;
-  const tRep=(sadin||evRep||asRep||grRep)?null:parseTeachersReport(aoa);
+  const tRep=(plain||sadin||evRep||asRep||grRep)?null:parseTeachersReport(aoa);
   if(tRep){ const file={id:'f'+(state.nextId++), name, headers:[], rows:[], mapping:{}, kind:'teachers', teachers:tRep}; state.files.push(file); return file; }
   if(evRep) aoa=evRep.aoa;
   const hr=findHeaderRow(aoa);
@@ -2837,7 +2840,9 @@ function addDeck(name,res,notes,msgs){
   const heads=new Set([...(res.labels||[]),...merged.flatMap(e=>e.pairs.map(p=>p.h))].map(h=>labelText(clean(h).replace(/\.$/,''))));
   const isHead=t=>{ const w=labelText(clean(t).replace(/\.$/,'')); return heads.has(w)||Object.values(INFO_HEAD).includes(w); };
   /* "חוזקות: ..." loses its header; "הגיע עם מספר חברים: אורי, ..." is a sentence and stays whole */
-  const stripHead=t=>{ const m=clean(t).match(/^([^:׃]{2,45})[:׃]\s*(.*)$/); return m&&(isHead(m[1])||(sureLabel(m[1])&&m[1].trim().split(/\s+/).length<=3))?m[2]:t; };
+  /* never a whole sentence before the colon ("הורים נשואים. אחים: …"), and "חברות: …" / "אחים: …" keep their word: it says what the list is */
+  const KEEP_HEAD=/^(?:ה?חברים|ה?חברות|חבריו|חבריה|חברותיו|חברותיה|ה?אחים|ה?אחיות|אחים ואחיות)$/;
+  const stripHead=t=>{ const m=clean(t).match(/^([^:׃.!?]{2,45})[:׃]\s*(.*)$/); return m&&!KEEP_HEAD.test(m[1].trim())&&(isHead(m[1])||(sureLabel(m[1])&&m[1].trim().split(/\s+/).length<=3))?m[2]:t; };
   for(const e of merged){
     const items=e.pairs.map(p=>{ const hint=headHint(p.h);
       return {t:String(p.v||'').split('\n').filter(l=>clean(l)&&!isHead(l)).map(stripHead).join('\n'), hint}; });
@@ -2845,7 +2850,7 @@ function addDeck(name,res,notes,msgs){
     e.hasInfo=INFO.some(f=>e.info[f]);
   }
   const aoa=[['שם',...INFO.map(f=>FLABEL[f])], ...merged.filter(e=>e.name).map(e=>[e.name,...INFO.map(f=>e.info[f]||'')])];
-  const file=addFileFromAoa(name, aoa); file.kind='deck'; file.photoKeys=[]; file.photoData={}; file.classified=true;
+  const file=addFileFromAoa(name, aoa, true); file.kind='deck'; file.photoKeys=[]; file.photoData={}; file.classified=true;
   /* keep only the name column mapped; the other columns are already our rows */
   for(const k of Object.keys(file.mapping)) if(!['name','first','last'].includes(k)) file.mapping[k]=-1;
   file.headers=aoa[0].map(clean); file.mapping.name=0; file.mapping.first=file.mapping.last=-1;
