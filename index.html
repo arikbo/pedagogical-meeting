@@ -2419,7 +2419,7 @@ async function handleAnyInner(list){
       if(ro.photos.length&&ro.rows>=3){ for(const x of ro.photos) setPhoto(x.name,x.photo,x.text); state.roster61=true; notes.push(`${f.name}: אלפון תמונות, נקראו ${ro.photos.length} תמונות.`); continue; }
       if(ro.isRoster){ msgs.push(`${f.name}: זה אלפון תלמידים, אבל לא נמצאו בו תמונות. שמרו אותו שוב כ-PDF כשהתמונות מופיעות במסך (פריסה לרוחב, התאמה לעמוד).`); continue; }
       const dk=await readPdfDeck(f);
-      if(dk.entries.some(e=>e.hasInfo)){ addDeck(f.name,dk,notes); refresh(); continue; }
+      if(dk.entries.some(e=>e.hasInfo)){ addDeck(f.name,dk,notes,msgs); refresh(); continue; }
       const sheets=await readPdf(f);
       for(const s of sheets){ const fi=addFileFromAoa(s.name,s.aoa); noteData(fi,msgs,notes); }
       refresh();
@@ -2506,6 +2506,9 @@ function addDeck(name,res,notes,msgs){
   /* other lines of the slide that may be the name, for matching to the class list once it is loaded */
   for(const r of file.rows){ const e=merged.find(x=>x.name===clean(r[0])); if(e){ r.alts=[e.name,...e.alts]; r.ocr=!!e.ocr; } }
   for(const e of merged) if(e.photo){ const k=setPhoto(e.name,e.photo,'','deck'); file.photoKeys.push(k); file.photoData[k]=e.photo; }
+  /* safety net: every student read from the file must become a row. If not, say so in plain words (red) */
+  const readN=merged.filter(e=>e.name).length;
+  if(file.rows.length<readN) (msgs||notes).push(`${name}: חלק מהמידע ב${kindWord} לא נקלט (נקראו ${readN} תלמידים, נכנסו ${file.rows.length}). שלחו את הקובץ לאריק.`);
   const withInfo=merged.filter(e=>e.hasInfo).length;
   notes.push(`${name}: ${kindWord}, ${merged.length} שקפי תלמידים, ${withInfo} עם מידע כללי, ${file.photoKeys.length} תמונות. כל משפט שויך לשורה בטבלה לפי התוכן שלו (אפשר לתקן בשלב 4). המידע נכנס רק לתלמידים שברשימת הכיתה מהדוחות.`
     +(res.skipped.length?` לא זוהה שם תלמיד בשקפים ${res.skipped.join(', ')}.`:'')
