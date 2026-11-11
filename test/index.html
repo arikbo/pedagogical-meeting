@@ -402,7 +402,7 @@ footer a{color:var(--accent)}
     <div class="rep" data-k="assess"><b>33</b><span>סדין אירועי הערכה (ציונים שוטפים)</span><em>Excel · או דוח 34 <strong>לסמן: את כל המקצועות</strong></em></div>
     <div class="rep" data-k="photos"><b>61</b><span>אלפון תלמידים כיתתי עם תמונות</span><em>PDF <strong>לשמור רק אחרי שכל התמונות נטענו במסך</strong></em></div>
     <div class="rep" data-k="groups"><b>58</b><span>שיוך תלמידי כיתה לקבוצות</span><em>Excel <strong>לסמן: את כל המקצועות</strong></em></div>
-    <div class="rep opt" data-k="schedule"><b>64</b><span>מערכת שעות לתלמיד <span class="hint">(לא חובה · בבדיקה)</span></span><em>PDF <strong>לסמן: לבחור את הכיתה ולבחור את כל התלמידים</strong></em></div>
+    <div class="rep" data-k="schedule"><b>64</b><span>מערכת שעות לתלמיד</span><em>PDF <strong>לסמן: לבחור את הכיתה ולבחור את כל התלמידים</strong></em></div>
     <div class="rep opt" data-k="deck"><b>+</b><span>מצגת או מסמך מהישיבה הקודמת <span class="hint">(לא חובה)</span></span><em>PowerPoint · Word · PDF · ממלא את תמונת המצב האישית. התמונות שבה לא מחליפות את דוח 61 <small class="tip">בקנבה או ב-Google Slides? מורידים כ-PowerPoint וגוררים לכאן. Slides: קובץ ← הורדה ← PowerPoint · קנבה: שיתוף ← הורדה ← PPTX</small></em></div>
   </div>
   </div>
@@ -480,7 +480,7 @@ footer a{color:var(--accent)}
   </div>
   </details>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסת בדיקה 11.11.2026 · 19:20</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 11.11.2026 · 20:58</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -2017,6 +2017,11 @@ function renderChecks(){
   if(realFiles.length&&built.students.length&&!built.students.some(s=>s.gender)){
     const el=document.createElement('div'); el.className='issue missing';
     el.innerHTML=`<div class="issue-title">אין נתון בנים/בנות</div><span class="hint">העלו את דוח 58 (שיוך תלמידי כיתה לקבוצות).</span>`;
+    box.appendChild(el);
+  }
+  if(realFiles.length&&!state.files.some(f=>f.kind==='schedule')){
+    const el=document.createElement('div'); el.className='issue missing';
+    el.innerHTML=`<div class="issue-title">חסר דוח 64 (מערכת שעות לתלמיד)</div><span class="hint">העלו אותו יחד עם שאר הדוחות.</span>`;
     box.appendChild(el);
   }
   if(realFiles.length&&!state.files.some(f=>f.kind==='assess')){
