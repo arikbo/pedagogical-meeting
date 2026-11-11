@@ -207,6 +207,7 @@ header{padding-block:22px 0}
 .score{font-family:var(--display);font-weight:700;text-align:left;font-variant-numeric:tabular-nums}
 .tags{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 10px}
 .flag{font-size:13px;color:var(--bad);padding:0 14px 8px}
+.flag.info-long{color:var(--warn)}
 details.info{border-top:1px solid var(--line)}
 details.info summary{cursor:pointer;padding:10px 14px;font-size:15px;color:var(--accent);font-weight:600}
 .info-fields{display:flex;flex-direction:column;gap:8px;padding:0 14px 14px}
@@ -327,7 +328,7 @@ footer a:hover{text-decoration:underline}
   </div>
   </details>
 </section>
-<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 05.11.2026 · 00:20</span></footer>
+<footer><a id="credit" href="https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A" target="_blank" rel="noopener">© כל הזכויות שמורות לאריק · לשאלות והצעות בוואטסאפ</a> · <span id="ver">גרסה 11.11.2026 · 18:55</span></footer>
 </div>
 
 <div class="bar-bottom"><div class="bar-in">
@@ -382,6 +383,9 @@ const ANS_WORDS=new RegExp([
   '(?:יוצא|יוצאת|יוצאים|יוצאות|יצא|יצאה)\\s+לשיח(?:ה|ות)(?![^.;\\n]{0,30}(?:אמא|אימא|אמו|אמה|אבא|אביו|אביה|הורים|הוריו|הוריה))',
   '(?:מקיים|מקיימת|מקיימים|מקיימות|קיים|קיימה)\\s+שיחות(?![^.;\\n]{0,30}(?:אמא|אימא|אמו|אמה|אבא|אביו|אביה|הורים|הוריו|הוריה))'
 ].join('|'),'i');
+/* "יקבל שעות שילוב", "תקבל פרטני", "אמורה לקבל CBT": a wish to give a מענה, not one the student gets → דרכי פעולה, not מענים */
+const FUT_ANS=/(^|[^א-ת])(?:ו?(?:יקבל|תקבל|יקבלו|ישובץ|תשובץ|ישובצו)|(?:אמור|אמורה|אמורים|צריך|צריכה|צריכים)\s+לקבל|לשבץ|להפנות)(?![א-ת])/;
+const isAns=(s,re=ANS_WORDS)=>re.test(s)&&!FUT_ANS.test(s);
 /* ביקור סדיר: חיסורים (also "חסורים"), איחורים, מחסיר/החסירה, מאחר/ת (not "מאחר ש" = since), "מרבה לאחר", היעדרות, הגעה בזמן */
 const ATT_WORDS=/חי?סור|חסיר|איחור|מאחר(?:ת|ים|ות)?(?![א-ת])(?!\s+ש)|(?:מרבה|נוטה|ממשיך|ממשיכה)\s+(?:לאחר|להיעדר|להעדר|להחסיר)|היעדרו|העדרו|להיעדר|להעדר|ביקור סדיר|הגעה\s+(?:בזמן|לבית)|מעקב הגעה/;
 /* a long sentence with no full stops ("...בשיעורי ספורט יקבל שעות שילוב"): take out only the part about the מענה */
@@ -398,7 +402,7 @@ function splitLong(s, re){
   return {part, rest};
 }
 /* אבחון / בריאות → אתגרים (when it is about the student, not a brother or sister: "אח בן 4 על הרצף" stays in the profile) */
-const EMO_WORDS=/אבחון|מאובחנ|אובחנ|אובחן|הפרעו?ת קשב|קשב וריכוז|ריטלין|פוקלין|קונצרטה|דיפרנציאל|לקות|לקוי|אלרגי|אסתמה|צליאק|סכרת|ניתוח|על הרצף|אוטיזם|חרדה|חרדות|מצב רפואי|בעיה רפואית|בעייה רפואית|מצב בריאותי/;
+const EMO_WORDS=/תקיפה|הותקף|הותקפה|טראומ|אבחון|מאובחנ|אובחנ|אובחן|הפרעו?ת קשב|קשב וריכוז|ריטלין|פוקלין|קונצרטה|דיפרנציאל|לקות|לקוי|אלרגי|אסתמה|צליאק|סכרת|ניתוח|על הרצף|אוטיזם|חרדה|חרדות|מצב רפואי|בעיה רפואית|בעייה רפואית|מצב בריאותי/;
 const KIN=/(^|[\s,(])(ו?ה?אח|ו?ה?אחות|ו?ה?אחים|אחיו|אחותו|אחיה|אחותה|אחיותיה|אחיותיו)(?![א-ת])/;
 const EMO_FROM=['iGen','iStr'];
 /* strengths and hobbies written in the profile ("כללי, מצב משפחתי, חוזקות") → חוזקות; not when negated ("לא אוהב ספורט") */
@@ -420,7 +424,7 @@ function rerouteInfo(val, locked={}){
     const stay=[];
     for(const l of String(val.iAtt).split('\n')){
       if(ATT_WORDS.test(l)||EMPTY_VAL.test(clean(l))){ stay.push(l); continue; }
-      const t=!locked.iAns&&ANS_WORDS.test(l)?'iAns':!locked.iEmo&&(DIFF_WORDS.test(l)||EMO_WORDS.test(l))?'iEmo'
+      const t=!locked.iAns&&isAns(l)?'iAns':!locked.iEmo&&(DIFF_WORDS.test(l)||EMO_WORDS.test(l))?'iEmo'
         :!locked.iRec&&REC_WORDS.test(l)?'iRec':!locked.iStr&&STR_WORDS.test(l)&&!NEG.test(l)?'iStr':null;
       if(t) add[t].push(l); else stay.push(l);
     }
@@ -431,7 +435,7 @@ function rerouteInfo(val, locked={}){
     const keepLines=[];
     for(const line of String(val[f]).split('\n')){
       const keep=[];
-      const where=s=>ANS_FROM.includes(f)&&!locked.iAns&&ANS_WORDS.test(s)?'iAns'
+      const where=s=>ANS_FROM.includes(f)&&!locked.iAns&&isAns(s)?'iAns'
           :ATT_FROM.includes(f)&&!locked.iAtt&&ATT_WORDS.test(s)?'iAtt'
           :EMO_FROM.includes(f)&&!locked.iEmo&&!locked.iExc&&(EMO_WORDS.test(s)||(f==='iGen'&&DIFF_WORDS.test(s)&&!/^ה?הורים/.test(s)))&&!KIN.test(s)?'iEmo'
           :f==='iGen'&&!locked.iStr&&STR_WORDS.test(s)&&!NEG.test(s)&&!KIN.test(s)&&!/^הורים|^ההורים|^אם |^האם |^אב |^האב /.test(s)?'iStr':null;
@@ -484,7 +488,7 @@ const CL={
   /* a point to act on */
   rec:/(^|[\s,(])(צריך|צריכה|צריכים|כדאי|יש לשים|יש להקפיד|יש לעדכן|לשים לב|לשים דגש|לעדכן|לדבר|להוציא|לחבר|לקרב|לבדוק|מומלץ|מומלצת|להושיב|לשבת מקדימה|לשבת קדימה|לשבת מקדימה|ישיבה קדימה|מקום ישיבה|גבולות|לא להעיר|שלא להעיר|לא לאפשר|לאפשר|לעקוב|מעקב|לשלב|לעודד|לחזק|להקפיד|לוודא|לתת|ניתן לתת|חשוב ש)(?![א-ת])/,
   /* difficulties: learning, behavior, social, emotional */
-  diff:new RegExp([DIFF_WORDS.source,'(^|[\\s,(])(אין\\s+(?:ל[והה]\\s+)?חבר|בודד|בודדה|דחוי|מופנם|מופנמת|מופנת|ביישן|ביישנית|רגיש|רגישה|נפיץ|מתפרצ|התפרצו|מציק|להציק|אלימ|חצוף|חוצפה|פטפטן|פטפטנית|מפטפט|וכחנ|לחוץ|לחוצה|לחץ|פחד|פוחד|חושש|חוששת|חוסר|עייף|עצלנ|מתנדנד|לא רגוע|לא רגועה|לא משלים|לא משלימה|לא מגויס|לא מגויסת|לא תמיד|לא מרוצה|רגשית מאוד|רגשי מאוד|לא אוהבת ללמוד|לא אוהב ללמוד|לא משקיע|לא משקיעה|שגיאות|להשתפר|לשפר|לשיפור|חלש|חלשה|מועט|מועטה|נמוכה|נמוך|נכשל|נכשלת|ירידה|מתעצבן|מתעצבנת|עצבני|להתעצבן|נרתע|מסרב|מסרבת|מבקש(?:ת)? לעבור|לעבור כיתה|בעיית|בעיה|קשיי|קשה ל)'].join('|')),
+  diff:new RegExp([DIFF_WORDS.source,'(^|[\\s,(])(חווה|חוה|חוותה|חוו|תקיפה|הותקף|הותקפה|טראומ[א-ת]*|אין\\s+(?:ל[והה]\\s+)?חבר|בודד|בודדה|דחוי|מופנם|מופנמת|מופנת|ביישן|ביישנית|רגיש|רגישה|נפיץ|מתפרצ|התפרצו|מציק|להציק|אלימ|חצוף|חוצפה|פטפטן|פטפטנית|מפטפט|וכחנ|לחוץ|לחוצה|לחץ|פחד|פוחד|חושש|חוששת|חוסר|עייף|עצלנ|מתנדנד|לא רגוע|לא רגועה|לא משלים|לא משלימה|לא מגויס|לא מגויסת|לא תמיד|לא מרוצה|רגשית מאוד|רגשי מאוד|לא אוהבת ללמוד|לא אוהב ללמוד|לא משקיע|לא משקיעה|שגיאות|להשתפר|לשפר|לשיפור|חלש|חלשה|מועט|מועטה|נמוכה|נמוך|נכשל|נכשלת|ירידה|מתעצבן|מתעצבנת|עצבני|להתעצבן|נרתע|מסרב|מסרבת|מבקש(?:ת)? לעבור|לעבור כיתה|בעיית|בעיה|קשיי|קשה ל)'].join('|')),
   /* strengths, hobbies, positive traits */
   str:new RegExp([STR_WORDS.source.replace(')(?![א-ת])','|עוזר|עוזרת|רצון|מוטיבציה|רוצה להצליח|רוצה ללמוד|מקובל|מקובלת|מקבול|חברותי|חברותית|מקסים|מקסימה|טוב לב|טובת לב|מנומס|מנומסת|מחונך|מחונכת|שקדן|שקדנית|מאורגן|מאורגנת|מסודר|מסודרת|רציני|רצינית|בוגר|בוגרת|מצחיק|מצחיקה|שמח|שמחה|ספורטאי|ספורטאית|משחק|משחקת|לומד|לומדת|מתעניין|מתעניינת|מכוון|מכוונת|יוצר|יוצרת|אמן|אמנית|מבריק|מבריקה|פעיל|פעילה|משתתף|משתתפת|תורם|תורמת|נתינה|אכפתי|אכפתית|דעתן|דעתנית|מנהיג|מנהיגה|התקבל|התקבלה|זכה|זכתה|מקום (?:ראשון|שני|שלישי)|נבחרת|ליגה|חוג|להקה|מנגן|כינור|פסנתר|ציור|לצייר|אומנות|אמנות|ריקוד|לרקוד|כדורגל|כדורסל|כדורעף|שחייה|שחמט|ג\'ודו|קרב מגע|היאבקות|טניס|תיאטרון|מוסיקה|מוזיקה|לשיר|לבשל|בישול|מחשבים|לתכנת)(?![א-ת])')].join('')),
   /* family and background — the profile */
@@ -497,6 +501,7 @@ const NEG_STR=/(^|\s)(לא|אינו|אינה|אין|בלי|פחות)\s/;
 function infoKind(s){
   const t=' '+clean(s)+' ';
   if(CL.att.test(t)&&!/^\s*(?:ה?הורים|אב|אם)\s/.test(t)) return 'iAtt';
+  if(CL.ans.test(t)&&FUT_ANS.test(t)) return 'iRec'; /* "יקבל שעות שילוב": a plan */
   if(CL.ans.test(t)&&!/מתקשה|קושי|קשיים/.test(t.replace(CL.ans,''))) return 'iAns';
   if(/(^|\s)ש?לא\s+(?:להעיר|לאפשר|להושיב|לשלוח)/.test(t)) return 'iRec';
   /* about a parent ("האם עובדת כמנהלת…, האב עצמאי"): the profile, unless it is about the student's health or a request */
@@ -537,11 +542,20 @@ function tidyInfo(x){
   return t;
 }
 const EMPTY_INFO=/^(אין|תקין|איו|רגיל|רגילה|-|—|–|ללא|אין מידע|לא ידוע|אין הערות|אין בעיות|בסדר|אין חריגים)\.?$/;
+/* "חוה ארוע תקיפה ביום העצמאות יש לשים לב שלא מתעייף… יקבל שעות שילוב" (no full stops):
+   what happened, what to do and the plan are each on their own, so the event is not taken for a דרך פעולה */
+const CUE_SPLIT=/\s+(?=ו?(?:יש\s+(?:לשים|להקפיד|לעדכן|לוודא|לעקוב|לחזק|לעודד)|לשים\s+לב|כדאי|מומלץ|חשוב\s+ש|יקבל|תקבל|ישובץ|תשובץ|(?:אמור|אמורה)\s+לקבל)(?![א-ת]))/;
+function cueParts(s){
+  if(s.split(' ').length<8) return [s];
+  const out=[];
+  for(const p of s.split(CUE_SPLIT)){ if(out.length&&out[out.length-1].split(' ').length<3) out[out.length-1]+=' '+p; else out.push(p); }
+  return out;
+}
 function classifyInfo(items){
   const out={iGen:[],iStr:[],iEmo:[],iAtt:[],iAns:[],iRec:[]};
   for(const it of items){
     for(const line of cleanML(it.t).split('\n')){
-      for(const s0 of sentencesOf(line)){
+      for(const s1 of sentencesOf(line)) for(const s0 of cueParts(s1)){
         const s=s0.replace(/^[-–•*·\s]+/,'').trim();
         if(!s||EMPTY_INFO.test(s)) continue;
         /* a long sentence with no full stops: the part about a מענה / attendance on its own */
@@ -1592,6 +1606,105 @@ function renderFiles(){
     box.appendChild(d);
   }
 }
+/* ---------- the "תמונת מצב אישית" table on the student's slide ----------
+   The text is measured (Arial, the same widths as on the slide). It fits → the rows share the height.
+   Too long → the font shrinks a little (down to 9). Still too long → what fits stays, and the rest goes
+   to a "תמונת מצב אישית · המשך" slide right after the student's slide (between whole sentences). */
+const INFO_LAY={
+  one:  {top:1.25, bottom:6.75, colW:[3.25,1.35]},   /* everything on the student's slide */
+  first:{top:1.25, bottom:6.5,  colW:[3.25,1.35]},   /* split: room left for "המשך בשקף הבא" */
+  cont: {top:1.75, bottom:6.8,  colW:[10.25,1.95]}   /* the continuation slide: the whole width */
+};
+const INFO_ROWH=[0.95,0.85,0.9,0.95,0.9,0.95]; /* the usual look when the text is short */
+const INFO_PAD=[4,6,4,6]; /* cell margins, points */
+let _mctx=null;
+function textLines(text, pt, widthIn, bold){
+  if(_mctx===null){ try{ _mctx=document.createElement('canvas').getContext('2d')||false; }catch(e){ _mctx=false; } }
+  const W=(widthIn*72-INFO_PAD[1]-INFO_PAD[3])*0.95; /* a little spare: PowerPoint wraps a bit differently */
+  if(_mctx) _mctx.font=(bold?'bold ':'')+pt+'px Arial';
+  const meas=x=>_mctx?_mctx.measureText(x).width:x.length*pt*0.52;
+  const sp=meas(' '); let n=0;
+  for(const para of String(text||'').split('\n')){
+    let lines=1, cur=0;
+    for(const w of para.split(' ').filter(Boolean)){
+      const ww=meas(w);
+      if(cur&&cur+sp+ww<=W){ cur+=sp+ww; continue; }
+      if(cur) lines++;
+      cur=ww; while(cur>W){ lines++; cur-=W; }
+    }
+    n+=lines;
+  }
+  return n;
+}
+/* the counts under "ביקור סדיר" (from each threshold up: big and red) */
+function infoCounts(st, s){ return [['חיסורים',absencesOf(st),s.absMin],['איחורים',latesOf(st),s.lateMin]].filter(c=>c[1]!=null); }
+function infoLabelH(f, counts, cont, colW1=INFO_LAY.one.colW[1]){
+  const lp=colW1>1.5?14:11; /* the continuation slide has bigger labels */
+  if(f==='iAtt'&&counts.length){ const big=counts.length>1?18:22;
+    return (11*1.2+counts.reduce((a,[,n,min])=>a+(n>=min?big:14)*1.2,0)+INFO_PAD[0]+INFO_PAD[2])/72; }
+  return (textLines(FLABEL[f]+(cont?' (המשך)':''),lp,colW1,true)*lp*1.2+INFO_PAD[0]+INFO_PAD[2])/72;
+}
+function infoRowNeed(row, pt, colW, counts){
+  const tH=(textLines(row.t,pt,colW[0])*pt*1.2+INFO_PAD[0]+INFO_PAD[2])/72;
+  return Math.max(0.4, tH, infoLabelH(row.f,counts,row.cont,colW[1]));
+}
+/* the longest beginning of a row's text that fits in `room` (whole lines, then whole sentences, then words) */
+function infoCut(row, pt, colW, counts, room){
+  const toks=[]; String(row.t).split('\n').forEach((l,i)=>{ const ss=sentencesOf(l); ss.forEach((x,j)=>{
+    const ws=x.split(' '); /* one sentence longer than a slide: by words */
+    if(infoRowNeed({f:row.f,t:x},pt,colW,counts)>room*0.9) ws.forEach((w,k)=>toks.push({t:w,nl:i>0&&j===0&&k===0}));
+    else toks.push({t:x,nl:i>0&&j===0});
+  }); });
+  const join=a=>a.map((x,k)=>(k&&x.nl?'\n':k?' ':'')+x.t).join('');
+  let k=0; while(k<toks.length&&infoRowNeed({f:row.f,t:join(toks.slice(0,k+1)),cont:row.cont},pt,colW,counts)<=room) k++;
+  if(!k||k===toks.length) return null;
+  const rest=toks.slice(k); rest[0]={...rest[0],nl:false};
+  return {head:join(toks.slice(0,k)), tail:join(rest)};
+}
+/* → [{rows:[{f,t,cont}], pt, rowH:[…], lay}] — one page per slide */
+function infoPages(st, s){
+  const counts=infoCounts(st,s), rows=INFO.map(f=>({f,t:String(st[f]||'').trim()}));
+  const one=INFO_LAY.one, avail=one.bottom-one.top;
+  for(const pt of [11,10.5,10,9.5,9]){
+    const need=rows.map(r=>infoRowNeed(r,pt,one.colW,counts)); if(need.reduce((a,b)=>a+b,0)>avail+1e-6) continue;
+    /* the usual heights, taken from rows with room to spare where a longer row needs more */
+    const want=need.map((n,i)=>Math.max(n,INFO_ROWH[i])), over=want.reduce((a,b)=>a+b,0)-avail;
+    const slack=want.map((w,i)=>w-need[i]), sl=slack.reduce((a,b)=>a+b,0);
+    return [{rows,pt,lay:one,rowH:over>0?want.map((w,i)=>w-slack[i]*over/sl):want}];
+  }
+  /* too long even at 9: every row stays on the student's slide; only the longest rows are cut, and what is
+     left of them continues, row by row, on the next slide */
+  const pt=10, first=INFO_LAY.first, fAvail=first.bottom-first.top, minRoom=0.6;
+  const need=rows.map(r=>infoRowNeed(r,pt,first.colW,counts)), cut=new Set();
+  const fixed=()=>rows.reduce((a,r,i)=>a+(cut.has(i)?0:need[i]),0);
+  while(fixed()+cut.size*minRoom>fAvail&&cut.size<rows.length){
+    let k=-1; rows.forEach((r,i)=>{ if(!cut.has(i)&&(k<0||need[i]>need[k])) k=i; }); cut.add(k);
+  }
+  const room=fAvail-fixed(), cutNeed=[...cut].reduce((a,i)=>a+need[i],0);
+  const page=[], tails=[];
+  rows.forEach((r,i)=>{
+    if(!cut.has(i)){ page.push(r); return; }
+    const c=infoCut(r,pt,first.colW,counts,Math.max(minRoom,room*need[i]/cutNeed));
+    if(c){ page.push({f:r.f,t:c.head}); tails.push({f:r.f,t:c.tail,cont:true}); }
+    else { page.push({f:r.f,t:''}); tails.push({f:r.f,t:r.t,cont:true}); }
+  });
+  const pNeed=page.map(r=>infoRowNeed(r,pt,first.colW,counts)), extra=Math.max(0,fAvail-pNeed.reduce((a,b)=>a+b,0))/page.length;
+  const pages=[{rows:page,pt,lay:first,rowH:pNeed.map(n=>n+extra)}];
+  /* the next slide: as big as fits (it is read on the screen in the meeting) */
+  const cont=INFO_LAY.cont, cAvail=cont.bottom-cont.top;
+  for(const cp of [16,15,14,13,12,11,10]){
+    const cn=tails.map(r=>infoRowNeed(r,cp,cont.colW,counts));
+    if(cn.reduce((a,b)=>a+b,0)<=cAvail||cp===10){
+      /* still too long at 10: one slide after another */
+      let pg=[], ph=[], used=0;
+      tails.forEach((r,i)=>{ if(used+cn[i]>cAvail&&pg.length){ pages.push({rows:pg,pt:cp,lay:cont,rowH:ph}); pg=[]; ph=[]; used=0; }
+        pg.push(r); ph.push(cn[i]); used+=cn[i]; });
+      if(pg.length) pages.push({rows:pg,pt:cp,lay:cont,rowH:ph});
+      break;
+    }
+  }
+  return pages;
+}
 function renderChecks(){
   const {students,conflicts,missing}=built, links=built.autoLinks||[], lost=built.unmatched||[];
   const open=conflicts.filter(c=>!c.resolved).length;
@@ -1698,6 +1811,13 @@ function renderChecks(){
     });
     box.appendChild(el);
   }
+  /* a long "תמונת מצב אישית": it continues on a slide of its own */
+  const longInfo=students.filter(st=>infoPages(st,settings()).length>1);
+  if(longInfo.length){
+    const el=document.createElement('div'); el.className='issue missing';
+    el.innerHTML=`<div class="issue-title">תמונת מצב אישית ארוכה: ${longInfo.map(x=>esc(x.name)).join(', ')}</div><span class="hint">הטקסט לא נכנס בשקף אחד, ולכן ${longInfo.length>1?'לכל אחד מהם יהיה':'יהיה'} שקף ״תמונת מצב אישית · המשך״ מיד אחרי שקף התלמיד/ה. אם תרצו שקף אחד, קצרו את הטקסט בשלב 4, ״התלמידים״.</span>`;
+    box.appendChild(el);
+  }
   for(const m of missing){
     const el=document.createElement('div'); el.className='issue missing';
     el.innerHTML=`<div class="issue-title">${esc(m.name)}: לא מופיע/ה ב${m.absent.map(esc).join(', ')}</div><span class="hint">בדקו אם השם כתוב אחרת בדוח. הנתונים מהדוח החסר יופיעו בשקף כ״—״.</span>`;
@@ -1725,17 +1845,20 @@ function renderStudents(){
       <div class="bars">${bars}</div>
       ${tags?`<div class="tags">${tags}</div>`:''}
       ${flagsBy[s.key]?`<div class="flag">לבדיקה: ${flagsBy[s.key].map(esc).join(', ')}</div>`:''}
+      <div class="flag info-long" hidden>תמונת המצב האישית ארוכה ולא נכנסת בשקף אחד, ולכן תמשיך בשקף נוסף מיד אחרי שקף התלמיד/ה. אפשר לקצר את הטקסט כאן.</div>
       <details class="info"><summary>תמונת מצב אישית${INFO.some(f=>s[f])?' ✓':''}</summary><div class="info-fields"></div></details>`;
     card.querySelector('.ph').onclick=()=>{
       const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
       inp.onchange=async()=>{ const f=inp.files[0]; if(!f) return; const d=await shrink(await fileToDataURL(f)); if(d){ state.photos[s.key]=d; (state.photoSrc||={})[s.key]='manual'; refresh(); } };
       inp.click();
     };
-    const inf=card.querySelector('.info-fields');
+    const inf=card.querySelector('.info-fields'), longEl=card.querySelector('.info-long');
+    const markLong=()=>{ const st=built.students.find(x=>x.key===s.key)||s; longEl.hidden=infoPages(st,settings()).length<2; };
+    markLong();
     for(const f of INFO){
       const lab=document.createElement('label'); lab.textContent=FLABEL[f];
       const ta=document.createElement('textarea'); ta.id='info-'+f+'-'+s.key.replace(/\s/g,'_'); ta.value=s[f];
-      ta.oninput=()=>{ (state.overrides[s.key] ||= {})[f]=ta.value; const st=built.students.find(x=>x.key===s.key); if(st) st[f]=ta.value; };
+      ta.oninput=()=>{ (state.overrides[s.key] ||= {})[f]=ta.value; const st=built.students.find(x=>x.key===s.key); if(st) st[f]=ta.value; markLong(); };
       lab.appendChild(ta); inf.appendChild(lab);
     }
     box.appendChild(card);
@@ -2750,9 +2873,11 @@ async function generate(){
       coreTitleY=2.64+Math.ceil(neg.length/cols)*(ch+gy)+0.08;
     }
     /* subjects with ongoing grades link to a hidden slide right after this one */
-    const S=sl._slideNum, detail=coreFor(st,s.cls).filter(c=>assessFor(st,efField(st,c)).length), detailNum=Object.fromEntries(detail.map((c,i)=>[c,S+1+i]));
+    /* a long "תמונת מצב אישית" continues on visible slides right after this one; the hidden slides come after them */
+    const infoPg=infoPages(st,s), contN=infoPg.length-1;
+    const S=sl._slideNum, detail=coreFor(st,s.cls).filter(c=>assessFor(st,efField(st,c)).length), detailNum=Object.fromEntries(detail.map((c,i)=>[c,S+1+contN+i]));
     /* נכשלים: hovering shows the failed subjects and grades (ScreenTip, in the slideshow); clicking opens a hidden slide after the subject slides */
-    const failList=st.failList||[], failNum=failList.length?S+1+detail.length:null;
+    const failList=st.failList||[], failNum=failList.length?S+1+contN+detail.length:null;
     if(failNum){
       const tip=failShort.map(x=>x.s+' '+fmt(x.g)).join(' · ');
       sl.addText('›',T({x:failTileX+tw-0.22,y:1.22,w:0.18,h:0.3,fontSize:14,bold:true,color:C.bad,align:'center'}));
@@ -2783,21 +2908,41 @@ async function generate(){
     /* left: general info table */
     sl.addShape(pptx.ShapeType.roundRect,{x:0.33,y:0.6,w:4.95,h:6.25,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.12});
     sl.addText('תמונת מצב אישית',T({x:0.5,y:0.7,w:4.6,h:0.45,fontSize:16,bold:true}));
-    const absN=absencesOf(st), lateN=latesOf(st);
     /* the counts are shown for everyone; from each threshold up the number is big and red */
-    const counts=[['חיסורים',absN,s.absMin],['איחורים',lateN,s.lateMin]].filter(c=>c[1]!=null);
+    const counts=infoCounts(st,s);
     const big=counts.length>1?18:22;
     const attLabel=[{text:FLABEL.iAtt,options:{bold:true,breakLine:counts.length>0}}];
     counts.forEach(([w,n,min],k)=>{ const hot=n>=min, last=k===counts.length-1;
       attLabel.push({text:w+': ',options:{bold:hot,color:hot?C.bad:C.soft}},{text:String(n),options:{bold:true,color:hot?C.bad:C.ink,fontSize:hot?big:14,breakLine:!last}}); });
-    const rows=INFO.map((f,i)=>{ const fill={color:i%2?TH.band:C.white};
-      const label=f==='iAtt'&&counts.length?attLabel:FLABEL[f];
-      return [ {text:st[f]||'',options:T({fontSize:11,fill,valign:'top',margin:[4,6,4,6]})},
-               {text:label,options:T({fontSize:11,bold:true,fill,valign:'top',margin:[4,6,4,6]})} ]; });
-    sl.addTable(rows,{x:0.5,y:1.25,w:4.6,colW:[3.25,1.35],rowH:[0.95,0.85,0.9,0.95,0.9,0.95],border:{type:'solid',pt:0.75,color:'C9D3E6'},autoPage:false});
+    const infoTable=(slide,pg,x)=>{
+      const rows=pg.rows.map((r,i)=>{ const fill={color:i%2?TH.band:C.white};
+        const label=r.f==='iAtt'&&counts.length&&!r.cont?attLabel:FLABEL[r.f]+(r.cont?' (המשך)':'');
+        return [ {text:r.t||'',options:T({fontSize:pg.pt,fill,valign:'top',margin:INFO_PAD})},
+                 {text:label,options:T({fontSize:pg.lay.colW[1]>1.5?14:11,bold:true,fill,valign:'top',margin:INFO_PAD})} ]; });
+      const w=pg.lay.colW[0]+pg.lay.colW[1];
+      slide.addTable(rows,{x,y:pg.lay.top,w,colW:pg.lay.colW,rowH:pg.rowH,border:{type:'solid',pt:0.75,color:'C9D3E6'},autoPage:false});
+    };
+    infoTable(sl,infoPg[0],0.5);
+    if(contN) sl.addText('המשך בשקף הבא ›',T({x:0.5,y:6.52,w:4.6,h:0.28,fontSize:11,bold:true,color:ACC,align:'left'}));
 
     if(flagsBy[st.key]) sl.addText('לבדיקה – ערכים שונים בדוחות: '+flagsBy[st.key].join(' · '),T({x:5.5,y:6.92,w:7.5,h:0.3,fontSize:10,color:C.bad,fit:'shrink'}));
     if(s.credit) sl.addText(s.credit,T({x:0.33,y:6.95,w:5,h:0.3,fontSize:9,color:C.faint,align:'left'}));
+
+    /* "תמונת מצב אישית · המשך": what did not fit, on the whole width of a slide */
+    infoPg.slice(1).forEach((pg,i)=>{
+      const cs=pptx.addSlide(); cs.background={color:TH.bg};
+      if(s.bsd) cs.addText('בס״ד',T({x:11.9,y:0.15,w:1.1,h:0.3,fontSize:11,color:C.soft}));
+      cs.addShape(pptx.ShapeType.roundRect,{x:0.33,y:0.6,w:12.67,h:6.38,fill:{color:C.white},line:{color:C.line,width:0.75},rectRadius:0.12});
+      const cph=photoFor(st), d=0.85;
+      if(cph) cs.addImage({data:cph,x:11.95,y:0.75,w:d,h:d,rounding:true,sizing:{type:'cover',w:d,h:d}});
+      else { cs.addShape(pptx.ShapeType.ellipse,{x:11.95,y:0.75,w:d,h:d,fill:{color:'E3E9F7'},line:{color:'E3E9F7'}});
+        cs.addText(initials(st.name),T({x:11.95,y:0.75,w:d,h:d,fontSize:18,bold:true,color:'8A9BC4',align:'center'})); }
+      cs.addText('תמונת מצב אישית · המשך'+(infoPg.length>2?' '+(i+1):''),T({x:0.55,y:0.72,w:11.2,h:0.5,fontSize:22,bold:true,color:ACC}));
+      cs.addText([st.name,st.cls&&('כיתה '+st.cls)].filter(Boolean).join('   ·   '),T({x:0.55,y:1.2,w:11.2,h:0.35,fontSize:14,color:C.soft}));
+      infoTable(cs,pg,0.55);
+      if(i<infoPg.length-2) cs.addText('המשך בשקף הבא ›',T({x:0.55,y:6.6,w:6,h:0.28,fontSize:11,bold:true,color:ACC,align:'left'}));
+      if(s.credit) cs.addText(s.credit,T({x:0.33,y:6.95,w:5,h:0.3,fontSize:9,color:C.faint,align:'left'}));
+    });
 
     /* hidden slides: ongoing grades per subject (shown only when a subject is clicked) */
     for(const c of detail){
