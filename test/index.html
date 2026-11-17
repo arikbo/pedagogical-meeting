@@ -3091,6 +3091,29 @@ async function generate(){
   cv.addShape(pptx.ShapeType.rect,{x:11.3,y:4.65,w:1.2,h:0.06,fill:{color:ACC},line:{color:ACC}});
   cv.addText([{text:'© נבנה על ידי אריק · כל הזכויות שמורות · לפניות בוואטסאפ',options:{hyperlink:{url:'https://wa.me/972507652552?text=%D7%94%D7%99%D7%99%20%D7%90%D7%A8%D7%99%D7%A7%2C%20%D7%94%D7%92%D7%A2%D7%AA%D7%99%20%D7%9E%D7%94%D7%9E%D7%97%D7%95%D7%9C%D7%9C%20%D7%9C%D7%99%D7%A9%D7%99%D7%91%D7%94%20%D7%A4%D7%93%D7%92%D7%95%D7%92%D7%99%D7%AA%20%D7%95%D7%A8%D7%A6%D7%99%D7%AA%D7%99%20%D7%9C%D7%A9%D7%90%D7%95%D7%9C/%D7%9C%D7%94%D7%A6%D7%99%D7%A2%3A',tooltip:'וואטסאפ לאריק'},color:C.faint}}],T({x:0.4,y:7.05,w:7,h:0.3,fontSize:9,color:C.faint,align:'left'}));
 
+  /* who teaches the class */
+  const t66=state.files.filter(f=>f.kind==='teachers').flatMap(f=>f.teachers);
+  const t58=state.files.filter(f=>f.kind==='groups').flatMap(f=>f.teachers);
+  const tList=t66.length?t66:t58.length?t58:state.files.flatMap(f=>f.teachers||[]); /* the סדין lists only teachers who entered grades */
+  if(s.showTeachers&&tList.length){
+    /* one card per teacher, with every subject they teach in the class */
+    const by={}; for(const t of tList){ if(/^חינוך$/.test(t.subject)) continue; (by[t.teacher] ||= new Set()).add(t.subject+(t.group?' ('+t.group+')':'')); }
+    const subj=Object.entries(by).sort((a,b)=>a[0].localeCompare(b[0],'he')).map(([teacher,set])=>[teacher,new Set([[...set].join(' · ')])]);
+    const ts=pptx.addSlide(); ts.background={color:PAGE}; bsd(ts);
+    ts.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
+    ts.addText('צוות המורים'+(s.cls?' · כיתה '+s.cls:''),T({x:0.6,y:0.45,w:11.9,h:0.7,fontSize:30,bold:true}));
+    const homeroom=s.teacher||(tList.find(t=>/^חינוך$/.test(t.subject))||{}).teacher;
+    if(homeroom) ts.addText('מחנך/ת הכיתה: '+homeroom,T({x:0.6,y:1.1,w:11.9,h:0.4,fontSize:16,color:ACC,bold:true}));
+    const cols=3, cw=3.85, gx=0.18, top=1.7, avail=6.85-top, rows=Math.ceil(subj.length/cols), chh=Math.min(1.3,(avail-(rows-1)*0.14)/rows);
+    subj.forEach(([name,set],i)=>{
+      const r=Math.floor(i/cols), k=i%cols, x=12.5-(k+1)*cw-k*gx, y=top+r*(chh+0.14);
+      ts.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:chh,fill:{color:'FFFFFF'},line:{color:C.line,width:0.75},rectRadius:0.08});
+      ts.addText(name,T({x:x+0.15,y:y+0.06,w:cw-0.3,h:Math.min(0.45,chh*0.42),fontSize:17,bold:true,color:C.ink,fit:'shrink'}));
+      ts.addText([...set].join('\n'),T({x:x+0.15,y:y+Math.min(0.5,chh*0.42),w:cw-0.3,h:chh-Math.min(0.54,chh*0.44),fontSize:13,color:C.soft,valign:'top',fit:'shrink'}));
+    });
+    credit(ts);
+  }
+
   /* the class at a glance: boys / girls */
   {
     const BOY='2F5BD8', GIRL='D9467A';
@@ -3168,30 +3191,6 @@ async function generate(){
     });
     credit(cs2);
   }
-
-  /* who teaches the class */
-  const t66=state.files.filter(f=>f.kind==='teachers').flatMap(f=>f.teachers);
-  const t58=state.files.filter(f=>f.kind==='groups').flatMap(f=>f.teachers);
-  const tList=t66.length?t66:t58.length?t58:state.files.flatMap(f=>f.teachers||[]); /* the סדין lists only teachers who entered grades */
-  if(s.showTeachers&&tList.length){
-    /* one card per teacher, with every subject they teach in the class */
-    const by={}; for(const t of tList){ if(/^חינוך$/.test(t.subject)) continue; (by[t.teacher] ||= new Set()).add(t.subject+(t.group?' ('+t.group+')':'')); }
-    const subj=Object.entries(by).sort((a,b)=>a[0].localeCompare(b[0],'he')).map(([teacher,set])=>[teacher,new Set([[...set].join(' · ')])]);
-    const ts=pptx.addSlide(); ts.background={color:PAGE}; bsd(ts);
-    ts.addShape(pptx.ShapeType.rect,{x:12.93,y:0,w:0.4,h:7.5,fill:{color:ACC},line:{color:ACC}});
-    ts.addText('צוות המורים'+(s.cls?' · כיתה '+s.cls:''),T({x:0.6,y:0.45,w:11.9,h:0.7,fontSize:30,bold:true}));
-    const homeroom=s.teacher||(tList.find(t=>/^חינוך$/.test(t.subject))||{}).teacher;
-    if(homeroom) ts.addText('מחנך/ת הכיתה: '+homeroom,T({x:0.6,y:1.1,w:11.9,h:0.4,fontSize:16,color:ACC,bold:true}));
-    const cols=3, cw=3.85, gx=0.18, top=1.7, avail=6.85-top, rows=Math.ceil(subj.length/cols), chh=Math.min(1.3,(avail-(rows-1)*0.14)/rows);
-    subj.forEach(([name,set],i)=>{
-      const r=Math.floor(i/cols), k=i%cols, x=12.5-(k+1)*cw-k*gx, y=top+r*(chh+0.14);
-      ts.addShape(pptx.ShapeType.roundRect,{x,y,w:cw,h:chh,fill:{color:'FFFFFF'},line:{color:C.line,width:0.75},rectRadius:0.08});
-      ts.addText(name,T({x:x+0.15,y:y+0.06,w:cw-0.3,h:Math.min(0.45,chh*0.42),fontSize:17,bold:true,color:C.ink,fit:'shrink'}));
-      ts.addText([...set].join('\n'),T({x:x+0.15,y:y+Math.min(0.5,chh*0.42),w:cw-0.3,h:chh-Math.min(0.54,chh*0.44),fontSize:13,color:C.soft,valign:'top',fit:'shrink'}));
-    });
-    credit(ts);
-  }
-
 
   const flagsBy={}; for(const c of built.conflicts) if(!c.resolved)(flagsBy[c.key] ||= []).push(`${FLABEL[c.field]} (${c.options.map(o=>o.val).join(' / ')})`);
   for(const st of built.students){
