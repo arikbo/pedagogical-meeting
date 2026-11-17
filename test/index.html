@@ -567,6 +567,9 @@ function sentencesOf(line){ return line.split(/(?<=[.;!?])\s+|(?<=[א-ת\d][.!?]
 const DIFF_WORDS=/(^|[\s,(])(מתקשה|מתקשים|קושי|קשיים|קשה לו|קשה לה|בעיה|בעייה|בעיות|בעייתי|בעייתית|מתפרץ|מתפרצת|מפריע|מפריעה)(?![א-ת])/;
 /* a point to act on ("צריכה תגבור", "לעדכן את האמא") */
 const REC_WORDS=/(^|[\s,(])(צריך|צריכה|צריכים|כדאי|יש לשים לב|לשים לב|לעדכן|לדבר|להוציא|לחבר|לקרב|לבדוק|מומלץ)(?![א-ת])/;
+/* קדם ממריאות is an enrichment program: always חוזקות (an older text that says just "ממריאות" is named "קדם ממריאות") */
+const MAMRIOT=/ממריאות/;
+const mamriot=t=>String(t).replace(/(קדם[\s-]*)?ממריאות/g,'קדם ממריאות');
 const EMPTY_VAL=/^(אין|תקין|איו|רגיל|-|—|ללא)\.?$/;
 /* val: {iGen:'...', ...}; locked: rows the teacher typed by hand (never moved into or out of) */
 function rerouteInfo(val, locked={}){
@@ -587,7 +590,8 @@ function rerouteInfo(val, locked={}){
     const keepLines=[];
     for(const line of String(val[f]).split('\n')){
       const keep=[];
-      const where=s=>ANS_FROM.includes(f)&&!locked.iAns&&isAns(s)?'iAns'
+      const where=s=>f!=='iStr'&&!locked.iStr&&MAMRIOT.test(s)?'iStr'
+          :ANS_FROM.includes(f)&&!locked.iAns&&isAns(s)?'iAns'
           :ATT_FROM.includes(f)&&!locked.iAtt&&ATT_WORDS.test(s)?'iAtt'
           :EMO_FROM.includes(f)&&!locked.iEmo&&!locked.iExc&&(EMO_WORDS.test(s)||(f==='iGen'&&DIFF_WORDS.test(s)&&!/^ה?הורים/.test(s)))&&!KIN.test(s)?'iEmo'
           :f==='iGen'&&!locked.iStr&&STR_WORDS.test(s)&&!NEG.test(s)&&!KIN.test(s)&&!/^הורים|^ההורים|^אם |^האם |^אב |^האב /.test(s)?'iStr':null;
@@ -610,16 +614,19 @@ function rerouteInfo(val, locked={}){
     }
     val[f]=keepLines.join('\n');
   }
-  if(val.iAns&&!locked.iAns&&!locked.iEmo){
-    const stay=[]; for(const l of String(val.iAns).split('\n')){ if(DIFF_WORDS.test(l)&&!ANS_WORDS.test(l)) add.iEmo.push(l); else stay.push(l); }
+  if(val.iAns&&!locked.iAns&&(!locked.iEmo||!locked.iStr)){
+    const stay=[]; for(const l of String(val.iAns).split('\n')){ if(MAMRIOT.test(l)&&!locked.iStr) add.iStr.push(l); else if(!locked.iEmo&&DIFF_WORDS.test(l)&&!ANS_WORDS.test(l)) add.iEmo.push(l); else stay.push(l); }
     val.iAns=stay.join('\n');
   }
-  for(const [f,list] of Object.entries(add)){
-    const have=String(val[f]||''); const extra=list.filter(s=>!have.includes(s));
+  for(let [f,list] of Object.entries(add)){
+    if(f==='iStr') list=list.map(mamriot);
+    const have=String(val[f]||''); let seenM=MAMRIOT.test(have);
+    const extra=list.filter(s=>!have.includes(s)&&!(f==='iStr'&&MAMRIOT.test(s)&&(seenM||!(seenM=true))));
     if(extra.length) val[f]=[have,...extra].filter(Boolean).join('\n');
   }
   /* neat text: no space before a full stop or comma, no comma at the end of a line, no line twice */
   for(const f of INFO_IN){ if(locked[f]||!val[f]) continue;
+    if(f==='iStr') val[f]=mamriot(val[f]);
     const seen=new Set();
     val[f]=String(val[f]).split('\n').map(l=>l.replace(/\s+([.,:;!?])/g,'$1').replace(/,(?=[א-תA-Za-z])/g,', ').replace(/\s{2,}/g,' ').replace(/^[-–•*\s]+/,'').replace(/[,;\s]+$/,'').trim())
       .filter(l=>l&&!seen.has(l)&&seen.add(l)).join('\n'); }
@@ -1021,7 +1028,7 @@ function buildStudents(files, opts){
     if(st.camp?.length&&!('iStr' in ov)){
       const g=clean(val.gender), verb=/^(נ|נקבה|בת)/.test(g)?'משתתפת':/^(ז|זכר|בן)/.test(g)?'משתתף':'משתתף/ת';
       const have=val.iStr||'', nk=t=>t.replace(/[\s"״'`׳–-]/g,'');
-      const add=st.camp.filter(c=>{ const w=nk(c.replace(/^קמפוס\s*/,'')); return !(/קמפוס/.test(have)&&nk(have).includes(w)); }).map(c=>`${verb} ב${c}`); /* once: not when the text already names this קמפוס */
+      const add=st.camp.filter(c=>{ if(/ממריאות/.test(c)) return !/ממריאות/.test(have); const w=nk(c.replace(/^קמפוס\s*/,'')); return !(/קמפוס/.test(have)&&nk(have).includes(w)); }).map(c=>`${verb} ב${c}`); /* once: not when the text already names this קמפוס */
       if(add.length) val.iStr=[have,...add].filter(Boolean).join('\n');
     }
     Object.assign(val,ov);
@@ -1313,7 +1320,7 @@ function parseGroupsReport(aoa){
       const txt=subject+' '+lv; if(!ANS_SUBJ.test(txt)||/אסטרטגי/.test(txt)) return;
       ansCols.push({i,label:subject+(lv&&ANS_SUBJ.test(lv)&&!subject.includes(lv)?' – '+lv:''),teacher}); });
     /* a קמפוס (כדורגל, תקשורת…) is an enrichment program: it goes to חוזקות, without the teacher */
-    const campCols=[]; row.forEach((c,i)=>{ const line=sadinText(String((aoa[r]||[])[i]??'').split('\n')[0]); const m=line.match(/^([^,]+),\s*([^,]+),/); if(m&&/^קמפוס/.test(m[2].trim())) campCols.push({i,label:m[2].trim()}); });
+    const campCols=[]; row.forEach((c,i)=>{ const line=sadinText(String((aoa[r]||[])[i]??'').split('\n')[0]); const m=line.match(/^([^,]+),\s*([^,]+),/); if(m&&/^קמפוס/.test(m[2].trim())) campCols.push({i,label:m[2].trim()}); else if(m&&/ממריאות/.test(m[2])) campCols.push({i,label:'תוכנית קדם ממריאות'}); });
     const campByName={};
     const out=[['שם התלמיד','כיתה','מין','הקבצה מתמטיקה','הקבצה אנגלית']];
     for(let k=r+1;k<aoa.length;k++){
@@ -2239,7 +2246,7 @@ const ROLE_DEFAULTS=[
   {name:'מש״צים',m:'מש״צ',f:'מש״צית',u:'מש״צ/ית'},
   {name:'להקת בית הספר',m:'משתתף בלהקת בית הספר',f:'משתתפת בלהקת בית הספר',u:'משתתף/ת בלהקת בית הספר'},
   {name:'מועצת תלמידים',m:'חבר מועצת התלמידים',f:'חברת מועצת התלמידים',u:'חבר/ת מועצת התלמידים'},
-  {name:'ממריאות',m:'משתתף בתוכנית ממריאות',f:'משתתפת בתוכנית ממריאות',u:'משתתף/ת בתוכנית ממריאות'}];
+  {name:'קדם ממריאות',m:'משתתף בתוכנית קדם ממריאות',f:'משתתפת בתוכנית קדם ממריאות',u:'משתתף/ת בתוכנית קדם ממריאות'}];
 state.roles=ROLE_DEFAULTS.map((r,i)=>({id:'r'+i,...r,keys:[]}));
 let roleSeq=ROLE_DEFAULTS.length, pkRole=null, pkSel=new Set();
 const rolePhrase=(r,g)=>g==='f'?r.f:g==='m'?r.m:r.u;
@@ -2250,7 +2257,7 @@ function roleStudent(k){ return built.students.find(s=>s.key===k||(s.aliasKeys||
 const ROLE_LINE=t=>{ const x=clean(t); return !!x&&state.roles.some(r=>[r.m,r.f,r.u].includes(x)); };
 function withRoles(text,s,strip=true){ /* strip: only the teacher's own edit (a line from a previous deck stays) */
   const base=String(text||'').split('\n').filter(l=>!strip||!ROLE_LINE(l)).join('\n').replace(/\s+$/,'');
-  const add=state.roles.filter(r=>r.keys.some(k=>k===s.key||(s.aliasKeys||[]).includes(k))).map(r=>rolePhrase(r,s.gender)).filter(ph=>!base.includes(ph));
+  const add=state.roles.filter(r=>r.keys.some(k=>k===s.key||(s.aliasKeys||[]).includes(k))).map(r=>rolePhrase(r,s.gender)).filter(ph=>!base.includes(ph)&&!(MAMRIOT.test(ph)&&MAMRIOT.test(base))); /* קדם ממריאות once, however it is worded */
   return [base,...add].filter(Boolean).join('\n');
 }
 function applyRoles(students){ for(const s of students) s.iStr=withRoles(s.iStr,s,!!(state.overrides[s.key]&&'iStr' in state.overrides[s.key])); }
