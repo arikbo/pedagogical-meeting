@@ -2130,7 +2130,7 @@ function renderStudents(){
     for(const f of INFO){
       const lab=document.createElement('label'); lab.textContent=FLABEL[f];
       const ta=document.createElement('textarea'); ta.id='info-'+f+'-'+s.key.replace(/\s/g,'_'); ta.value=s[f];
-      ta.oninput=()=>{ (state.overrides[s.key] ||= {})[f]=ta.value; const st=built.students.find(x=>x.key===s.key); if(st) st[f]=ta.value; markLong(); };
+      ta.oninput=()=>{ (state.overrides[s.key] ||= {})[f]=ta.value; const st=built.students.find(x=>x.key===s.key); if(st) st[f]=f==='iStr'?withRoles(ta.value,st):ta.value; markLong(); };
       lab.appendChild(ta); inf.appendChild(lab);
     }
     box.appendChild(card);
@@ -2244,14 +2244,16 @@ state.roles=ROLE_DEFAULTS.map((r,i)=>({id:'r'+i,...r,keys:[]}));
 let roleSeq=ROLE_DEFAULTS.length, pkRole=null, pkSel=new Set();
 const rolePhrase=(r,g)=>g==='f'?r.f:g==='m'?r.m:r.u;
 function roleStudent(k){ return built.students.find(s=>s.key===k||(s.aliasKeys||[]).includes(k)); }
-function applyRoles(students){
-  for(const r of state.roles) for(const k of r.keys){
-    const s=students.find(x=>x.key===k||(x.aliasKeys||[]).includes(k)); if(!s) continue;
-    if(state.overrides[s.key]&&'iStr' in state.overrides[s.key]) continue; /* the teacher already edited חוזקות */
-    const ph=rolePhrase(r,s.gender); if((s.iStr||'').includes(ph)) continue;
-    s.iStr=[s.iStr,ph].filter(Boolean).join('\n');
-  }
+/* the roles are kept apart from the text: a line that is a role phrase (any role, any gender) is taken out,
+   then the roles picked now are added. So a teacher who edited חוזקות (before or after picking) still gets them,
+   and a role taken off in the picker leaves the slide */
+const ROLE_LINE=t=>{ const x=clean(t); return !!x&&state.roles.some(r=>[r.m,r.f,r.u].includes(x)); };
+function withRoles(text,s,strip=true){ /* strip: only the teacher's own edit (a line from a previous deck stays) */
+  const base=String(text||'').split('\n').filter(l=>!strip||!ROLE_LINE(l)).join('\n').replace(/\s+$/,'');
+  const add=state.roles.filter(r=>r.keys.some(k=>k===s.key||(s.aliasKeys||[]).includes(k))).map(r=>rolePhrase(r,s.gender)).filter(ph=>!base.includes(ph));
+  return [base,...add].filter(Boolean).join('\n');
 }
+function applyRoles(students){ for(const s of students) s.iStr=withRoles(s.iStr,s,!!(state.overrides[s.key]&&'iStr' in state.overrides[s.key])); }
 function renderRoles(){
   const box=$('#rolesBox'); if(!box) return;
   const show=!state.sample&&built.students.length>0; box.hidden=!show; if(!show) return;
