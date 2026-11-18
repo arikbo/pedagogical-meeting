@@ -1,7 +1,7 @@
 /* דף יום הורים – האפליקציה */
 'use strict';
 /* ↓↓↓ כתובת ה-Web App של Google Apps Script (מסתיימת ב-/exec). ריק = מצב הדגמה: הכל נשמר רק בדפדפן הזה ↓↓↓ */
-const API = '';
+const API = 'https://script.google.com/macros/s/AKfycbx2n23gKqmj_oEpI7psUBKqI_TXmblkmQbXUzIS1weLBVmeAf_-6q4IWAWe4Ltg75XU/exec';
 /* ↑↑↑ */
 
 const ROLES=['מש״צ','מועצת תלמידים','להקת בית הספר','נבחרת ספורט','חונך/ת'];
