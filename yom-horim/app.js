@@ -1,7 +1,7 @@
 /* דף יום הורים – האפליקציה */
 'use strict';
 /* ↓↓↓ כתובת ה-Web App של Google Apps Script (מסתיימת ב-/exec). ריק = מצב הדגמה: הכל נשמר רק בדפדפן הזה ↓↓↓ */
-const API = 'https://script.google.com/macros/s/AKfycbx2n23gKqmj_oEpI7psUBKqI_TXmblkmQbXUzIS1weLBVmeAf_-6q4IWAWe4Ltg75XU/exec';
+const API = 'https://script.google.com/macros/s/AKfycbwsUZnxuaTSvPaBLInaGZbfK7m8AOp2FpXMekcFihsAZKafNxJ1xAge_vQbQX3vGOYL/exec';
 /* ↑↑↑ */
 
 const ROLES=['מש״צ','מועצת תלמידים','להקת בית הספר','נבחרת ספורט','חונך/ת'];
@@ -15,51 +15,16 @@ let toastT;
 function toast(msg){ let t=$('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t); } t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,2200); }
 function copy(text){ (navigator.clipboard?navigator.clipboard.writeText(text):Promise.reject()).then(()=>toast('הקישור הועתק'),()=>{ prompt('העתיקו את הקישור:',text); }); }
 
-/* ---------- storage: Google Sheet through Apps Script, or this browser (demo) ---------- */
-const DEMO_CODE='1234';
+/* ---------- storage: the Google Sheet, through Apps Script ---------- */
 const getCode=()=>localStorage.getItem('yh_code')||'';
+const getAdmin=()=>localStorage.getItem('yh_admin')||'';
 async function call(q){
-  q={...q,code:getCode()};
+  q={...q,code:getCode(),admin:getAdmin()};
   let j;
-  if(!API) j=await localCall(q);
-  else{ const r=await fetch(API,{method:'POST',body:JSON.stringify(q)}); j=await r.json(); }
-  if(j.error){ const e=new Error(j.error); e.codeError=!!j.codeError; throw e; }
+  try{ const r=await fetch(API,{method:'POST',body:JSON.stringify(q)}); j=await r.json(); }
+  catch(e){ throw new Error('אין חיבור לשרת. בדקו את האינטרנט ונסו שוב.'); }
+  if(j.error){ const e=new Error(j.error); e.codeError=!!j.codeError; e.adminError=!!j.adminError; throw e; }
   return j;
-}
-function ldb(){ try{ return JSON.parse(localStorage.getItem('yh_db'))||{classes:{},entries:[]}; }catch(e){ return {classes:{},entries:[]}; } }
-function lsave(db){ localStorage.setItem('yh_db',JSON.stringify(db)); }
-function tok(n){ const a='abcdefghijkmnpqrstuvwxyz23456789'; let s=''; for(let i=0;i<n;i++) s+=a[Math.floor(Math.random()*a.length)]; return s; }
-/* the same rules as apps-script.gs, kept in this browser (demo) */
-async function localCall(q){
-  const db=ldb(), codeOk=String(q.code||'').trim()===DEMO_CODE;
-  if(q.action==='create'){ if(!codeOk) return {error:'קוד בית ספר שגוי',codeError:true}; const id=tok(10), key=tok(16); (q.data.subjects||[]).forEach(s=>s.token=tok(12)); db.classes[id]={key,name:q.name,homeroom:q.homeroom,data:q.data,reports:q.reports||{}}; lsave(db); return {id,key}; }
-  const c=db.classes[q.id]; if(!c) return {error:'הכיתה לא נמצאה. בדקו את הקישור.'};
-  const admin=!!q.key&&q.key===c.key;
-  const find=()=>db.entries.find(e=>e.id===q.id&&e.subjectId===q.subjectId&&e.studentKey===q.studentKey);
-  if(q.t){
-    if(!codeOk) return {error:'קוד בית ספר שגוי',codeError:true};
-    const sub=(c.data.subjects||[]).find(s=>s.token&&s.token===q.t);
-    if(!sub) return {error:'הקישור האישי הזה כבר לא בתוקף. בקשו מהמחנך/ת קישור חדש.'};
-    if(q.action==='tget') return {cls:{id:q.id,name:c.name,homeroom:c.homeroom},subject:{id:sub.id,subject:sub.subject,teacher:sub.teacher},students:c.data.students.filter(s=>sub.students.includes(s.key)),entries:db.entries.filter(e=>e.id===q.id&&e.subjectId===sub.id)};
-    if(q.action!=='save') return {error:'אין הרשאה'};
-    if(!sub.students.includes(q.studentKey)) return {error:'התלמיד/ה לא ברשימה שלך'};
-    q={...q,subjectId:sub.id,by:sub.teacher};
-  } else {
-    if(!admin) return {error:'אין הרשאה'};
-    if(q.action==='get') return {cls:{id:q.id,name:c.name,homeroom:c.homeroom,data:c.data,reports:c.reports,admin:true},entries:db.entries.filter(e=>e.id===q.id)};
-    if(q.action==='retoken'){ const sub=c.data.subjects.find(s=>s.id===q.subjectId); sub.token=tok(12); lsave(db); return {token:sub.token}; }
-    if(q.action==='save'&&q.subjectId!=='_hr') return {error:'אין הרשאה'};
-  }
-  if(q.action==='save'){
-    let e=find(); const extra=!!(q.strength||q.response);
-    if(!e){ e={id:q.id,subjectId:q.subjectId,studentKey:q.studentKey,seen:q.subjectId==='_hr'||!extra}; db.entries.push(e); }
-    else{ const changed=(q.strength||'')!==(e.strength||'')||(q.response||'')!==(e.response||''); e.seen=q.subjectId==='_hr'?true:(changed?!extra:e.seen); }
-    Object.assign(e,{eval:q.eval||'',strength:q.strength||'',response:q.response||'',by:q.by||e.by||'',updated:new Date().toISOString()});
-    lsave(db); return {ok:true};
-  }
-  if(q.action==='review'){ const e=find(); if(!e) return {error:'לא נמצא'}; if(q.strength!=null) e.strength=q.strength; if(q.response!=null) e.response=q.response; e.seen=true; lsave(db); return {ok:true}; }
-  if(q.action==='update'){ if(q.reports) c.reports=q.reports; if(q.name!=null) c.name=q.name; if(q.homeroom!=null) c.homeroom=q.homeroom; lsave(db); return {ok:true}; }
-  return {error:'unknown'};
 }
 const myClasses=()=>{ try{ return JSON.parse(localStorage.getItem('yh_my'))||[]; }catch(e){ return []; } };
 function rememberClass(c){ const l=myClasses().filter(x=>x.id!==c.id); l.unshift(c); localStorage.setItem('yh_my',JSON.stringify(l.slice(0,20))); }
@@ -95,7 +60,6 @@ function dropZone(title,sub,accept,onFile,done){
 }
 function shell(eyebrow,title){
   app.innerHTML=`<header class="top"><img src="atidim-logo.png" alt="לוגו עתידים"><div class="t"><span class="eyebrow">${esc(eyebrow)}</span><h1>${esc(title)}</h1></div></header>
-  ${API?'':`<div class="demo">מצב הדגמה: הנתונים נשמרים רק בדפדפן הזה, ומורים אחרים לא יראו אותם. קוד בית ספר להדגמה: ${DEMO_CODE}</div>`}
   <main style="display:flex;flex-direction:column;gap:18px"></main>`;
   return $('main',app);
 }
@@ -128,7 +92,8 @@ function viewHome(){
     <p class="hint">מעלים את דוח 58 של הכיתה, מקבלים קישור לשלוח למורים המקצועיים, ובסוף מפיקים דף אחד לכל תלמיד.</p>
     <div><button class="btn primary" id="newCls">פתיחת כיתה חדשה</button></div></div>
     ${mine.length?`<div class="card"><h2>הכיתות שלי</h2><div style="display:flex;flex-direction:column;gap:8px">${mine.map(c=>`<a class="btn" style="justify-content:space-between" href="?c=${esc(c.id)}&k=${esc(c.key)}"><span>${esc(c.name)}</span><span class="hint">למסך המחנך ←</span></a>`).join('')}</div></div>`:''}
-    <div class="card"><h2>מורים מקצועיים</h2><p class="hint">קיבלתם קישור מהמחנך/ת? פשוט פתחו אותו, והוא יוביל אתכם ישר לרשימת התלמידים.</p></div>`;
+    <div class="card"><h2>מורים מקצועיים</h2><p class="hint">לכל מורה יש קישור אישי אחד לכל הכיתות. פותחים אותו ורואים את כל הכיתות שלכם.</p></div>
+    <footer class="ft"><a href="?admin=1" style="color:inherit">דף רכז</a></footer>`;
   $('#newCls').onclick=viewCreate;
 }
 
@@ -197,25 +162,27 @@ function viewCreate(){
   }
   draw();
 }
-function teacherLink(id,token){ return `${BASE}?c=${id}&t=${token}`; }
-/* one personal link per subject teacher: it opens only that subject, and the server checks it */
+function teacherLink(token){ return `${BASE}?m=${token}`; }
+function waMsg(name,url){ return `שלום ${name}, זה הקישור האישי שלך לכתיבת ההערכות לדף יום ההורים. הוא אחד לכל הכיתות שלך, וכל כיתה חדשה תופיע בו לבד:\n${url}\n(בכניסה הראשונה צריך את הקוד הבית ספרי)`; }
+/* one personal link per teacher, for all of their classes. A teacher who already got it from someone else needs nothing new */
 function teacherLinks(){
-  return `<div class="card"><h2>קישורים אישיים למורים</h2>
-    <p class="hint">כל מורה מקבל/ת קישור משלו/ה, שפותח רק את התלמידים שלו/ה. בכניסה הראשונה יתבקש גם הקוד הבית ספרי. אם קישור הגיע למישהו אחר – "קישור חדש", והישן מפסיק לעבוד.</p>
-    <div class="scroll"><table class="t"><tbody>${subjects().map(s=>{
-      const url=teacherLink(S.id,s.token), msg=`שלום ${s.teacher}, זה הקישור האישי שלך למילוי ההערכות ב${s.subject} לדף יום ההורים של כיתה ${S.cls.name}:\n${url}\n(בכניסה הראשונה צריך את הקוד הבית ספרי)`;
-      return `<tr><td><b>${esc(s.subject)}</b><br><span class="hint">${esc(s.teacher)}</span></td>
-        <td style="white-space:nowrap;text-align:left"><a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">וואטסאפ</a>
-        <button class="btn small" data-copy="${esc(url)}">העתקה</button>
-        <button class="btn small" data-new="${esc(s.id)}">קישור חדש</button></td></tr>`; }).join('')}</tbody></table></div></div>`;
+  const T=S.teachers||[];
+  return `<div class="card"><h2>קישורים למורים</h2>
+    <p class="hint">לכל מורה יש קישור אישי אחד לכל הכיתות שלו/ה, והכיתה שלך כבר מופיעה בו. מי שמסומן/ת "קיבל/ה קישור" – אין צורך לשלוח שוב.</p>
+    <div class="scroll"><table class="t"><tbody>${T.map(t=>{
+      const subs=subjects().filter(s=>clean(s.teacher)===t.name).map(s=>s.subject).join(', ');
+      const url=teacherLink(t.token);
+      return `<tr><td><b>${esc(t.name)}</b><br><span class="hint">${esc(subs)}</span></td>
+        <td style="white-space:nowrap;text-align:left">${t.sent?'<span class="st ok" style="margin-inline-end:8px">קיבל/ה קישור ✓</span>':''}
+        <a class="btn small" target="_blank" rel="noopener" data-sent="${esc(t.name)}" href="https://wa.me/?text=${encodeURIComponent(waMsg(t.name,url))}">${t.sent?'שוב':'וואטסאפ'}</a>
+        <button class="btn small" data-copy="${esc(url)}" data-sent="${esc(t.name)}">העתקה</button></td></tr>`; }).join('')}</tbody></table></div></div>`;
 }
-function bindTeacherLinks(el){
+function bindTeacherLinks(el,sentAction){
   bindCopy(el);
-  el.querySelectorAll('[data-new]').forEach(b=>b.onclick=async()=>{
-    const s=subjects().find(x=>x.id===b.dataset.new);
-    if(!confirm(`ליצור קישור חדש ל${s.teacher} (${s.subject})? הקישור הישן יפסיק לעבוד.`)) return;
-    try{ const r=await call({action:'retoken',id:S.id,key:S.key,subjectId:s.id}); s.token=r.token; drawManager(); toast('נוצר קישור חדש. שלחו אותו שוב למורה'); }catch(e){ toast(e.message); }
-  });
+  el.querySelectorAll('[data-sent]').forEach(b=>b.addEventListener('click',()=>{
+    const n=b.dataset.sent, t=(S.teachers||[]).find(x=>x.name===n); if(!t||t.sent) return;
+    t.sent=true; call(sentAction?{action:sentAction,names:[n]}:{action:'sent',id:S.id,key:S.key,names:[n]}).catch(()=>{});
+  }));
 }
 function bindCopy(el){ el.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copy(b.dataset.copy)); }
 function viewLinks(id,key,name){
@@ -225,7 +192,7 @@ function viewLinks(id,key,name){
     <div class="l"><b>הקישור שלך (מחנך/ת) – לא לשלוח למורים</b><code>${esc(adm)}</code>
     <div class="row"><button class="btn small" data-copy="${esc(adm)}">העתקה</button></div>
     <p class="hint">הוא נשמר גם ב"הכיתות שלי" בדפדפן הזה. כדאי לשמור אותו גם אצלך, למשל בהודעה לעצמך.</p></div>
-    <p class="hint">את הקישורים האישיים למורים שולחים מתוך מסך המחנך, בלשונית "מעקב".</p>
+    <p class="hint">את הקישורים למורים שולחים מתוך מסך המחנך, בלשונית "מעקב". מורה שכבר קיבל/ה קישור ממחנך אחר – הכיתה שלך כבר מופיעה אצלו/ה.</p>
     <div><a class="btn primary" href="?c=${esc(id)}&k=${esc(key)}">למסך המחנך</a></div></div>`;
   bindCopy(m);
 }
@@ -236,27 +203,42 @@ const ek=(sid,key)=>sid+'||'+key;
 async function load(id,key){
   const r=await call({action:'get',id,key});
   const entries=new Map(); for(const e of r.entries) entries.set(ek(e.subjectId,e.studentKey),e);
-  S={cls:r.cls,entries,id,key}; return S;
+  S={cls:r.cls,entries,id,key,teachers:r.teachers||[]}; return S;
 }
 const students=()=>S.cls.data.students||[];
 const subjects=()=>S.cls.data.subjects||[];
 const stuBy=k=>students().find(s=>s.key===k);
 
-/* ================= subject teacher (personal link) ================= */
-async function viewTeacher(id,t){
+/* ================= subject teacher: one personal link for all classes ================= */
+let M=null; /* the teacher's token */
+async function viewPortal(m){
+  M=m; shell('דף יום הורים','טוען…');
+  let r; try{ r=await withCode(()=>call({action:'mine',m})); }catch(e){ errorView(e.message); return; }
+  const page=shell('דף יום הורים',`שלום ${r.name}`);
+  const done=r.classes.filter(c=>c.total&&c.done>=c.total).length;
+  page.innerHTML=r.classes.length?`<div class="card" style="gap:8px"><b>${done} מתוך ${r.classes.length} כיתות הושלמו</b>
+    <p class="hint">בוחרים כיתה וכותבים הערכה לכל תלמיד. הכול נשמר לבד. כיתה חדשה שנפתחת מופיעה כאן מעצמה.</p></div>
+    <div style="display:flex;flex-direction:column;gap:8px">${r.classes.map((c,i)=>{ const full=c.total&&c.done>=c.total, w=c.total?Math.min(100,c.done/c.total*100):0;
+      return `<button class="btn stu${full?' done':''}" data-i="${i}" style="align-items:stretch;text-align:right;font-family:var(--body)">
+        <span class="row"><span class="nm">כיתה ${esc(c.cls)}</span><span class="hint">${esc(c.subject)}</span><span style="margin-inline-start:auto;${full?'color:var(--good);font-weight:700':''}">${full?'✓ הושלם':`${c.done}/${c.total}`}</span></span>
+        <span class="progress"><i style="width:${w}%;${full?'':'background:#F59E0B'}"></i></span></button>`; }).join('')}</div>`
+    :`<div class="card"><div class="note info">עוד אין כיתות שלך במערכת. כשמחנך/ת יפתח/תפתח כיתה שאת/ה מלמד/ת בה, היא תופיע כאן.</div></div>`;
+  page.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>openClass(r.classes[+b.dataset.i]));
+}
+async function openClass(c){
   shell('דף יום הורים','טוען…');
-  let r;
-  try{ r=await withCode(()=>call({action:'tget',id,t})); }catch(e){ errorView(e.message); return; }
+  let r; try{ r=await withCode(()=>call({action:'mclass',m:M,id:c.id,subjectId:c.subjectId})); }catch(e){ errorView(e.message); return; }
   const entries=new Map(); for(const e of r.entries) entries.set(ek(e.subjectId,e.studentKey),e);
-  S={cls:{...r.cls,data:{students:r.students,subjects:[{...r.subject,students:r.students.map(s=>s.key)}]}},entries,id,t};
+  S={cls:{...r.cls,data:{students:r.students,subjects:[{...r.subject,students:r.students.map(s=>s.key)}]}},entries,id:c.id,m:M};
   teacherSubject(r.subject.id);
 }
 function teacherSubject(sid){
   const sub=subjects().find(s=>s.id===sid);
   const m=shell(`כיתה ${S.cls.name} · ${sub.teacher}`,sub.subject);
   const list=students().filter(s=>sub.students.includes(s.key));
-  m.innerHTML=`<div class="card" style="position:sticky;top:0;z-index:4;gap:8px"><div class="row"><b id="pc"></b></div><div class="progress"><i id="pb"></i></div>
+  m.innerHTML=`<div class="card" style="position:sticky;top:0;z-index:4;gap:8px"><div class="row"><button class="btn small" id="back">→ כל הכיתות שלי</button><b id="pc" style="margin-inline-start:auto"></b></div><div class="progress"><i id="pb"></i></div>
     <p class="hint">כתבו הערכה קצרה לכל תלמיד. היא נשמרת לבד. "הצע משפט" מוסיף משפט מוכן שאפשר לערוך.</p></div><div id="cards" style="display:flex;flex-direction:column;gap:10px"></div>`;
+  $('#back').onclick=()=>viewPortal(S.m);
   const prog=()=>{ const n=list.filter(s=>clean(S.entries.get(ek(sid,s.key))?.eval)).length; $('#pc').textContent=`מולאו ${n} מתוך ${list.length}`; $('#pb').style.width=(list.length?n/list.length*100:0)+'%'; };
   const cards=$('#cards');
   for(const stu of list){
@@ -276,7 +258,7 @@ function teacherSubject(sid){
     const save=async()=>{
       clearTimeout(t); const now=JSON.stringify([ta.value,xs.value,xr.value]); if(now===last) return;
       st.className='st'; st.textContent='שומר…';
-      try{ await call({action:'save',id:S.id,t:S.t,subjectId:sid,studentKey:stu.key,eval:ta.value.trim(),strength:xs.value.trim(),response:xr.value.trim(),by:sub.teacher});
+      try{ await call({action:'save',id:S.id,m:S.m,subjectId:sid,studentKey:stu.key,eval:ta.value.trim(),strength:xs.value.trim(),response:xr.value.trim(),by:sub.teacher});
         last=now; S.entries.set(ek(sid,stu.key),{...e,eval:ta.value.trim(),strength:xs.value.trim(),response:xr.value.trim()});
         st.className='st ok'; st.textContent='נשמר ✓'; c.classList.toggle('done',!!ta.value.trim()); prog();
       }catch(err){ st.className='st err'; st.textContent='לא נשמר – '+err.message; }
@@ -417,6 +399,42 @@ function extraCard(stu,redraw){
 }
 function drawTabsBadge(){ const n=students().reduce((s,x)=>s+newCount(x.key),0); const t=document.querySelector('[data-t="extra"]'); if(t) t.innerHTML='חוזקות ומענים'+(n?`<span class="cnt">${n}</span>`:''); }
 
+/* ================= coordinator: every teacher and their link ================= */
+function askAdmin(again,wrong){
+  const m=shell('דף רכז','קוד רכז');
+  m.innerHTML=`<div class="card"><p class="hint">הקוד נמצא בגיליון, בלשונית "הגדרות".</p>${wrong?'<div class="note bad">הקוד לא נכון.</div>':''}
+    <form id="af" class="row"><input type="password" id="ac" autocomplete="off" style="max-width:220px" aria-label="קוד רכז"><button class="btn primary">כניסה</button></form></div>`;
+  $('#ac').focus();
+  $('#af').onsubmit=e=>{ e.preventDefault(); const v=clean($('#ac').value); if(!v) return; localStorage.setItem('yh_admin',v); again(); };
+}
+async function viewAdmin(){
+  shell('דף רכז','טוען…');
+  let r;
+  try{ r=await call({action:'adminGet'}); }
+  catch(e){ if(e.adminError){ const had=!!getAdmin(); localStorage.removeItem('yh_admin'); askAdmin(viewAdmin,had); } else errorView(e.message); return; }
+  S={teachers:r.teachers};
+  const m=shell('דף רכז','כל המורים');
+  const notSent=r.teachers.filter(t=>!t.sent);
+  const all=r.teachers.map(t=>`${t.name}: ${teacherLink(t.token)}`).join('\n');
+  m.innerHTML=`<div class="card" style="gap:8px"><b>${r.classes.length} כיתות פתוחות · ${r.teachers.length} מורים · ${notSent.length} עוד לא קיבלו קישור</b>
+    <p class="hint">לכל מורה קישור אחד לכל הכיתות. "קישור חדש" מבטל את הקודם (למשל אם הועבר למישהו אחר).</p>
+    <div class="row"><button class="btn small" id="cpAll">העתקת כל הקישורים</button><button class="btn small" id="rl">רענון</button></div></div>
+    <div class="card"><div class="scroll"><table class="t"><thead><tr><th>מורה</th><th>כיתות</th><th>מילוי</th><th></th></tr></thead><tbody>${r.teachers.map(t=>{
+      const w=t.total?Math.min(100,t.done/t.total*100):0, url=teacherLink(t.token);
+      return `<tr><td><b>${esc(t.name)}</b>${t.sent?'<br><span class="st ok">קיבל/ה קישור ✓</span>':''}</td><td>${t.classes}</td>
+        <td style="min-width:110px"><span class="hint" style="font-size:13px">${t.done}/${t.total}</span><div class="progress"><i style="width:${w}%;${w<100?'background:#F59E0B':''}"></i></div></td>
+        <td style="white-space:nowrap;text-align:left"><a class="btn small" target="_blank" rel="noopener" data-sent="${esc(t.name)}" href="https://wa.me/?text=${encodeURIComponent(waMsg(t.name,url))}">וואטסאפ</a>
+        <button class="btn small" data-copy="${esc(url)}" data-sent="${esc(t.name)}">העתקה</button>
+        <button class="btn small" data-new="${esc(t.name)}">קישור חדש</button></td></tr>`; }).join('')}</tbody></table></div></div>`;
+  bindTeacherLinks(m,'adminSent');
+  $('#rl').onclick=viewAdmin;
+  $('#cpAll').onclick=()=>{ copy(all); call({action:'adminSent',names:r.teachers.map(t=>t.name)}).catch(()=>{}); };
+  m.querySelectorAll('[data-new]').forEach(b=>b.onclick=async()=>{
+    if(!confirm(`ליצור קישור חדש ל${b.dataset.new}? הקישור הישן יפסיק לעבוד, וצריך לשלוח לו/ה את החדש.`)) return;
+    try{ await call({action:'adminRetoken',name:b.dataset.new}); toast('נוצר קישור חדש'); viewAdmin(); }catch(e){ toast(e.message); }
+  });
+}
+
 /* ================= the printed page ================= */
 function pageHTML(stu){
   const R=S.cls.reports||{};
@@ -489,9 +507,10 @@ function panePrint(p){
 
 /* ---------- start ---------- */
 (function(){
-  const c=params.get('c'), k=params.get('k'), t=params.get('t');
-  if(c&&k) viewManager(c,k);
-  else if(c&&t) viewTeacher(c,t);
+  const c=params.get('c'), k=params.get('k'), m=params.get('m');
+  if(m) viewPortal(m);
+  else if(params.get('admin')) viewAdmin();
+  else if(c&&k) viewManager(c,k);
   else if(c) errorView('זה קישור ישן או חלקי. כל מורה מקבל/ת קישור אישי מהמחנך/ת.');
   else viewHome();
 })();
