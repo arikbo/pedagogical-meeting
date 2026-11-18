@@ -1,10 +1,13 @@
 /**
  * דף יום הורים – שרת קטן בגוגל שיטס
- * מדביקים את כל הקובץ הזה ב: גיליון חדש → תוספים (Extensions) → Apps Script
- * ואז: פריסה (Deploy) → פריסה חדשה → אפליקציית אינטרנט (Web app)
- *      הרצה בתור: אני | מי יכול לגשת: כל אחד (Anyone)
- * את הכתובת שמתקבלת (מסתיימת ב- /exec) מדביקים בראש index.html בשורה  const API = '...'
+ * 1. מדביקים את כל הקובץ הזה ב: גיליון חדש → תוספים (Extensions) → Apps Script
+ * 2. משנים את הקוד הבית ספרי בשורה SCHOOL_CODE למטה (מספר שתמסרו למורים בעל פה)
+ * 3. פריסה (Deploy) → פריסה חדשה → אפליקציית אינטרנט (Web app)
+ *    הרצה בתור: אני | מי יכול לגשת: כל אחד (Anyone)
+ * את הכתובת שמתקבלת (מסתיימת ב- /exec) שולחים לאריק / מדביקים בראש app.js בשורה  const API = '...'
  */
+const SCHOOL_CODE = 'CHANGE-ME';   // ← כאן כותבים את הקוד הבית ספרי, למשל '4821'
+
 const CLASSES = 'כיתות';
 const ENTRIES = 'הערכות';
 
@@ -19,22 +22,35 @@ const entriesSheet_ = () => sheet_(ENTRIES, ['מזהה כיתה', 'מקצוע', 
 
 function out_(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 /* text that starts with = + - @ would turn into a formula */
-function t_(s) { s = s == null ? '' : String(s); return /^[=+\-@]/.test(s) ? "'" + s : s; }
+function txt_(s) { s = s == null ? '' : String(s); return /^[=+\-@]/.test(s) ? "'" + s : s; }
 function token_(n) { const a = 'abcdefghijkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < n; i++) s += a[Math.floor(Math.random() * a.length)]; return s; }
 
 function findClass_(id) {
+  if (!id) return null;
   const sh = classesSheet_(), v = sh.getDataRange().getValues();
-  for (let r = 1; r < v.length; r++) if (v[r][0] === id) return { sh, row: r + 1, v: v[r] };
+  for (let r = 1; r < v.length; r++) if (v[r][0] === id) return { sh, row: r + 1, v: v[r], data: JSON.parse(v[r][5] || '{}') };
   return null;
 }
-function classOut_(c, admin) {
-  return { id: c.v[0], name: c.v[2], homeroom: c.v[3], data: JSON.parse(c.v[5] || '{}'), reports: JSON.parse(c.v[6] || '{}'), admin: admin };
-}
-function entries_(id) {
+function saveData_(c) { c.sh.getRange(c.row, 6).setValue(JSON.stringify(c.data)); }
+function entries_(id, subjectId) {
   const v = entriesSheet_().getDataRange().getValues(), out = [];
-  for (let r = 1; r < v.length; r++) if (v[r][0] === id)
+  for (let r = 1; r < v.length; r++) if (v[r][0] === id && (!subjectId || v[r][1] === subjectId))
     out.push({ subjectId: v[r][1], studentKey: v[r][2], eval: v[r][3], strength: v[r][4], response: v[r][5], updated: v[r][6], seen: v[r][7] === true || v[r][7] === 'TRUE', by: v[r][8] });
   return out;
+}
+function upsert_(q, subjectId, by) {
+  const sh = entriesSheet_(), v = sh.getDataRange().getValues();
+  let row = -1;
+  for (let r = 1; r < v.length; r++) if (v[r][0] === q.id && v[r][1] === subjectId && v[r][2] === q.studentKey) { row = r + 1; break; }
+  const now = new Date(), hr = subjectId === '_hr', extra = !!(q.strength || q.response);
+  if (row < 0) sh.appendRow([q.id, subjectId, q.studentKey, txt_(q.eval), txt_(q.strength), txt_(q.response), now, hr || !extra, by]);
+  else {
+    const old = v[row - 1];
+    const changed = (q.strength || '') !== String(old[4]) || (q.response || '') !== String(old[5]);
+    const seen = hr ? true : (changed ? !extra : old[7]);
+    sh.getRange(row, 4, 1, 6).setValues([[txt_(q.eval), txt_(q.strength), txt_(q.response), now, seen, by]]);
+  }
+  return { ok: true, at: now };
 }
 
 function doGet() { return out_({ ok: true, msg: 'דף יום הורים – השרת עובד' }); }
@@ -48,51 +64,59 @@ function doPost(e) {
 }
 
 function handle_(q) {
+  if (SCHOOL_CODE === 'CHANGE-ME' || !SCHOOL_CODE) return { error: 'עוד לא נקבע קוד בית ספרי בסקריפט (השורה SCHOOL_CODE).' };
+  const codeOk = String(q.code || '').trim() === String(SCHOOL_CODE);
+
+  /* ---- homeroom teacher opens a class (needs the school code) ---- */
   if (q.action === 'create') {
-    const id = token_(10), key = token_(14);
-    classesSheet_().appendRow([id, key, t_(q.name), t_(q.homeroom), new Date(), JSON.stringify(q.data || {}), JSON.stringify(q.reports || {})]);
+    if (!codeOk) return { error: 'קוד בית ספר שגוי', codeError: true };
+    const id = token_(10), key = token_(16), data = q.data || {};
+    (data.subjects || []).forEach(s => { s.token = token_(12); });
+    classesSheet_().appendRow([id, key, txt_(q.name), txt_(q.homeroom), new Date(), JSON.stringify(data), JSON.stringify(q.reports || {})]);
     return { id, key };
   }
+
   const c = findClass_(q.id);
   if (!c) return { error: 'הכיתה לא נמצאה. בדקו את הקישור.' };
   const admin = !!q.key && q.key === c.v[1];
 
-  if (q.action === 'get') return { cls: classOut_(c, admin), entries: entries_(q.id) };
-
-  if (q.action === 'save') { /* a subject teacher, or the homeroom teacher (subjectId "_hr") */
-    if (q.subjectId === '_hr' && !admin) return { error: 'אין הרשאה' };
-    const sh = entriesSheet_(), v = sh.getDataRange().getValues();
-    let row = -1;
-    for (let r = 1; r < v.length; r++) if (v[r][0] === q.id && v[r][1] === q.subjectId && v[r][2] === q.studentKey) { row = r + 1; break; }
-    const now = new Date();
-    if (row < 0) {
-      const extra = !!(q.strength || q.response);
-      sh.appendRow([q.id, q.subjectId, q.studentKey, t_(q.eval), t_(q.strength), t_(q.response), now, q.subjectId === '_hr' || !extra, q.by || '']);
-    } else {
-      const old = v[row - 1];
-      const changed = (q.strength || '') !== old[4] || (q.response || '') !== old[5];
-      const seen = q.subjectId === '_hr' ? true : (changed ? !(q.strength || q.response) : old[7]);
-      sh.getRange(row, 4, 1, 6).setValues([[t_(q.eval), t_(q.strength), t_(q.response), now, seen, q.by || old[8]]]);
+  /* ---- a subject teacher: personal link (token) + school code. Gets only their own students and entries ---- */
+  if (q.t) {
+    if (!codeOk) return { error: 'קוד בית ספר שגוי', codeError: true };
+    const sub = (c.data.subjects || []).find(s => s.token && s.token === q.t);
+    if (!sub) return { error: 'הקישור האישי הזה כבר לא בתוקף. בקשו מהמחנך/ת קישור חדש.' };
+    if (q.action === 'tget') {
+      const mine = (c.data.students || []).filter(s => sub.students.indexOf(s.key) >= 0);
+      return { cls: { id: q.id, name: c.v[2], homeroom: c.v[3] }, subject: { id: sub.id, subject: sub.subject, teacher: sub.teacher }, students: mine, entries: entries_(q.id, sub.id) };
     }
-    return { ok: true, at: now };
+    if (q.action === 'save') {
+      if (sub.students.indexOf(q.studentKey) < 0) return { error: 'התלמיד/ה לא ברשימה שלך' };
+      return upsert_(q, sub.id, sub.teacher);
+    }
+    return { error: 'אין הרשאה' };
   }
 
+  /* ---- everything else: only the homeroom teacher (secret key) ---- */
   if (!admin) return { error: 'אין הרשאה' };
-
-  if (q.action === 'review') { /* the homeroom teacher approves / edits / removes a teacher's addition */
+  if (q.action === 'get') return { cls: { id: q.id, name: c.v[2], homeroom: c.v[3], data: c.data, reports: JSON.parse(c.v[6] || '{}'), admin: true }, entries: entries_(q.id) };
+  if (q.action === 'save') { if (q.subjectId !== '_hr') return { error: 'אין הרשאה' }; return upsert_(q, '_hr', 'מחנך/ת'); }
+  if (q.action === 'review') {
     const sh = entriesSheet_(), v = sh.getDataRange().getValues();
     for (let r = 1; r < v.length; r++) if (v[r][0] === q.id && v[r][1] === q.subjectId && v[r][2] === q.studentKey) {
-      sh.getRange(r + 1, 5, 1, 2).setValues([[t_(q.strength ?? v[r][4]), t_(q.response ?? v[r][5])]]);
+      sh.getRange(r + 1, 5, 1, 2).setValues([[txt_(q.strength != null ? q.strength : v[r][4]), txt_(q.response != null ? q.response : v[r][5])]]);
       sh.getRange(r + 1, 8).setValue(true);
       return { ok: true };
     }
     return { error: 'לא נמצא' };
   }
+  if (q.action === 'retoken') { /* a new personal link for one teacher; the old one stops working */
+    const sub = (c.data.subjects || []).find(s => s.id === q.subjectId); if (!sub) return { error: 'לא נמצא' };
+    sub.token = token_(12); saveData_(c); return { token: sub.token };
+  }
   if (q.action === 'update') {
-    if (q.data) c.sh.getRange(c.row, 6).setValue(JSON.stringify(q.data));
     if (q.reports) c.sh.getRange(c.row, 7).setValue(JSON.stringify(q.reports));
-    if (q.name != null) c.sh.getRange(c.row, 3).setValue(q.name);
-    if (q.homeroom != null) c.sh.getRange(c.row, 4).setValue(q.homeroom);
+    if (q.name != null) c.sh.getRange(c.row, 3).setValue(txt_(q.name));
+    if (q.homeroom != null) c.sh.getRange(c.row, 4).setValue(txt_(q.homeroom));
     return { ok: true };
   }
   return { error: 'unknown action' };
