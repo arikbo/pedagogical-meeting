@@ -562,6 +562,15 @@ function bulkReports(classes){
       show();
     }
     show();
+    /* classes in report 58 that were never opened: offer to open them right here, with the same files */
+    const open=new Set(classes.map(c=>clsKey(c.name)));
+    const missing=rd.g58.filter(g=>inMyGrade(g)&&!open.has(clsKey(g.cls)));
+    if(missing.length){
+      const box=document.createElement('div'); box.className='note info'; box.style.marginTop='10px';
+      box.innerHTML=`בדוח 58 יש ${missing.length} כיתות שעוד לא נפתחו: ${esc(missing.map(g=>clean(g.cls)).join(', '))}. <button class="btn small primary" style="margin-inline-start:8px">פתיחתן עכשיו</button>`;
+      $('button',box).onclick=()=>{ rd.g58=missing; viewCreateMany(rd); };
+      out.prepend(box);
+    }
   }));
   return card;
 }
