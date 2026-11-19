@@ -518,12 +518,19 @@ function askAdmin(again,wrong){
 const pct=(d,t)=>t?Math.min(100,Math.round(d/t*100)):0;
 const bar=(d,t)=>{ const w=pct(d,t); return `<span class="hint" style="font-size:13px">${d}/${t}</span><div class="progress"><i style="width:${w}%;${w<100?'background:#F59E0B':''}"></i></div>`; };
 /* classes: progress, the homeroom's link (WhatsApp / copy / open), and a print of each grade */
-function classesCard(classes,title){
+function classesCard(classes,title,canDelete){
   return `<div class="card"><h2>${esc(title)}</h2><p class="hint">הקישור למסך המחנך של כל כיתה נשלח למחנך/ת שלה.</p>
     <div class="scroll"><table class="t"><thead><tr><th>כיתה</th><th>מילוי</th><th></th></tr></thead><tbody>${classes.map(c=>{ const url=`${BASE}?c=${c.id}&k=${c.key}`, msg=`שלום ${c.homeroom||''}, זה הקישור שלך למסך המחנך של כיתה ${c.name} בדף יום ההורים. לא להעביר הלאה:\n${url}`;
       return `<tr><td><b>${esc(c.name)}</b><br><span class="hint">${esc(c.homeroom||'')}</span></td><td style="min-width:110px">${bar(c.done,c.total)}</td>
         <td style="white-space:nowrap;text-align:left"><a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">וואטסאפ</a>
-        <button class="btn small" data-copy="${esc(url)}">העתקה</button><a class="btn small" href="${esc(url)}">פתיחה</a></td></tr>`; }).join('')}</tbody></table></div></div>`;
+        <button class="btn small" data-copy="${esc(url)}">העתקה</button><a class="btn small" href="${esc(url)}">פתיחה</a>${canDelete?`<button class="btn small bad" data-del="${esc(c.id)}" data-name="${esc(c.name)}">מחיקה</button>`:''}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+}
+/* deleting a class removes it and all of its evaluations (after a confirmation) */
+function bindDelete(el,action,extra,after){
+  el.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
+    if(!confirm(`למחוק את כיתה ${b.dataset.name} וכל ההערכות שנכתבו בה? אי אפשר לבטל.`)) return;
+    try{ await call({action,id:b.dataset.del,...extra}); toast('הכיתה נמחקה'); after(); }catch(e){ toast(e.message); }
+  });
 }
 function teachersCard(teachers,canRenew){
   return `<div class="card"><h2>מורים</h2><p class="hint">לכל מורה קישור אישי אחד לכל הכיתות שלו/ה.${canRenew?' "קישור חדש" מבטל את הקודם.':''}</p>
@@ -595,10 +602,17 @@ async function viewAdmin(){
         <td style="white-space:nowrap;text-align:left">${c?`${c.sent?'<span class="st ok" style="margin-inline-end:6px">קיבל/ה ✓</span>':''}<a class="btn small" target="_blank" rel="noopener" data-csent="${esc(g)}" href="https://wa.me/?text=${encodeURIComponent(msg)}">וואטסאפ</a><button class="btn small" data-copy="${esc(url)}" data-csent="${esc(g)}">העתקה</button><button class="btn small" data-cnew="${esc(g)}">קישור חדש</button>`:`<button class="btn small" data-cset="${esc(g)}">יצירת קישור</button>`}
         <button class="btn small" data-print="${esc(g)}">הפקת השכבה</button></td></tr>`; }).join('')}</tbody></table></div>
     <form id="addG" class="row"><input type="text" id="ng" placeholder="שכבה (למשל ט)" style="max-width:140px" aria-label="שכבה"><input type="text" id="nn" placeholder="שם הרכז/ת" style="max-width:220px" aria-label="שם הרכז/ת"><button class="btn small">הוספת רכז/ת</button></form></div>
-    ${classesCard(r.classes,'כיתות פתוחות')}${teachersCard(r.teachers,true)}`;
+    ${classesCard(r.classes,'כיתות פתוחות',true)}${teachersCard(r.teachers,true)}
+    <div class="card"><h2>איפוס המערכת</h2><p class="hint">מוחק את כל הכיתות, ההערכות והקישורים של המורים ורכזי השכבה. ההגדרות והקודים נשארים. אי אפשר לבטל.</p>
+    <div><button class="btn small bad" id="reset">איפוס כל המערכת</button></div></div>`;
   m.insertBefore(bulkReports(r.classes),m.children[2]);
   bindTeacherLinks(m,'adminSent'); bindPrint(m,r.classes);
   $('#newCls').onclick=()=>viewCreate({by:'admin'});
+  bindDelete(m,'adminDeleteClass',{},viewAdmin);
+  $('#reset').onclick=async()=>{
+    const v=prompt('כדי לאפס את כל המערכת, כתבו: איפוס'); if(clean(v)!=='איפוס') return;
+    try{ await call({action:'adminResetAll',confirm:'איפוס'}); localStorage.removeItem('yh_my'); toast('המערכת אופסה'); viewAdmin(); }catch(e){ toast(e.message); }
+  };
   $('#rl').onclick=viewAdmin;
   $('#cpAll').onclick=()=>{ copy(r.teachers.map(t=>`${t.name}: ${teacherLink(t.token)}`).join('\n')); call({action:'adminSent',names:r.teachers.map(t=>t.name)}).catch(()=>{}); };
   const setCoord=async(g,name,newToken)=>{ try{ await call({action:'adminSetCoord',grade:g,name,newToken}); toast('נשמר'); viewAdmin(); }catch(e){ toast(e.message); } };
@@ -622,10 +636,11 @@ async function viewCoord(g){
   const done=r.classes.reduce((n,c)=>n+c.done,0), total=r.classes.reduce((n,c)=>n+c.total,0);
   m.innerHTML=`<div class="card" style="gap:10px"><b>${r.classes.length} כיתות · ${r.teachers.length} מורים · מולאו ${pct(done,total)}% מההערכות</b>
     <div class="row"><button class="btn primary" id="newCls">פתיחת כיתות בשכבה</button>${r.classes.length?`<button class="btn" data-print="">הפקת דפים לכל השכבה</button>`:''}<button class="btn" id="rl">רענון</button></div></div>
-    ${classesCard(r.classes,'הכיתות בשכבה')}${teachersCard(r.teachers,false)}`;
+    ${classesCard(r.classes,'הכיתות בשכבה',true)}${teachersCard(r.teachers,false)}`;
   if(r.classes.length) m.insertBefore(bulkReports(r.classes),m.children[2]);
   bindTeacherLinks(m,'gsent'); bindPrint(m,r.classes);
   $('#newCls').onclick=()=>viewCreate(WHO);
+  bindDelete(m,'gDeleteClass',{g},()=>viewCoord(g));
   $('#rl').onclick=()=>viewCoord(g);
   $('#cpAll').onclick=()=>{ copy(r.teachers.map(t=>`${t.name}: ${teacherLink(t.token)}`).join('\n')); call({action:'gsent',g,names:r.teachers.map(t=>t.name)}).catch(()=>{}); };
 }
