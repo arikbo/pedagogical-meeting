@@ -130,6 +130,17 @@ function overview_(grade) {
   return { classes: cls, teachers };
 }
 
+/* ---------- deleting: rewrite a sheet without the rows that go ---------- */
+function keepRows_(sh, keep) {
+  const v = sh.getDataRange().getValues(), rows = [v[0]].concat(v.slice(1).filter(keep));
+  sh.clearContents(); sh.getRange(1, 1, rows.length, v[0].length).setValues(rows);
+  return v.length - rows.length;
+}
+function deleteClass_(id) {
+  keepRows_(classesSheet_(), r => r[0] !== id);
+  return keepRows_(entriesSheet_(), r => r[0] !== id);
+}
+
 function doGet() { settings_(); return out_({ ok: true, msg: 'דף יום הורים – השרת עובד' }); }
 
 function doPost(e) {
@@ -168,6 +179,12 @@ function handle_(q) {
       x.token = token_(14); teachersSheet_().getRange(x.row, 2, 1, 2).setValues([[x.token, false]]); return { token: x.token };
     }
     if (q.action === 'adminSent') { return markSent_(q.names || []); }
+    if (q.action === 'adminDeleteClass') { deleteClass_(q.id); return { ok: true }; }
+    if (q.action === 'adminResetAll') { /* everything except the settings: classes, evaluations, teacher and coordinator links */
+      if (q.confirm !== 'איפוס') return { error: 'לא אושר' };
+      [classesSheet_(), entriesSheet_(), teachersSheet_(), coordsSheet_()].forEach(sh => keepRows_(sh, () => false));
+      return { ok: true };
+    }
     return { error: 'unknown action' };
   }
 
@@ -176,6 +193,10 @@ function handle_(q) {
     if (!codeOk) return { error: 'קוד בית ספר שגוי', codeError: true };
     if (!coord) return { error: 'הקישור האישי הזה כבר לא בתוקף. בקשו קישור חדש ממנהל המערכת.' };
     if (q.action === 'gget') { const o = overview_(coord.grade); return { name: coord.name, grade: coord.grade, classes: o.classes, teachers: o.teachers }; }
+    if (q.action === 'gDeleteClass') {
+      const c = findClass_(q.id); if (!c || gradeOf_(c.v[2]) !== coord.grade) return { error: 'הכיתה לא בשכבה שלך' };
+      deleteClass_(q.id); return { ok: true };
+    }
     if (q.action === 'gsent') { const mine = overview_(coord.grade).teachers.map(t => t.name); return markSent_((q.names || []).filter(n => mine.indexOf(norm_(n)) >= 0)); }
     return { error: 'אין הרשאה' };
   }
