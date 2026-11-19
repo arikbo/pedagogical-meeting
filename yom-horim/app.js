@@ -97,7 +97,7 @@ function viewHome(){
 
 /* ================= homeroom: open a class ================= */
 /* ---------- every report goes into ONE drop area: each file is recognised by its content ---------- */
-const FILES_HINT='דוח 58 של כיתה או של שכבה (חובה), ואם יש גם 42, 64 ו-66. אפשר כמה קבצים יחד ובכל סדר';
+const FILES_HINT='דוח 58 של כיתה או של שכבה (חובה), דוח 42 לאירועים, ודוח 64 רק אם רוצים מספר שעות למענים. אפשר כמה קבצים יחד ובכל סדר';
 async function readReports(files){
   const out={g58:[],t66:[],e42:[],s64:[],bad:[]};
   for(const f of files){
@@ -428,13 +428,13 @@ async function saveReports(patch){
 function paneReports(p){
   const R=S.cls.reports||{};
   const at=x=>x?new Date(x).toLocaleDateString('he-IL'):'';
-  const row=(name,done,what)=>`<tr><td><b>${name}</b><br><span class="hint">${what}</span></td><td style="text-align:left">${done?`<span class="st ok">${esc(done)}</span>`:'<span class="hint">עוד לא הועלה</span>'}</td></tr>`;
+  const row=(name,done,what)=>`<tr><td><b>${name}</b><br><span class="hint">${what}</span></td><td style="text-align:left">${done?`<span class="st ok">${esc(done)}</span>`:'<span class="hint">לא הועלה</span>'}</td></tr>`;
   p.innerHTML=`<div class="card"><h2>דוחות מסמארט סקול</h2>
     <p class="hint">גוררים לכאן את הדוחות, אחד או כמה יחד, של הכיתה או של כל השכבה. המערכת מזהה לבד איזה דוח זה ולוקחת רק את התלמידים של הכיתה. אפשר להעלות שוב כדי לעדכן.</p>
     <div id="zr"></div>
     <table class="t"><tbody>
       ${row('דוח 42 – אירועים בשיעורים','' + (R.ev?`✓ ${at(R.ev_at)}${R.range?` · מ־${R.range.from} עד ${R.range.to}`:''}`:''),'צל״שים, הפרעות, איחורים וחיסורים')}
-      ${row('דוח 64 – מערכת שעות לתלמיד (PDF)',R.a64?`✓ ${at(R.a64_at)}`:'','מענים עם שעות שבועיות (לא חובה)')}
+      ${row('דוח 64 – מערכת שעות לתלמיד (PDF, לא חובה)',R.a64?`✓ ${at(R.a64_at)}`:'','רק אם רוצים שיופיע מספר השעות של כל מענה')}
       ${row('דוח 58 – קבוצות',`✓ ${R.a58_at?at(R.a58_at):'בפתיחת הכיתה'}`,'מענים וקמפוסים')}
     </tbody></table></div>`;
   $('#zr',p).appendChild(dropZone('גררו לכאן את הדוחות','42, 64 או 58 – כיתה או שכבה, אחד או כמה',async files=>{
@@ -536,8 +536,8 @@ function teachersCard(teachers,canRenew){
 /* reports 42 / 64 / 58 for many classes at once: each class takes only its own students */
 function bulkReports(classes){
   const card=document.createElement('div'); card.className='card';
-  card.innerHTML=`<h2>דוחות לכל הכיתות</h2><p class="hint">גוררים לכאן דוח 42 של השכבה (או של כמה כיתות), ואם רוצים גם 64 ו-58. כל כיתה מקבלת רק את התלמידים שלה.</p><div id="zb"></div><div id="zbr"></div>`;
-  $('#zb',card).appendChild(dropZone('גררו לכאן את הדוחות','42, 64 או 58 – שכבה שלמה או כמה כיתות',async files=>{
+  card.innerHTML=`<h2>דוחות לכל הכיתות</h2><p class="hint">גוררים לכאן דוח 42 של השכבה, או של כמה כיתות. דוח 64 לא חובה: הוא מוסיף רק את מספר השעות של כל מענה, ואפשר להעלות אותו לכיתות מסוימות בלבד. כל כיתה מקבלת רק את התלמידים שלה.</p><div id="zb"></div><div id="zbr"></div>`;
+  $('#zb',card).appendChild(dropZone('גררו לכאן את הדוחות','42 (ואם רוצים 64 או 58) – שכבה שלמה או כמה כיתות',async files=>{
     const out=$('#zbr',card); out.innerHTML='<p class="hint">קורא את הקבצים…</p>';
     const rd=await readReports(files), lines=[];
     const show=()=>{ out.innerHTML=lines.map(([k,t])=>`<div class="note ${k}" style="padding:6px 12px;margin-top:6px">${esc(t)}</div>`).join(''); };
