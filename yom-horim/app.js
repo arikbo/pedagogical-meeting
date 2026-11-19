@@ -590,6 +590,7 @@ async function viewAdmin(){
   let r;
   try{ r=await call({action:'adminGet'}); }
   catch(e){ if(e.adminError){ const had=!!getAdmin(); localStorage.removeItem('yh_admin'); askAdmin(viewAdmin,had); } else errorView(e.message); return; }
+  if(r.classes.length&&!r.classes[0].key){ errorView('השרת עדיין מריץ גרסה ישנה של הסקריפט. צריך לפרסם את הגרסה החדשה (Deploy ← New deployment) ולשלוח את הכתובת החדשה.'); return; }
   WHO={by:'admin'}; S={teachers:r.teachers};
   const grades=[...new Set([...r.classes.map(c=>c.grade),...(r.coords||[]).map(c=>c.grade)].filter(Boolean))].sort();
   const coordOf=g=>(r.coords||[]).find(c=>c.grade===g);
