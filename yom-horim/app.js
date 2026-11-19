@@ -141,8 +141,11 @@ function viewCreate(){
   }
   async function f66(file){
     try{
-      const r=(await readXlsx(file)).map(parseTeachers66).find(Boolean);
-      if(!r){ toast('לא נמצאו בקובץ עמודות מורה ומקצוע'); return; }
+      const all=(await readXlsx(file)).map(parseTeachers66).filter(Boolean);
+      if(!all.length){ toast('לא נמצאו בקובץ עמודות מורה ומקצוע'); return; }
+      /* a whole-grade file has a sheet per class: take only this class's sheet */
+      const r=all.length===1?all[0]:all.find(x=>x.cls&&clsKey(x.cls)===clsKey(d.name));
+      if(!r){ toast(`בקובץ אין גיליון של כיתה ${d.name}`); return; }
       let n=0;
       for(const t of r){ const subject=subjName(t.subject,d.name); if(d.subjects.some(s=>clean(s.subject)===clean(subject))) continue;
         d.subjects.push({id:'s'+(seq++),subject,teacher:t.teacher,students:d.students.map(s=>s.key)}); n++; }

@@ -78,6 +78,10 @@ function parseTeachers66(aoa){
     const ti=row.findIndex(c=>short(c)&&/^(שם )?(ה)?מורה|מורים/.test(c)), si=row.findIndex(c=>short(c)&&/מקצוע/.test(c));
     if(ti<0||si<0) continue;
     const out=[];
+    /* the class, from a title like "רשימת מורים לז' 5" (a grade export has one sheet per class) */
+    let cls='';
+    for(let k=0;k<r&&!cls;k++) for(const c of (aoa[k]||[])){ const m=sadinText(c).match(/רשימת מורים ל\s*(.+)$/); if(m){ cls=clean(m[1]); break; } }
+    out.cls=cls;
     for(let k=r+1;k<aoa.length;k++){
       const t=sadinText((aoa[k]||[])[ti]), s=sadinText((aoa[k]||[])[si]).replace(/\s*\(.*\)$/,'');
       if(t&&s&&/[א-ת]/.test(t)&&!/\d|:|הופק/.test(t)) out.push({subject:s,teacher:t});
@@ -194,4 +198,5 @@ const BANK=[
 ];
 function gform(s,g){ return s.replace(/\{([^|{}]*)\|([^|{}]*)\}/g,(m,a,b)=>g==='f'?b:a); }
 
-if(typeof module!=='undefined') module.exports={clean,nameKey,parseGroups58,parseTeachers66,parseEvents42,parseSchedulePages,mergeAns,BANK,gform,subjName};
+const clsKey=s=>clean(s).replace(/["'`׳״\s]/g,'');
+if(typeof module!=='undefined') module.exports={clsKey,clean,nameKey,parseGroups58,parseTeachers66,parseEvents42,parseSchedulePages,mergeAns,BANK,gform,subjName};
