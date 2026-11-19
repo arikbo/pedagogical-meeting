@@ -634,7 +634,8 @@ async function viewCoord(g){
 function pageHTML(stu){
   const R=S.cls.reports||{};
   const subs=subjects().filter(s=>s.students.includes(stu.key));
-  const ev=R.ev?.[stu.key];
+  /* a student missing from report 42 had no events at all: 0, not a dash */
+  const ev=R.ev?(R.ev[stu.key]||{tz:0,hf:0,late:0,abs:0}):null;
   const n=v=>ev&&v!=null?v:'—';
   const hr=hrEntry(stu.key), adds=additions(stu.key);
   const strTags=[...autoStr(stu.key),...rolesOf(stu.key)];
