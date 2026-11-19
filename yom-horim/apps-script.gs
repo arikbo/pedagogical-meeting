@@ -39,6 +39,7 @@ function out_(obj) { return ContentService.createTextOutput(JSON.stringify(obj))
 /* text that starts with = + - @ would turn into a formula */
 function txt_(s) { s = s == null ? '' : String(s); return /^[=+\-@]/.test(s) ? "'" + s : s; }
 function token_(n) { const a = 'abcdefghijkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < n; i++) s += a[Math.floor(Math.random() * a.length)]; return s; }
+const clsKey_ = s => String(s == null ? '' : s).replace(/["'`׳״\s]/g, '');
 const norm_ = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 
 function allClasses_() {
@@ -126,7 +127,7 @@ function handle_(q) {
         const cl = teacherClasses_(t.name, done);
         return { name: t.name, token: t.token, sent: t.sent, classes: cl.length, done: cl.reduce((n, x) => n + Math.min(x.done, x.total), 0), total: cl.reduce((n, x) => n + x.total, 0) };
       }).sort((a, b) => a.name.localeCompare(b.name, 'he'));
-      return { teachers: list, classes: classes.map(c => ({ name: c.v[2], homeroom: c.v[3] })) };
+      return { teachers: list, classes: classes.map(c => ({ id: c.id, key: c.v[1], name: c.v[2], homeroom: c.v[3] })) };
     }
     if (q.action === 'adminRetoken') {
       const x = teachers_().list.find(y => y.name === norm_(q.name)); if (!x) return { error: 'לא נמצא' };
@@ -139,6 +140,9 @@ function handle_(q) {
   /* ---- homeroom teacher opens a class (needs the school code) ---- */
   if (q.action === 'create') {
     if (!codeOk) return { error: 'קוד בית ספר שגוי', codeError: true };
+    const ck = clsKey_(q.name);
+    if (!ck) return { error: 'חסר שם כיתה' };
+    if (allClasses_().some(c => clsKey_(c.v[2]) === ck)) return { error: 'הכיתה ' + q.name + ' כבר נפתחה. את הקישור למסך המחנך שלה אפשר למצוא בדף הרכז.', exists: true };
     const id = token_(10), key = token_(16), data = q.data || {};
     classesSheet_().appendRow([id, key, txt_(q.name), txt_(q.homeroom), new Date(), JSON.stringify(data), JSON.stringify(q.reports || {})]);
     ensureTeachers_((data.subjects || []).map(s => s.teacher));

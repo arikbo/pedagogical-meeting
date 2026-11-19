@@ -23,11 +23,11 @@ async function call(q){
   let j;
   try{ const r=await fetch(API,{method:'POST',body:JSON.stringify(q)}); j=await r.json(); }
   catch(e){ throw new Error('אין חיבור לשרת. בדקו את האינטרנט ונסו שוב.'); }
-  if(j.error){ const e=new Error(j.error); e.codeError=!!j.codeError; e.adminError=!!j.adminError; throw e; }
+  if(j.error){ const e=new Error(j.error); e.codeError=!!j.codeError; e.adminError=!!j.adminError; e.exists=!!j.exists; throw e; }
   return j;
 }
 const myClasses=()=>{ try{ return JSON.parse(localStorage.getItem('yh_my'))||[]; }catch(e){ return []; } };
-function rememberClass(c){ const l=myClasses().filter(x=>x.id!==c.id); l.unshift(c); localStorage.setItem('yh_my',JSON.stringify(l.slice(0,20))); }
+function rememberClass(c){ const l=myClasses().filter(x=>x.id!==c.id); l.unshift(c); localStorage.setItem('yh_my',JSON.stringify(l.slice(0,80))); }
 
 /* ---------- reading files ---------- */
 async function readXlsx(file){
@@ -89,7 +89,7 @@ function viewHome(){
   const m=shell('חטיבת הביניים עתידים','דף יום הורים');
   const mine=myClasses();
   m.innerHTML=`<div class="card"><h2>מחנכים: פתיחת כיתה</h2>
-    <p class="hint">מעלים את דוח 58 של הכיתה, מקבלים קישור לשלוח למורים המקצועיים, ובסוף מפיקים דף אחד לכל תלמיד.</p>
+    <p class="hint">מעלים את דוח 58 של הכיתה, ובסוף מפיקים דף אחד לכל תלמיד. רכזי שכבה יכולים להעלות דוח 58 של כל השכבה ולפתוח את כל הכיתות בבת אחת.</p>
     <div><button class="btn primary" id="newCls">פתיחת כיתה חדשה</button></div></div>
     ${mine.length?`<div class="card"><h2>הכיתות שלי</h2><div style="display:flex;flex-direction:column;gap:8px">${mine.map(c=>`<a class="btn" style="justify-content:space-between" href="?c=${esc(c.id)}&k=${esc(c.key)}"><span>${esc(c.name)}</span><span class="hint">למסך המחנך ←</span></a>`).join('')}</div></div>`:''}
     <div class="card"><h2>מורים מקצועיים</h2><p class="hint">לכל מורה יש קישור אישי אחד לכל הכיתות. פותחים אותו ורואים את כל הכיתות שלכם.</p></div>
@@ -131,11 +131,13 @@ function viewCreate(){
   };
   async function f58(file){
     try{
-      const r=(await readXlsx(file)).map(parseGroups58).find(Boolean);
-      if(!r){ toast('זה לא נראה כמו דוח 58'); return; }
-      d.students=r.students; d.a58=r.ans; d.s58=r.str; d.name=d.name||r.cls;
-      d.subjects=r.subjects.sort((a,b)=>a.subject.localeCompare(b.subject,'he')).map(s=>({id:'s'+(seq++),...s}));
-      d.ok58=`${file.name} · ${r.students.length} תלמידים, ${r.subjects.length} מקצועות`;
+      const all=(await readXlsx(file)).map(parseGroups58).filter(Boolean);
+      if(!all.length){ toast('זה לא נראה כמו דוח 58'); return; }
+      if(all.length>1){ viewCreateMany(all.map(prepClass),file.name); return; }  /* a whole grade: a sheet per class */
+      const c=prepClass(all[0]);
+      Object.assign(d,{students:c.students,a58:c.a58,s58:c.s58,name:d.name||c.name,homeroom:d.homeroom||c.homeroom,subjects:c.subjects});
+      seq=c.subjects.length+1;
+      d.ok58=`${file.name} · ${c.students.length} תלמידים, ${c.subjects.length} מקצועות`;
       draw();
     }catch(e){ console.error(e); toast('לא הצלחתי לקרוא את הקובץ'); }
   }
@@ -147,7 +149,7 @@ function viewCreate(){
       const r=all.length===1?all[0]:all.find(x=>x.cls&&clsKey(x.cls)===clsKey(d.name));
       if(!r){ toast(`בקובץ אין גיליון של כיתה ${d.name}`); return; }
       let n=0;
-      for(const t of r){ const subject=subjName(t.subject,d.name); if(d.subjects.some(s=>clean(s.subject)===clean(subject))) continue;
+      for(const t of r){ const subject=subjName(t.subject,d.name); if(!isEvalSubject(subject)||d.subjects.some(s=>clean(s.subject)===clean(subject))) continue;
         d.subjects.push({id:'s'+(seq++),subject,teacher:t.teacher,students:d.students.map(s=>s.key)}); n++; }
       d.ok66=`${file.name} · נוספו ${n} מקצועות`; draw();
     }catch(e){ console.error(e); toast('לא הצלחתי לקרוא את הקובץ'); }
@@ -162,6 +164,68 @@ function viewCreate(){
       rememberClass({id:r.id,key:r.key,name:clean(d.name)});
       viewLinks(r.id,r.key,clean(d.name));
     }catch(e){ go.disabled=false; go.textContent='פתיחת הכיתה וקבלת קישורים'; toast(e.message); }
+  }
+  draw();
+}
+/* one class from report 58: the "חינוך" teachers are the homeroom teachers (shown at the top of the page, not as a subject) */
+function prepClass(r){
+  const hr=r.subjects.filter(s=>/^חינוך$/.test(clean(s.subject)));
+  const subjects=r.subjects.filter(s=>!hr.includes(s)).sort((a,b)=>a.subject.localeCompare(b.subject,'he')).map((s,i)=>({id:'s'+(i+1),...s}));
+  return {name:clean(r.cls),homeroom:[...new Set(hr.map(s=>clean(s.teacher)))].join(', '),students:r.students,a58:r.ans,s58:r.str,subjects};
+}
+/* a grade coordinator opens all the classes of a grade at once */
+function viewCreateMany(list,fileName){
+  const m=shell('פתיחת שכבה','דף יום הורים');
+  const opened=new Set(myClasses().map(c=>clsKey(c.name)));
+  list.forEach(c=>{ c.on=!opened.has(clsKey(c.name)); c.was=opened.has(clsKey(c.name)); });
+  let ok66='';
+  const draw=()=>{
+    const n=list.filter(c=>c.on).length;
+    m.innerHTML=`<div class="card"><h2>נמצאו ${list.length} כיתות בקובץ</h2>
+      <p class="hint">${esc(fileName)}. שמות המחנכים נלקחו מהמקצוע "חינוך", ואפשר לתקן. מסמנים אילו כיתות לפתוח.</p>
+      <div class="scroll"><table class="t"><thead><tr><th></th><th>כיתה</th><th>מחנך/ת</th><th>תלמידים</th><th>מקצועות</th></tr></thead><tbody>${list.map((c,i)=>`<tr>
+        <td><input type="checkbox" data-i="${i}" ${c.on?'checked':''} aria-label="לפתוח את ${esc(c.name)}"></td>
+        <td><b>${esc(c.name)}</b>${c.was?'<br><span class="st" style="color:var(--warn)">כבר נפתחה</span>':''}</td>
+        <td><input type="text" data-h="${i}" value="${esc(c.homeroom)}"></td><td>${c.students.length}</td><td>${c.subjects.length}</td></tr>`).join('')}</tbody></table></div>
+      <div id="z66"></div>
+      <p class="hint">אחרי הפתיחה, כל מחנך/ת מקבל/ת קישור משלו/ה למסך המחנך. מורים מקצועיים לא צריכים קישור חדש: הכיתות מופיעות אצלם לבד.</p>
+      <div><button class="btn primary" id="go" ${n?'':'disabled'}>פתיחת ${n} כיתות</button></div></div>`;
+    $('#z66',m).appendChild(dropZone('דוח 66 של השכבה (לא חובה)','משלים מקצועות שחסרים בדוח 58','.xlsx,.xls',f66,ok66));
+    m.querySelectorAll('[data-i]').forEach(b=>b.onchange=()=>{ list[+b.dataset.i].on=b.checked; draw(); });
+    m.querySelectorAll('[data-h]').forEach(b=>b.oninput=()=>{ list[+b.dataset.h].homeroom=b.value; });
+    $('#go',m).onclick=go;
+  };
+  async function f66(file){
+    try{
+      const all=(await readXlsx(file)).map(parseTeachers66).filter(Boolean); let n=0;
+      for(const c of list){ const r=all.find(x=>x.cls&&clsKey(x.cls)===clsKey(c.name)); if(!r) continue;
+        for(const t of r){ const subject=subjName(t.subject,c.name); if(!isEvalSubject(subject)||c.subjects.some(s=>clean(s.subject)===clean(subject))) continue;
+          c.subjects.push({id:'s'+(c.subjects.length+1),subject,teacher:t.teacher,students:c.students.map(s=>s.key)}); n++; } }
+      ok66=`${file.name} · נוספו ${n} מקצועות`; draw();
+    }catch(e){ console.error(e); toast('לא הצלחתי לקרוא את הקובץ'); }
+  }
+  async function go(){
+    const todo=list.filter(c=>c.on);
+    const b=$('#go',m); b.disabled=true;
+    const done=[], existed=[];
+    try{
+      for(const c of todo){
+        b.textContent=`פותח ${c.name}… (${done.length+existed.length+1}/${todo.length})`;
+        const q={action:'create',name:c.name,homeroom:clean(c.homeroom),data:{students:c.students,subjects:c.subjects},reports:{a58:c.a58,s58:c.s58,title:DEF_TITLE}};
+        try{ const r=await withCode(()=>call(q)); rememberClass({id:r.id,key:r.key,name:c.name}); done.push({...c,id:r.id,key:r.key}); }
+        catch(e){ if(e.exists) existed.push(c.name); else throw e; }
+      }
+    }catch(e){ toast(e.message); }
+    const res=shell('פתיחת שכבה',`נפתחו ${done.length} כיתות`);
+    res.innerHTML=`<div class="card"><h2>קישורים למחנכים</h2><p class="hint">לכל מחנך/ת שולחים את הקישור של הכיתה שלו/ה. הקישורים נשמרו גם ב"הכיתות שלי" בדפדפן הזה.</p>
+      <div class="scroll"><table class="t"><tbody>${done.map(c=>{ const url=`${BASE}?c=${c.id}&k=${c.key}`, msg=`שלום ${c.homeroom||''}, זה הקישור שלך למסך המחנך של כיתה ${c.name} בדף יום ההורים. לא להעביר הלאה:\n${url}`;
+        return `<tr><td><b>${esc(c.name)}</b><br><span class="hint">${esc(c.homeroom)}</span></td><td style="white-space:nowrap;text-align:left">
+          <a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">וואטסאפ</a>
+          <button class="btn small" data-copy="${esc(url)}">העתקה</button><a class="btn small" href="${esc(url)}">פתיחה</a></td></tr>`; }).join('')}</tbody></table></div>
+      ${existed.length?`<div class="note info">כבר היו פתוחות, ולכן לא נפתחו שוב: ${esc(existed.join(', '))}. הקישורים שלהן בדף הרכז.</div>`:''}
+      ${done.length+existed.length<todo.length?`<div class="note bad">לא כל הכיתות נפתחו (${done.length+existed.length} מתוך ${todo.length}). אפשר להעלות שוב את הקובץ ולסמן רק את מה שחסר.</div>`:''}
+      <div><a class="btn" href="${esc(BASE)}">לדף הראשי</a></div></div>`;
+    bindCopy(res);
   }
   draw();
 }
@@ -429,6 +493,9 @@ async function viewAdmin(){
         <td style="white-space:nowrap;text-align:left"><a class="btn small" target="_blank" rel="noopener" data-sent="${esc(t.name)}" href="https://wa.me/?text=${encodeURIComponent(waMsg(t.name,url))}">וואטסאפ</a>
         <button class="btn small" data-copy="${esc(url)}" data-sent="${esc(t.name)}">העתקה</button>
         <button class="btn small" data-new="${esc(t.name)}">קישור חדש</button></td></tr>`; }).join('')}</tbody></table></div></div>`;
+  if(r.classes.length&&r.classes[0].key) m.insertAdjacentHTML('beforeend',`<div class="card"><h2>כיתות פתוחות</h2><p class="hint">הקישור למסך המחנך של כל כיתה, למשל אם מחנך/ת איבד/ה אותו.</p>
+    <div class="scroll"><table class="t"><tbody>${r.classes.map(c=>{ const url=`${BASE}?c=${c.id}&k=${c.key}`;
+      return `<tr><td><b>${esc(c.name)}</b><br><span class="hint">${esc(c.homeroom)}</span></td><td style="white-space:nowrap;text-align:left"><button class="btn small" data-copy="${esc(url)}">העתקה</button><a class="btn small" href="${esc(url)}">פתיחה</a></td></tr>`; }).join('')}</tbody></table></div></div>`);
   bindTeacherLinks(m,'adminSent');
   $('#rl').onclick=viewAdmin;
   $('#cpAll').onclick=()=>{ copy(all); call({action:'adminSent',names:r.teachers.map(t=>t.name)}).catch(()=>{}); };

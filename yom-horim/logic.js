@@ -198,5 +198,10 @@ const BANK=[
 ];
 function gform(s,g){ return s.replace(/\{([^|{}]*)\|([^|{}]*)\}/g,(m,a,b)=>g==='f'?b:a); }
 
+/* a subject a teacher writes an evaluation for (not homeroom, a campus, a support program or a break) */
+function isEvalSubject(subj){
+  const t=clean(subj);
+  return !!t&&!/^חינוך$/.test(t)&&!/^קמפוס|ממריאות|אסטרטגי/.test(t)&&!(ANS_SUBJ.test(t))&&!NOT_SUBJ.test(t);
+}
 const clsKey=s=>clean(s).replace(/["'`׳״\s]/g,'');
-if(typeof module!=='undefined') module.exports={clsKey,clean,nameKey,parseGroups58,parseTeachers66,parseEvents42,parseSchedulePages,mergeAns,BANK,gform,subjName};
+if(typeof module!=='undefined') module.exports={isEvalSubject,clsKey,clean,nameKey,parseGroups58,parseTeachers66,parseEvents42,parseSchedulePages,mergeAns,BANK,gform,subjName};
