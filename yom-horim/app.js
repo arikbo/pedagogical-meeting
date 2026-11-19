@@ -519,9 +519,14 @@ const pct=(d,t)=>t?Math.min(100,Math.round(d/t*100)):0;
 const bar=(d,t)=>{ const w=pct(d,t); return `<span class="hint" style="font-size:13px">${d}/${t}</span><div class="progress"><i style="width:${w}%;${w<100?'background:#F59E0B':''}"></i></div>`; };
 /* classes: progress, the homeroom's link (WhatsApp / copy / open), and a print of each grade */
 function classesCard(classes,title,canDelete){
+  /* sorted by grade and number; the same class opened twice is marked */
+  const num=c=>Number((String(c.name).match(/\d+/)||[0])[0]);
+  classes=[...classes].sort((a,b)=>(a.grade||'').localeCompare(b.grade||'','he')||num(a)-num(b));
+  const seen={}; classes.forEach(c=>{ const k=clsKey(c.name); seen[k]=(seen[k]||0)+1; });
+  const twice=c=>seen[clsKey(c.name)]>1;
   return `<div class="card"><h2>${esc(title)}</h2><p class="hint">הקישור למסך המחנך של כל כיתה נשלח למחנך/ת שלה.</p>
     <div class="scroll"><table class="t"><thead><tr><th>כיתה</th><th>מילוי</th><th></th></tr></thead><tbody>${classes.map(c=>{ const url=`${BASE}?c=${c.id}&k=${c.key}`, msg=`שלום ${c.homeroom||''}, זה הקישור שלך למסך המחנך של כיתה ${c.name} בדף יום ההורים. לא להעביר הלאה:\n${url}`;
-      return `<tr><td><b>${esc(c.name)}</b><br><span class="hint">${esc(c.homeroom||'')}</span></td><td style="min-width:110px">${bar(c.done,c.total)}</td>
+      return `<tr><td><b>${esc(c.name)}</b>${twice(c)?' <span class="st" style="color:var(--bad);font-weight:700">כפולה</span>':''}<br><span class="hint">${esc(c.homeroom||'אין שם מחנך')}</span></td><td style="min-width:110px">${bar(c.done,c.total)}</td>
         <td style="white-space:nowrap;text-align:left"><a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">וואטסאפ</a>
         <button class="btn small" data-copy="${esc(url)}">העתקה</button><a class="btn small" href="${esc(url)}">פתיחה</a>${canDelete?`<button class="btn small bad" data-del="${esc(c.id)}" data-name="${esc(c.name)}">מחיקה</button>`:''}</td></tr>`; }).join('')}</tbody></table></div></div>`;
 }
