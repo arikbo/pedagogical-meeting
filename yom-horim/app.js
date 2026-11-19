@@ -710,7 +710,7 @@ function panePrint(p){
   const missing=subjects().reduce((n,s)=>n+s.students.filter(k=>!clean(S.entries.get(ek(s.id,k))?.eval)).length,0);
   p.innerHTML=`<div class="card"><h2>הפקת הדפים</h2>
     ${missing?`<div class="note warn">עוד חסרות ${missing} הערכות. בדף הן יופיעו כ־"—".</div>`:'<div class="note good">כל ההערכות מולאו.</div>'}
-    ${R.ev?'':'<div class="note info">עוד לא הועלה דוח 42, אז האירועים יופיעו כ־"—". אפשר להעלות אותו בלשונית "דוחות".</div>'}
+    ${R.ev?(Date.now()-(R.ev_at||0)>3*864e5?`<div class="note warn">דוח 42 (אירועים) הועלה ב־${new Date(R.ev_at).toLocaleDateString('he-IL')}${R.range?` ומכסה עד ${esc(R.range.to)}`:''}. לפני ההדפסה כדאי להעלות דוח מעודכן בלשונית "דוחות".</div>`:`<div class="note good">אירועים${R.range?` מ־${esc(R.range.from)} עד ${esc(R.range.to)}`:''}.</div>`):'<div class="note info">עוד לא הועלה דוח 42, אז האירועים יופיעו כ־"—". אפשר להעלות אותו בלשונית "דוחות".</div>'}
     <label class="f">כותרת משנה<input type="text" id="ttl" value="${esc(R.title||DEF_TITLE)}"></label>
     <div class="row"><button class="btn primary" id="all">הדפסה / PDF – כל הכיתה (${stus.length} דפים)</button></div>
     <div class="row"><select id="one" style="width:auto;flex:1">${stus.map(s=>`<option value="${esc(s.key)}">${esc(s.name)}</option>`).join('')}</select><button class="btn" id="pOne">הדפסת תלמיד/ה זה/ו</button></div>

@@ -132,6 +132,11 @@ footer.ft{text-align:center;color:var(--ink-faint);font-size:13px}
 .page .box .sub{color:#5b6578;font-size:12px}
 .page .box .none{color:#9aa3b5}
 .page .pf{flex:none;text-align:center;font-size:13px;font-weight:600;color:#24407a;background:#eef1f7;border-radius:8px;padding:6px 10px}
+@media (max-width:640px){
+  table.t td[style*="nowrap"]{white-space:normal!important}
+  table.t td[style*="text-align:left"]{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start}
+  table.t th,table.t td{padding:6px 5px}
+}
 #printArea{position:fixed;top:0;left:0;width:210mm;height:0;overflow:hidden;visibility:hidden;pointer-events:none}
 @media print{
   @page{size:A4;margin:0}
