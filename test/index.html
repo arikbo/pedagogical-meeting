@@ -230,6 +230,8 @@ h1{font-size:clamp(26px,4vw,34px)}
 .deck-text{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}
 .deck h3{font-family:var(--display);font-size:19px;margin:0}
 #deckInfo:empty,#photoInfo:empty{display:none}
+.resetbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0}
+.resetbar[hidden]{display:none}
 #deckInfo{color:var(--good)}
 .who{display:flex;flex-direction:column;min-width:0}
 .who b{font-family:var(--display);font-size:18px;overflow-wrap:anywhere}
@@ -412,6 +414,8 @@ footer a{color:var(--accent)}
   </div>
   <div class="samplebar"><div id="sampleBanner" class="sample" hidden><b>מוצגים נתוני דוגמה.</b><span>העלו דוחות אמיתיים והדוגמה תוסר.</span></div>
     <button class="btn small" type="button" id="bSample">רוצים לראות קודם איך זה נראה? הצגת דוגמה</button></div>
+  <div class="resetbar" id="resetBar" hidden><span class="hint">הדוחות והעריכות נשמרים רק בדפדפן הזה, גם אחרי רענון, ונמחקים אוטומטית אחרי 30 יום. במחשב משותף לחצו ״ניקוי הכול״ בסיום.</span>
+    <button class="btn small" type="button" id="bReset">ניקוי הכול והתחלה מחדש</button></div>
   <input type="file" id="inData" accept=".xlsx,.xls,.csv,.html,.htm,.pdf,.pptx,.ppt,.docx,.doc,.jpg,.jpeg,.png,.webp,.gif,.heic,.zip" multiple hidden>
   <span class="hint" id="photoInfo"></span>
   <span class="hint" id="deckInfo"></span>
@@ -1846,6 +1850,7 @@ function renderFiles(){
   const box=$('#files'); box.innerHTML='';
   $('#sampleBanner').hidden=!state.sample;
   $('#bSample').hidden=state.sample||state.files.length>0;
+  $('#resetBar').hidden=state.sample||!state.files.length;
   { const slim=!state.sample&&state.files.length>0; $('#upl').classList.toggle('slim',slim);
     $('#dropData strong').textContent=slim?'גררו לכאן קבצים נוספים, או לחצו לבחירה':'גררו לכאן את כל הדוחות יחד, או לחצו לבחירה'; }
   $('#stepCheck').hidden=$('#stepStu').hidden=$('#changedBox').hidden=!state.files.length;
@@ -1876,7 +1881,7 @@ function renderFiles(){
       lab.appendChild(sel); map.appendChild(lab);
     }
     if(!hasName) d.open=true;
-    d.querySelector('[data-del]').onclick=e=>{ e.preventDefault(); (f.photoKeys||[]).forEach(k=>{ if(state.photos[k]===f.photoData?.[k]) delete state.photos[k]; }); state.files=state.files.filter(x=>x.id!==f.id); refresh(); };
+    d.querySelector('[data-del]').onclick=e=>{ e.preventDefault(); dropFile(f); refresh(); };
     box.appendChild(d);
   }
 }
@@ -2240,6 +2245,7 @@ function refresh(){
   autoClass();
   autoTeacher();
   renderFiles(); renderChecks(); renderEvPick(); renderChanged(); renderThemes(); renderRoles(); renderStudents(); updateStatus();
+  scheduleSave();
 }
 /* ---------- roles and activities: picked by hand per role, written into חוזקות ---------- */
 const ROLE_DEFAULTS=[
@@ -2901,6 +2907,7 @@ async function handleAnyInner(list){
   const pdfs=list.filter(f=>ext(f)==='pdf');
   const msgs=list.filter(f=>![...data,...decks,...docs,...pics,...pdfs].includes(f)).map(f=>`${f.name}: סוג קובץ לא מוכר.`);
   const notes=[];
+  const before=new Set(state.files.map(f=>f.id));
   const busy=t=>{ $('#photoInfo').textContent=t; };
   if(data.length){ busy('קורא דוחות…'); await handleData(data,msgs,notes); }
   for(const f of pdfs){
@@ -2934,9 +2941,63 @@ async function handleAnyInner(list){
   }
   if(pics.length){ busy('משייך תמונות…'); await handlePhotos(pics,notes); }
   busy('');
+  notes.push(...replaceOlder(before));
   $('#deckInfo').textContent=notes.join(' ');
   if(msgs.length){ err.innerHTML=msgs.map(esc).join('<br>'); err.hidden=false; }
   refresh();
+}
+
+/* ---------- a report uploaded again replaces the one uploaded before ----------
+   One slot per Smart School report (98, 42, 33/34, 58, 64, teachers), one for a previous deck and one for a
+   previous Word document; any other file is the same file when it has the same name.
+   Only the report's data is replaced: the teacher's edits, roles, photos and "שינוי" students stay. */
+function fileSlot(f){
+  if(['sadin','events','assess','groups','schedule','teachers'].includes(f.kind)) return f.kind;
+  if(f.kind==='deck') return /\.docx$/i.test(f.name)?'deck:doc':'deck';
+  return 'name:'+clean(f.name);
+}
+function dropFile(f){
+  (f.photoKeys||[]).forEach(k=>{ if(state.photos[k]===f.photoData?.[k]) delete state.photos[k]; });
+  state.files=state.files.filter(x=>x.id!==f.id);
+}
+function replaceOlder(before){
+  const out=[];
+  for(const nf of state.files.filter(f=>!before.has(f.id))){
+    const old=state.files.filter(f=>before.has(f.id)&&fileSlot(f)===fileSlot(nf));
+    for(const o of old){ dropFile(o); before.delete(o.id); out.push(`${nf.name} החליף את ${o.name} שהועלה קודם (העריכות שלכם נשמרו).`); }
+  }
+  return out;
+}
+/* ---------- the work stays in this browser after a refresh or closing the tab ----------
+   Saved on this computer only (IndexedDB), never sent anywhere. Deleted by "ניקוי הכול" or after SAVE_DAYS. */
+const SAVE_DAYS=30, SAVE_INPUTS=['sClass','sTeacher','sDate','sTeachers','sTop3','sPass','sAbsMin','sLateMin','sBsd'];
+let saveReady=false, saveTimer=null;
+function idbOpen(){ return new Promise((res,rej)=>{ const q=indexedDB.open('pm-save',1); q.onupgradeneeded=()=>q.result.createObjectStore('s'); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+async function idbDo(mode,fn){ const db=await idbOpen(); return new Promise((res,rej)=>{ const tx=db.transaction('s',mode); const r=fn(tx.objectStore('s'));
+  tx.oncomplete=()=>{ db.close(); res(r&&r.result); }; tx.onerror=tx.onabort=()=>{ db.close(); rej(tx.error); }; }); }
+function scheduleSave(){ if(!saveReady||state.sample) return; clearTimeout(saveTimer); saveTimer=setTimeout(saveWork,500); }
+async function saveWork(){
+  if(!saveReady||state.sample) return;
+  try{
+    if(!state.files.length&&!Object.keys(state.photos).length){ await idbDo('readwrite',s=>s.delete('work')); return; }
+    const {logos,...rest}=state; /* logos are kept apart (pm.logos) */
+    const files=state.files.map(f=>({...f,rows:(f.rows||[]).map(r=>[...r]),_rx:(f.rows||[]).map(r=>r.alts||r.ocr?{alts:r.alts,ocr:r.ocr}:0)}));
+    const inputs=Object.fromEntries(SAVE_INPUTS.map(id=>{ const el=$('#'+id); return [id,el?(el.type==='checkbox'?el.checked:el.value):null]; }));
+    await idbDo('readwrite',s=>s.put({v:1,at:Date.now(),state:{...rest,files},inputs,roleSeq},'work'));
+  }catch(e){ console.warn('save failed',e); }
+}
+async function clearWork(){ try{ await idbDo('readwrite',s=>s.delete('work')); }catch(e){} }
+async function restoreWork(){
+  let w=null; try{ w=await idbDo('readonly',s=>s.get('work')); }catch(e){ return 0; }
+  if(!w||w.v!==1||!w.state) return 0;
+  if(Date.now()-w.at>SAVE_DAYS*864e5){ await clearWork(); return 0; }
+  const {files,...rest}=w.state;
+  Object.assign(state,rest);
+  state.files=(files||[]).map(({_rx,...f})=>{ (_rx||[]).forEach((x,i)=>{ if(x&&f.rows[i]){ f.rows[i].alts=x.alts; f.rows[i].ocr=x.ocr; } }); return f; });
+  state.sample=false;
+  for(const [id,v] of Object.entries(w.inputs||{})){ const el=$('#'+id); if(!el||v==null) continue; if(el.type==='checkbox') el.checked=!!v; else el.value=v; }
+  if(w.roleSeq) roleSeq=w.roleSeq;
+  return w.at;
 }
 function pdfError(f,e){
   if(e?.message==='scanned') return `${f.name}: ה-PDF הוא תמונה סרוקה בלי טקסט. הפיקו אותו מחדש מסמארט סקול.`;
@@ -3464,6 +3525,18 @@ $('#bGen').onclick=async()=>{
 };
 state.sample=false; refresh();
 $('#bSample').onclick=()=>{ loadSample(); };
+/* any typing or choice (info edits, "שינוי" students, settings, theme) is saved too */
+document.addEventListener('input',scheduleSave); document.addEventListener('change',scheduleSave);
+$('#bReset').onclick=async()=>{
+  if(!confirm('למחוק את כל הדוחות, התמונות והעריכות מהדפדפן הזה ולהתחיל מחדש?')) return;
+  saveReady=false; clearTimeout(saveTimer); await clearWork(); location.reload();
+};
+(async()=>{
+  const at=await restoreWork();
+  if(at){ refresh(); const d=new Date(at);
+    $('#deckInfo').textContent=`המשכתם מאיפה שעצרתם: הדוחות והעריכות מ-${d.toLocaleDateString('he-IL')} ${d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})} נטענו.`; }
+  saveReady=true;
+})();
 </script>
 </body>
 </html>
