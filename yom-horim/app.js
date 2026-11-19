@@ -459,6 +459,7 @@ function pageHTML(stu){
   <div style="display:flex;flex-direction:column;gap:5px"><div class="evh"><h4>אירועים בשיעורים</h4>${R.range?`<small>מ־${esc(R.range.from)} עד ${esc(R.range.to)}</small>`:''}</div>
   <div class="evs"><div class="ev pos"><b>${n(ev?.tz)}</b><span>צל״שים</span></div><div class="ev neg"><b>${n(ev?.hf)}</b><span>הפרעות</span></div><div class="ev"><b>${n(ev?.late)}</b><span>איחורים</span></div><div class="ev"><b>${n(ev?.abs)}</b><span>חיסורים</span></div></div></div>
   <div class="two"><div class="box g"><h4>חוזקות</h4>${sBody||'<span class="none">—</span>'}</div><div class="box"><h4>מענים</h4>${aBody||'<span class="none">—</span>'}</div></div>
+  <div class="pf">הציונים השוטפים מופיעים במערכת סמארט סקול</div>
   </div>`;
 }
 /* everything must fit one A4 page: shrink the text step by step until it does */
