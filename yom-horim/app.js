@@ -48,14 +48,15 @@ async function read64(file){
   }
   return parseSchedulePages(pages);
 }
-function dropZone(title,sub,accept,onFile,done){
+/* a drop area for one or more files (Excel or PDF); onFiles gets them all */
+function dropZone(title,sub,onFiles,done){
   const d=document.createElement('label'); d.className='drop'+(done?' ok':'');
-  d.innerHTML=`<span class="ic">${done?'✓':'+'}</span><span><b>${esc(title)}</b><small>${esc(done||sub)}</small></span><input type="file" accept="${accept}" hidden>`;
+  d.innerHTML=`<span class="ic">${done?'✓':'+'}</span><span><b>${esc(title)}</b><small>${esc(done||sub)}</small></span><input type="file" accept=".xlsx,.xls,.pdf" multiple hidden>`;
   const inp=$('input',d);
-  inp.onchange=()=>{ if(inp.files[0]) onFile(inp.files[0]); inp.value=''; };
+  inp.onchange=()=>{ if(inp.files.length) onFiles([...inp.files]); inp.value=''; };
   d.addEventListener('dragover',e=>{ e.preventDefault(); d.classList.add('over'); });
   d.addEventListener('dragleave',()=>d.classList.remove('over'));
-  d.addEventListener('drop',e=>{ e.preventDefault(); d.classList.remove('over'); if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]); });
+  d.addEventListener('drop',e=>{ e.preventDefault(); d.classList.remove('over'); if(e.dataTransfer.files.length) onFiles([...e.dataTransfer.files]); });
   return d;
 }
 function shell(eyebrow,title){
@@ -88,81 +89,121 @@ function errorView(msg){ const m=shell('דף יום הורים','משהו השת
 function viewHome(){
   const m=shell('חטיבת הביניים עתידים','דף יום הורים');
   const mine=myClasses();
-  m.innerHTML=`<div class="card"><h2>מחנכים: פתיחת כיתה</h2>
-    <p class="hint">מעלים את דוח 58 של הכיתה, ובסוף מפיקים דף אחד לכל תלמיד. רכזי שכבה יכולים להעלות דוח 58 של כל השכבה ולפתוח את כל הכיתות בבת אחת.</p>
-    <div><button class="btn primary" id="newCls">פתיחת כיתה חדשה</button></div></div>
-    ${mine.length?`<div class="card"><h2>הכיתות שלי</h2><div style="display:flex;flex-direction:column;gap:8px">${mine.map(c=>`<a class="btn" style="justify-content:space-between" href="?c=${esc(c.id)}&k=${esc(c.key)}"><span>${esc(c.name)}</span><span class="hint">למסך המחנך ←</span></a>`).join('')}</div></div>`:''}
-    <div class="card"><h2>מורים מקצועיים</h2><p class="hint">לכל מורה יש קישור אישי אחד לכל הכיתות. פותחים אותו ורואים את כל הכיתות שלכם.</p></div>
-    <footer class="ft"><a href="?admin=1" style="color:inherit">דף רכז</a></footer>`;
-  $('#newCls').onclick=viewCreate;
+  m.innerHTML=`${mine.length?`<div class="card"><h2>הכיתות שלי</h2><div style="display:flex;flex-direction:column;gap:8px">${mine.map(c=>`<a class="btn" style="justify-content:space-between" href="?c=${esc(c.id)}&k=${esc(c.key)}"><span>${esc(c.name)}</span><span class="hint">למסך המחנך ←</span></a>`).join('')}</div></div>`:''}
+    <div class="card"><h2>איך נכנסים</h2>
+    <p class="hint"><b>מחנכים</b> – קישור למסך המחנך של הכיתה, מרכז/ת השכבה.<br><b>רכזי שכבה</b> – קישור אישי ממנהל המערכת.<br><b>מורים מקצועיים</b> – קישור אישי אחד לכל הכיתות.</p></div>
+    <footer class="ft"><a href="?admin=1" style="color:inherit">מנהל המערכת</a></footer>`;
 }
 
 /* ================= homeroom: open a class ================= */
-function viewCreate(){
-  const m=shell('פתיחת כיתה','דף יום הורים');
-  const d={name:'',homeroom:'',students:[],subjects:[],a58:{},s58:{},ok58:'',ok66:''};
-  let seq=1;
+/* ---------- every report goes into ONE drop area: each file is recognised by its content ---------- */
+const FILES_HINT='דוח 58 של כיתה או של שכבה (חובה), ואם יש גם 42, 64 ו-66. אפשר כמה קבצים יחד ובכל סדר';
+async function readReports(files){
+  const out={g58:[],t66:[],e42:[],s64:[],bad:[]};
+  for(const f of files){
+    try{
+      if(/\.pdf$/i.test(f.name)){ const r=await read64(f); if(r) out.s64.push({name:f.name,map:r}); else out.bad.push(f.name); continue; }
+      const sheets=await readXlsx(f);
+      const g=sheets.map(parseGroups58).filter(Boolean); if(g.length){ out.g58.push(...g); continue; }
+      const e=sheets.map(parseEvents42).filter(Boolean); if(e.length){ out.e42.push(...e.map(x=>({...x,name:f.name}))); continue; }
+      const t=sheets.map(parseTeachers66).filter(Boolean); if(t.length){ out.t66.push(...t); continue; }
+      out.bad.push(f.name);
+    }catch(err){ console.error(err); out.bad.push(f.name); }
+  }
+  return out;
+}
+function mergeReports(a,b){ for(const k of ['g58','t66','e42','s64','bad']) a[k].push(...b[k]); return a; }
+const emptyReports=()=>({g58:[],t66:[],e42:[],s64:[],bad:[]});
+/* the part of reports 42 / 64 that belongs to these students (a class file or a whole-grade file alike) */
+function reportsFor(keys,rd){
+  const set=new Set(keys), patch={};
+  const ev={}; let range='';
+  for(const r of rd.e42){ let hit=0; for(const k of Object.keys(r.ev)) if(set.has(k)){ ev[k]=r.ev[k]; hit++; } if(hit&&!range) range=r.range; }
+  if(Object.keys(ev).length) Object.assign(patch,{ev,range,ev_at:Date.now()});
+  const a={};
+  for(const r of rd.s64) for(const [k,v] of Object.entries(r.map)) if(set.has(k)) a[k]=v;
+  if(Object.keys(a).length) Object.assign(patch,{a64:a,a64_at:Date.now()});
+  return patch;
+}
+/* subjects that report 66 has and 58 does not, for one class */
+function add66(c,t66){
+  const r=t66.length===1&&!t66[0].cls?t66[0]:t66.find(x=>x.cls&&clsKey(x.cls)===clsKey(c.name)); if(!r) return 0;
+  let n=0;
+  for(const t of r){ const subject=subjName(t.subject,c.name); if(!isEvalSubject(subject)||c.subjects.some(s=>clean(s.subject)===clean(subject))) continue;
+    c.subjects.push({id:'s'+(c.subjects.length+1),subject,teacher:t.teacher,students:c.students.map(s=>s.key)}); n++; }
+  return n;
+}
+/* what was recognised, one line per report */
+function reportLines(acc,classes){
+  const L=[];
+  if(acc.g58.length) L.push(['ok',`דוח 58 · ${acc.g58.length===1?clean(acc.g58[0].cls)+' · '+acc.g58[0].students.length+' תלמידים':acc.g58.length+' כיתות'}`]);
+  for(const r of acc.e42) L.push(['ok',`דוח 42 · אירועים${r.range?` מ־${r.range.from} עד ${r.range.to}`:''} · ${Object.keys(r.ev).length} תלמידים`]);
+  for(const r of acc.s64) L.push(['ok',`דוח 64 · מערכת שעות · ${Object.keys(r.map).length} תלמידים`]);
+  if(acc.t66.length) L.push(['ok',`דוח 66 · מורי הכיתה${acc.t66.length>1?` · ${acc.t66.length} כיתות`:''}`]);
+  for(const n of acc.bad) L.push(['bad',`לא זוהה כדוח: ${n}`]);
+  if(classes) for(const c of classes){ const k=c.students.map(s=>s.key); const p=reportsFor(k,acc);
+    if((acc.e42.length&&!p.ev)||(acc.s64.length&&!p.a64)) L.push(['warn',`${c.name}: ${acc.e42.length&&!p.ev?'אין לה נתונים בדוח 42':''}${acc.e42.length&&!p.ev&&acc.s64.length&&!p.a64?' וגם ':''}${acc.s64.length&&!p.a64?'אין לה נתונים בדוח 64':''}`]); }
+  return L.length?`<div style="display:flex;flex-direction:column;gap:6px">${L.map(([k,t])=>`<div class="note ${k==='ok'?'good':k==='bad'?'bad':'warn'}" style="padding:6px 12px">${k==='ok'?'✓ ':''}${esc(t)}</div>`).join('')}</div>`:'';
+}
+
+/* ================= homeroom: open a class (or a coordinator: a whole grade) ================= */
+/* who = {by:'admin'} or {by:'coord', g:<token>, grade:'ז'}: only they open classes */
+let WHO={by:'admin'};
+const backTo=()=>WHO.by==='coord'?`?g=${WHO.g}`:'?admin=1';
+const inMyGrade=g=>WHO.by!=='coord'||gradeOf(g.cls)===WHO.grade;
+function viewCreate(who){
+  if(who) WHO=who;
+  const m=shell(WHO.by==='coord'?`פתיחת כיתות · שכבה ${WHO.grade}'`:'פתיחת כיתות','דף יום הורים');
+  const acc=emptyReports();
+  let c=null; /* the class, from report 58 */
   const draw=()=>{
-    m.innerHTML=`<div class="card"><h2>1. דוח 58 – שיוך תלמידי כיתה לקבוצות</h2>
-      <p class="hint">מפיקים בסמארט סקול כקובץ Excel. ממנו נלקחים התלמידים, המקצועות והמורים של כל תלמיד.</p>
-      <div id="z58"></div><div id="z66"></div></div>
-      <div class="card" ${d.students.length?'':'hidden'}><h2>2. פרטי הכיתה</h2>
-      <div class="row"><label class="f grow">כיתה<input type="text" id="cName" value="${esc(d.name)}"></label>
-      <label class="f grow">שם המחנך/ת<input type="text" id="cHr" value="${esc(d.homeroom)}" placeholder="יופיע בראש הדף"></label></div>
-      <p class="hint">${d.students.length} תלמידים.</p></div>
-      <div class="card" ${d.students.length?'':'hidden'}><h2>3. מקצועות ומורים</h2>
-      <p class="hint">כל מורה יראה רק את התלמידים שלו. אפשר לתקן שם, למחוק מקצוע שלא צריך בדף (למשל שעת חינוך) או להוסיף מקצוע.</p>
+    m.innerHTML=`<div class="card"><h2>1. דוחות מסמארט סקול</h2>
+      <p class="hint">גוררים לכאן את הדוחות, והמערכת מזהה לבד איזה דוח זה. דוח 58 של שכבה שלמה פותח את כל הכיתות בבת אחת.</p>
+      <div id="zr"></div>${reportLines(acc,c?[c]:null)}</div>
+      ${c?`<div class="card"><h2>2. פרטי הכיתה</h2>
+      <div class="row"><label class="f grow">כיתה<input type="text" id="cName" value="${esc(c.name)}"></label>
+      <label class="f grow">שם המחנך/ת<input type="text" id="cHr" value="${esc(c.homeroom)}" placeholder="יופיע בראש הדף"></label></div>
+      <p class="hint">${c.students.length} תלמידים.</p></div>
+      <div class="card"><h2>3. מקצועות ומורים</h2>
+      <p class="hint">כל מורה יראה רק את התלמידים שלו. אפשר לתקן שם, למחוק מקצוע שלא צריך בדף או להוסיף מקצוע.</p>
       <div class="scroll"><table class="t"><thead><tr><th>מקצוע</th><th>מורה</th><th>תלמידים</th><th></th></tr></thead><tbody id="sb"></tbody></table></div>
       <div><button class="btn small" id="addS">+ הוספת מקצוע</button></div></div>
-      <div class="card" ${d.students.length?'':'hidden'}><button class="btn primary" id="go">פתיחת הכיתה וקבלת קישורים</button></div>`;
-    $('#z58').appendChild(dropZone('דוח 58 (Excel)','לחצו לבחירת קובץ או גררו לכאן','.xlsx,.xls',f58,d.ok58));
-    $('#z66').appendChild(dropZone('דוח 66 – מורי הכיתה (לא חובה)','משלים מקצועות שחסרים בדוח 58','.xlsx,.xls',f66,d.ok66));
+      <div class="card"><button class="btn primary" id="go">פתיחת הכיתה וקבלת קישורים</button></div>`:''}`;
+    $('#zr',m).appendChild(dropZone('גררו לכאן את הדוחות',FILES_HINT,onFiles));
+    if(!c) return;
     const sb=$('#sb');
-    d.subjects.forEach((s,i)=>{
+    c.subjects.forEach((s,i)=>{
       const tr=document.createElement('tr');
       tr.innerHTML=`<td><input type="text" value="${esc(s.subject)}"></td><td><input type="text" value="${esc(s.teacher)}"></td><td>${s.students.length}</td><td><button class="btn small bad" aria-label="מחיקה">✕</button></td>`;
       const [a,b]=tr.querySelectorAll('input'); a.oninput=()=>s.subject=a.value; b.oninput=()=>s.teacher=b.value;
-      $('button',tr).onclick=()=>{ d.subjects.splice(i,1); draw(); };
+      $('button',tr).onclick=()=>{ c.subjects.splice(i,1); draw(); };
       sb.appendChild(tr);
     });
-    const nm=$('#cName'), hr=$('#cHr'); if(nm){ nm.oninput=()=>d.name=nm.value; hr.oninput=()=>d.homeroom=hr.value; }
-    const add=$('#addS'); if(add) add.onclick=()=>{ d.subjects.push({id:'s'+(seq++),subject:'',teacher:'',students:d.students.map(s=>s.key)}); draw(); };
-    const go=$('#go'); if(go) go.onclick=create;
+    $('#cName').oninput=e=>c.name=e.target.value; $('#cHr').oninput=e=>c.homeroom=e.target.value;
+    $('#addS').onclick=()=>{ c.subjects.push({id:'s'+(c.subjects.length+1)+'x',subject:'',teacher:'',students:c.students.map(s=>s.key)}); draw(); };
+    $('#go').onclick=create;
   };
-  async function f58(file){
-    try{
-      const all=(await readXlsx(file)).map(parseGroups58).filter(Boolean);
-      if(!all.length){ toast('זה לא נראה כמו דוח 58'); return; }
-      if(all.length>1){ viewCreateMany(all.map(prepClass),file.name); return; }  /* a whole grade: a sheet per class */
-      const c=prepClass(all[0]);
-      Object.assign(d,{students:c.students,a58:c.a58,s58:c.s58,name:d.name||c.name,homeroom:d.homeroom||c.homeroom,subjects:c.subjects});
-      seq=c.subjects.length+1;
-      d.ok58=`${file.name} · ${c.students.length} תלמידים, ${c.subjects.length} מקצועות`;
-      draw();
-    }catch(e){ console.error(e); toast('לא הצלחתי לקרוא את הקובץ'); }
-  }
-  async function f66(file){
-    try{
-      const all=(await readXlsx(file)).map(parseTeachers66).filter(Boolean);
-      if(!all.length){ toast('לא נמצאו בקובץ עמודות מורה ומקצוע'); return; }
-      /* a whole-grade file has a sheet per class: take only this class's sheet */
-      const r=all.length===1?all[0]:all.find(x=>x.cls&&clsKey(x.cls)===clsKey(d.name));
-      if(!r){ toast(`בקובץ אין גיליון של כיתה ${d.name}`); return; }
-      let n=0;
-      for(const t of r){ const subject=subjName(t.subject,d.name); if(!isEvalSubject(subject)||d.subjects.some(s=>clean(s.subject)===clean(subject))) continue;
-        d.subjects.push({id:'s'+(seq++),subject,teacher:t.teacher,students:d.students.map(s=>s.key)}); n++; }
-      d.ok66=`${file.name} · נוספו ${n} מקצועות`; draw();
-    }catch(e){ console.error(e); toast('לא הצלחתי לקרוא את הקובץ'); }
+  async function onFiles(files){
+    toast('קורא את הקבצים…');
+    const rd=await readReports(files);
+    const other=rd.g58.filter(g=>!inMyGrade(g)); rd.g58=rd.g58.filter(inMyGrade);
+    if(other.length) toast(`דילגתי על כיתות שלא בשכבה ${WHO.grade}': ${other.map(g=>clean(g.cls)).join(', ')}`);
+    mergeReports(acc,rd);
+    if(acc.g58.length>1){ viewCreateMany(acc); return; }   /* a whole grade */
+    if(rd.g58.length===1){ c=prepClass(rd.g58[0]); }
+    if(c) add66(c,acc.t66);
+    draw();
   }
   async function create(){
-    const subjects=d.subjects.filter(s=>clean(s.subject)).map(s=>({id:s.id,subject:clean(s.subject),teacher:clean(s.teacher),students:s.students}));
-    if(!clean(d.name)){ toast('חסר שם כיתה'); return; }
+    const subjects=c.subjects.filter(s=>clean(s.subject)).map(s=>({id:s.id,subject:clean(s.subject),teacher:clean(s.teacher),students:s.students}));
+    if(!clean(c.name)){ toast('חסר שם כיתה'); return; }
     const go=$('#go'); go.disabled=true; go.textContent='פותח…';
     try{
-      const q={action:'create',name:clean(d.name),homeroom:clean(d.homeroom),data:{students:d.students,subjects},reports:{a58:d.a58,s58:d.s58,title:DEF_TITLE}};
+      const reports={a58:c.a58,s58:c.s58,title:DEF_TITLE,...reportsFor(c.students.map(s=>s.key),acc)};
+      const q={action:'create',g:WHO.g,name:clean(c.name),homeroom:clean(c.homeroom),data:{students:c.students,subjects},reports};
       const r=await withCode(()=>call(q));
-      rememberClass({id:r.id,key:r.key,name:clean(d.name)});
-      viewLinks(r.id,r.key,clean(d.name));
+      rememberClass({id:r.id,key:r.key,name:clean(c.name)});
+      viewLinks(r.id,r.key,clean(c.name));
     }catch(e){ go.disabled=false; go.textContent='פתיחת הכיתה וקבלת קישורים'; toast(e.message); }
   }
   draw();
@@ -174,36 +215,33 @@ function prepClass(r){
   return {name:clean(r.cls),homeroom:[...new Set(hr.map(s=>clean(s.teacher)))].join(', '),students:r.students,a58:r.ans,s58:r.str,subjects};
 }
 /* a grade coordinator opens all the classes of a grade at once */
-function viewCreateMany(list,fileName){
+function viewCreateMany(acc){
   const m=shell('פתיחת שכבה','דף יום הורים');
   const opened=new Set(myClasses().map(c=>clsKey(c.name)));
-  list.forEach(c=>{ c.on=!opened.has(clsKey(c.name)); c.was=opened.has(clsKey(c.name)); });
-  let ok66='';
+  let list=[];
+  const build=()=>{   /* one entry per class; a class seen twice keeps its first file */
+    const seen=new Set(list.map(c=>clsKey(c.name)));
+    for(const g of acc.g58){ const c=prepClass(g); if(seen.has(clsKey(c.name))) continue; seen.add(clsKey(c.name)); c.on=!opened.has(clsKey(c.name)); c.was=!c.on; list.push(c); }
+    for(const c of list) add66(c,acc.t66);
+  };
+  build();
   const draw=()=>{
     const n=list.filter(c=>c.on).length;
-    m.innerHTML=`<div class="card"><h2>נמצאו ${list.length} כיתות בקובץ</h2>
-      <p class="hint">${esc(fileName)}. שמות המחנכים נלקחו מהמקצוע "חינוך", ואפשר לתקן. מסמנים אילו כיתות לפתוח.</p>
-      <div class="scroll"><table class="t"><thead><tr><th></th><th>כיתה</th><th>מחנך/ת</th><th>תלמידים</th><th>מקצועות</th></tr></thead><tbody>${list.map((c,i)=>`<tr>
+    m.innerHTML=`<div class="card"><h2>נמצאו ${list.length} כיתות</h2>
+      <p class="hint">שמות המחנכים נלקחו מהמקצוע "חינוך", ואפשר לתקן. מסמנים אילו כיתות לפתוח. אפשר לגרור עוד דוחות (42, 64, 66) – כל דוח מגיע לבד לכיתה שלו.</p>
+      <div id="zr"></div>${reportLines(acc,list)}
+      <div class="scroll"><table class="t"><thead><tr><th></th><th>כיתה</th><th>מחנך/ת</th><th>תלמידים</th><th>מקצועות</th><th>42</th><th>64</th></tr></thead><tbody>${list.map((c,i)=>{ const p=reportsFor(c.students.map(s=>s.key),acc); return `<tr>
         <td><input type="checkbox" data-i="${i}" ${c.on?'checked':''} aria-label="לפתוח את ${esc(c.name)}"></td>
         <td><b>${esc(c.name)}</b>${c.was?'<br><span class="st" style="color:var(--warn)">כבר נפתחה</span>':''}</td>
-        <td><input type="text" data-h="${i}" value="${esc(c.homeroom)}"></td><td>${c.students.length}</td><td>${c.subjects.length}</td></tr>`).join('')}</tbody></table></div>
-      <div id="z66"></div>
-      <p class="hint">אחרי הפתיחה, כל מחנך/ת מקבל/ת קישור משלו/ה למסך המחנך. מורים מקצועיים לא צריכים קישור חדש: הכיתות מופיעות אצלם לבד.</p>
+        <td><input type="text" data-h="${i}" value="${esc(c.homeroom)}"></td><td>${c.students.length}</td><td>${c.subjects.length}</td>
+        <td class="c">${p.ev?'<span style="color:var(--good)">✓</span>':'—'}</td><td class="c">${p.a64?'<span style="color:var(--good)">✓</span>':'—'}</td></tr>`; }).join('')}</tbody></table></div>
+      <p class="hint">אחרי הפתיחה, כל מחנך/ת מקבל/ת קישור משלו/ה למסך המחנך. מורים מקצועיים לא צריכים קישור חדש: הכיתות מופיעות אצלם לבד. דוחות 42 ו-64 אפשר להעלות גם אחר כך, מהמסך הראשי שלך.</p>
       <div><button class="btn primary" id="go" ${n?'':'disabled'}>פתיחת ${n} כיתות</button></div></div>`;
-    $('#z66',m).appendChild(dropZone('דוח 66 של השכבה (לא חובה)','משלים מקצועות שחסרים בדוח 58','.xlsx,.xls',f66,ok66));
+    $('#zr',m).appendChild(dropZone('גררו לכאן עוד דוחות',FILES_HINT,async files=>{ toast('קורא את הקבצים…'); const rd=await readReports(files); rd.g58=rd.g58.filter(inMyGrade); mergeReports(acc,rd); build(); draw(); }));
     m.querySelectorAll('[data-i]').forEach(b=>b.onchange=()=>{ list[+b.dataset.i].on=b.checked; draw(); });
     m.querySelectorAll('[data-h]').forEach(b=>b.oninput=()=>{ list[+b.dataset.h].homeroom=b.value; });
     $('#go',m).onclick=go;
   };
-  async function f66(file){
-    try{
-      const all=(await readXlsx(file)).map(parseTeachers66).filter(Boolean); let n=0;
-      for(const c of list){ const r=all.find(x=>x.cls&&clsKey(x.cls)===clsKey(c.name)); if(!r) continue;
-        for(const t of r){ const subject=subjName(t.subject,c.name); if(!isEvalSubject(subject)||c.subjects.some(s=>clean(s.subject)===clean(subject))) continue;
-          c.subjects.push({id:'s'+(c.subjects.length+1),subject,teacher:t.teacher,students:c.students.map(s=>s.key)}); n++; } }
-      ok66=`${file.name} · נוספו ${n} מקצועות`; draw();
-    }catch(e){ console.error(e); toast('לא הצלחתי לקרוא את הקובץ'); }
-  }
   async function go(){
     const todo=list.filter(c=>c.on);
     const b=$('#go',m); b.disabled=true;
@@ -211,20 +249,21 @@ function viewCreateMany(list,fileName){
     try{
       for(const c of todo){
         b.textContent=`פותח ${c.name}… (${done.length+existed.length+1}/${todo.length})`;
-        const q={action:'create',name:c.name,homeroom:clean(c.homeroom),data:{students:c.students,subjects:c.subjects},reports:{a58:c.a58,s58:c.s58,title:DEF_TITLE}};
+        const reports={a58:c.a58,s58:c.s58,title:DEF_TITLE,...reportsFor(c.students.map(s=>s.key),acc)};
+        const q={action:'create',g:WHO.g,name:c.name,homeroom:clean(c.homeroom),data:{students:c.students,subjects:c.subjects},reports};
         try{ const r=await withCode(()=>call(q)); rememberClass({id:r.id,key:r.key,name:c.name}); done.push({...c,id:r.id,key:r.key}); }
         catch(e){ if(e.exists) existed.push(c.name); else throw e; }
       }
     }catch(e){ toast(e.message); }
     const res=shell('פתיחת שכבה',`נפתחו ${done.length} כיתות`);
-    res.innerHTML=`<div class="card"><h2>קישורים למחנכים</h2><p class="hint">לכל מחנך/ת שולחים את הקישור של הכיתה שלו/ה. הקישורים נשמרו גם ב"הכיתות שלי" בדפדפן הזה.</p>
+    res.innerHTML=`<div class="card"><h2>קישורים למחנכים</h2><p class="hint">לכל מחנך/ת שולחים את הקישור של הכיתה שלו/ה. הם נמצאים גם ברשימת הכיתות שלך.</p>
       <div class="scroll"><table class="t"><tbody>${done.map(c=>{ const url=`${BASE}?c=${c.id}&k=${c.key}`, msg=`שלום ${c.homeroom||''}, זה הקישור שלך למסך המחנך של כיתה ${c.name} בדף יום ההורים. לא להעביר הלאה:\n${url}`;
         return `<tr><td><b>${esc(c.name)}</b><br><span class="hint">${esc(c.homeroom)}</span></td><td style="white-space:nowrap;text-align:left">
           <a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">וואטסאפ</a>
           <button class="btn small" data-copy="${esc(url)}">העתקה</button><a class="btn small" href="${esc(url)}">פתיחה</a></td></tr>`; }).join('')}</tbody></table></div>
-      ${existed.length?`<div class="note info">כבר היו פתוחות, ולכן לא נפתחו שוב: ${esc(existed.join(', '))}. הקישורים שלהן בדף הרכז.</div>`:''}
+      ${existed.length?`<div class="note info">כבר היו פתוחות, ולכן לא נפתחו שוב: ${esc(existed.join(', '))}. הקישורים שלהן ברשימת הכיתות.</div>`:''}
       ${done.length+existed.length<todo.length?`<div class="note bad">לא כל הכיתות נפתחו (${done.length+existed.length} מתוך ${todo.length}). אפשר להעלות שוב את הקובץ ולסמן רק את מה שחסר.</div>`:''}
-      <div><a class="btn" href="${esc(BASE)}">לדף הראשי</a></div></div>`;
+      <div><a class="btn" href="${esc(backTo())}">חזרה</a></div></div>`;
     bindCopy(res);
   }
   draw();
@@ -248,19 +287,18 @@ function bindTeacherLinks(el,sentAction){
   bindCopy(el);
   el.querySelectorAll('[data-sent]').forEach(b=>b.addEventListener('click',()=>{
     const n=b.dataset.sent, t=(S.teachers||[]).find(x=>x.name===n); if(!t||t.sent) return;
-    t.sent=true; call(sentAction?{action:sentAction,names:[n]}:{action:'sent',id:S.id,key:S.key,names:[n]}).catch(()=>{});
+    t.sent=true; call(sentAction?{action:sentAction,g:WHO.g,names:[n]}:{action:'sent',id:S.id,key:S.key,names:[n]}).catch(()=>{});
   }));
 }
 function bindCopy(el){ el.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copy(b.dataset.copy)); }
 function viewLinks(id,key,name){
   const m=shell('הכיתה נפתחה',name);
-  const adm=`${BASE}?c=${id}&k=${key}`;
+  const adm=`${BASE}?c=${id}&k=${key}`, msg=`שלום, זה הקישור שלך למסך המחנך של כיתה ${name} בדף יום ההורים. לא להעביר הלאה:\n${adm}`;
   m.innerHTML=`<div class="card links">
-    <div class="l"><b>הקישור שלך (מחנך/ת) – לא לשלוח למורים</b><code>${esc(adm)}</code>
-    <div class="row"><button class="btn small" data-copy="${esc(adm)}">העתקה</button></div>
-    <p class="hint">הוא נשמר גם ב"הכיתות שלי" בדפדפן הזה. כדאי לשמור אותו גם אצלך, למשל בהודעה לעצמך.</p></div>
-    <p class="hint">את הקישורים למורים שולחים מתוך מסך המחנך, בלשונית "מעקב". מורה שכבר קיבל/ה קישור ממחנך אחר – הכיתה שלך כבר מופיעה אצלו/ה.</p>
-    <div><a class="btn primary" href="?c=${esc(id)}&k=${esc(key)}">למסך המחנך</a></div></div>`;
+    <div class="l"><b>קישור למסך המחנך של ${esc(name)} – לשלוח למחנך/ת בלבד</b><code>${esc(adm)}</code>
+    <div class="row"><a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">וואטסאפ</a><button class="btn small" data-copy="${esc(adm)}">העתקה</button></div>
+    <p class="hint">הקישור נמצא גם ברשימת הכיתות שלך. מורים מקצועיים לא צריכים קישור חדש: הכיתה מופיעה אצלם לבד.</p></div>
+    <div class="row"><a class="btn primary" href="${esc(adm)}">למסך המחנך</a><a class="btn" href="${esc(backTo())}">חזרה</a></div></div>`;
   bindCopy(m);
 }
 
@@ -390,24 +428,27 @@ async function saveReports(patch){
 function paneReports(p){
   const R=S.cls.reports||{};
   const at=x=>x?new Date(x).toLocaleDateString('he-IL'):'';
-  p.innerHTML=`<div class="card"><h2>דוחות מסמארט סקול</h2><p class="hint">מעלים פעם אחת לפני ההפקה. אפשר להעלות שוב כדי לעדכן.</p>
-    <div id="z42"></div><div id="z64"></div><div id="z58b"></div></div>`;
-  $('#z42',p).appendChild(dropZone('דוח 42 – מונה אירועים בשיעור לכיתה (Excel)','צל״שים, הפרעות, איחורים וחיסורים','.xlsx,.xls',async f=>{
-    try{ const r=(await readXlsx(f)).map(parseEvents42).find(Boolean); if(!r){ toast('זה לא נראה כמו דוח 42'); return; }
-      const miss=students().filter(s=>!r.ev[s.key]).length;
-      await saveReports({ev:r.ev,range:r.range,ev_at:Date.now()}); toast(miss?`נשמר. ${miss} תלמידים לא נמצאו בדוח`:'דוח 42 נשמר'); drawManager();
-    }catch(e){ console.error(e); toast('לא הצלחתי לקרוא: '+e.message); } },
-    R.ev?`נטען ${at(R.ev_at)}${R.range?` · מ־${R.range.from} עד ${R.range.to}`:''}`:''));
-  $('#z64',p).appendChild(dropZone('דוח 64 – מערכת שעות לתלמיד (PDF)','מענים עם שעות שבועיות ומורה','.pdf',async f=>{
-    try{ toast('קורא את ה-PDF…'); const r=await read64(f); if(!r){ toast('זה לא נראה כמו דוח 64'); return; }
-      await saveReports({a64:r,a64_at:Date.now()}); toast('דוח 64 נשמר'); drawManager();
-    }catch(e){ console.error(e); toast('לא הצלחתי לקרוא: '+e.message); } },
-    R.a64?`נטען ${at(R.a64_at)}`:''));
-  $('#z58b',p).appendChild(dropZone('דוח 58 – עדכון מענים וקמפוסים (Excel)','כבר נטען בפתיחת הכיתה. מעלים רק אם יש שינוי','.xlsx,.xls',async f=>{
-    try{ const r=(await readXlsx(f)).map(parseGroups58).find(Boolean); if(!r){ toast('זה לא נראה כמו דוח 58'); return; }
-      await saveReports({a58:r.ans,s58:r.str,a58_at:Date.now()}); toast('עודכן'); drawManager();
-    }catch(e){ console.error(e); toast('לא הצלחתי לקרוא: '+e.message); } },
-    R.a58_at?`עודכן ${at(R.a58_at)}`:'נטען בפתיחת הכיתה'));
+  const row=(name,done,what)=>`<tr><td><b>${name}</b><br><span class="hint">${what}</span></td><td style="text-align:left">${done?`<span class="st ok">${esc(done)}</span>`:'<span class="hint">עוד לא הועלה</span>'}</td></tr>`;
+  p.innerHTML=`<div class="card"><h2>דוחות מסמארט סקול</h2>
+    <p class="hint">גוררים לכאן את הדוחות, אחד או כמה יחד, של הכיתה או של כל השכבה. המערכת מזהה לבד איזה דוח זה ולוקחת רק את התלמידים של הכיתה. אפשר להעלות שוב כדי לעדכן.</p>
+    <div id="zr"></div>
+    <table class="t"><tbody>
+      ${row('דוח 42 – אירועים בשיעורים','' + (R.ev?`✓ ${at(R.ev_at)}${R.range?` · מ־${R.range.from} עד ${R.range.to}`:''}`:''),'צל״שים, הפרעות, איחורים וחיסורים')}
+      ${row('דוח 64 – מערכת שעות לתלמיד (PDF)',R.a64?`✓ ${at(R.a64_at)}`:'','מענים עם שעות שבועיות (לא חובה)')}
+      ${row('דוח 58 – קבוצות',`✓ ${R.a58_at?at(R.a58_at):'בפתיחת הכיתה'}`,'מענים וקמפוסים')}
+    </tbody></table></div>`;
+  $('#zr',p).appendChild(dropZone('גררו לכאן את הדוחות','42, 64 או 58 – כיתה או שכבה, אחד או כמה',async files=>{
+    toast('קורא את הקבצים…');
+    const rd=await readReports(files), keys=students().map(s=>s.key), set=new Set(keys);
+    const patch=reportsFor(keys,rd), msgs=[];
+    /* report 58: the sheet with this class's students */
+    const g=rd.g58.map(x=>({x,hit:x.students.filter(s=>set.has(s.key)).length})).sort((a,b)=>b.hit-a.hit)[0];
+    if(g&&g.hit){ Object.assign(patch,{a58:g.x.ans,s58:g.x.str,a58_at:Date.now()}); msgs.push('58'); }
+    if(patch.ev) msgs.push('42'); if(patch.a64) msgs.push('64');
+    if(rd.bad.length) toast('לא זוהה: '+rd.bad.join(', '));
+    if(!msgs.length){ if(!rd.bad.length) toast('בקבצים אין תלמידים מהכיתה הזאת'); return; }
+    try{ await saveReports(patch); toast('נשמרו דוחות '+msgs.join(', ')); drawManager(); }catch(e){ toast(e.message); }
+  }));
 }
 const hrEntry=key=>S.entries.get(ek('_hr',key))||{eval:'',strength:'',response:''};
 const rolesOf=key=>(hrEntry(key).eval||'').split('|').filter(Boolean);
@@ -468,41 +509,125 @@ function drawTabsBadge(){ const n=students().reduce((s,x)=>s+newCount(x.key),0);
 
 /* ================= coordinator: every teacher and their link ================= */
 function askAdmin(again,wrong){
-  const m=shell('דף רכז','קוד רכז');
+  const m=shell('מנהל המערכת','קוד מנהל');
   m.innerHTML=`<div class="card"><p class="hint">הקוד נמצא בגיליון, בלשונית "הגדרות".</p>${wrong?'<div class="note bad">הקוד לא נכון.</div>':''}
-    <form id="af" class="row"><input type="password" id="ac" autocomplete="off" style="max-width:220px" aria-label="קוד רכז"><button class="btn primary">כניסה</button></form></div>`;
+    <form id="af" class="row"><input type="password" id="ac" autocomplete="off" style="max-width:220px" aria-label="קוד מנהל"><button class="btn primary">כניסה</button></form></div>`;
   $('#ac').focus();
   $('#af').onsubmit=e=>{ e.preventDefault(); const v=clean($('#ac').value); if(!v) return; localStorage.setItem('yh_admin',v); again(); };
 }
+const pct=(d,t)=>t?Math.min(100,Math.round(d/t*100)):0;
+const bar=(d,t)=>{ const w=pct(d,t); return `<span class="hint" style="font-size:13px">${d}/${t}</span><div class="progress"><i style="width:${w}%;${w<100?'background:#F59E0B':''}"></i></div>`; };
+/* classes: progress, the homeroom's link (WhatsApp / copy / open), and a print of each grade */
+function classesCard(classes,title){
+  return `<div class="card"><h2>${esc(title)}</h2><p class="hint">הקישור למסך המחנך של כל כיתה נשלח למחנך/ת שלה.</p>
+    <div class="scroll"><table class="t"><thead><tr><th>כיתה</th><th>מילוי</th><th></th></tr></thead><tbody>${classes.map(c=>{ const url=`${BASE}?c=${c.id}&k=${c.key}`, msg=`שלום ${c.homeroom||''}, זה הקישור שלך למסך המחנך של כיתה ${c.name} בדף יום ההורים. לא להעביר הלאה:\n${url}`;
+      return `<tr><td><b>${esc(c.name)}</b><br><span class="hint">${esc(c.homeroom||'')}</span></td><td style="min-width:110px">${bar(c.done,c.total)}</td>
+        <td style="white-space:nowrap;text-align:left"><a class="btn small" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">וואטסאפ</a>
+        <button class="btn small" data-copy="${esc(url)}">העתקה</button><a class="btn small" href="${esc(url)}">פתיחה</a></td></tr>`; }).join('')}</tbody></table></div></div>`;
+}
+function teachersCard(teachers,canRenew){
+  return `<div class="card"><h2>מורים</h2><p class="hint">לכל מורה קישור אישי אחד לכל הכיתות שלו/ה.${canRenew?' "קישור חדש" מבטל את הקודם.':''}</p>
+    <div class="row"><button class="btn small" id="cpAll">העתקת כל הקישורים</button></div>
+    <div class="scroll"><table class="t"><thead><tr><th>מורה</th><th>כיתות</th><th>מילוי</th><th></th></tr></thead><tbody>${teachers.map(t=>{ const url=teacherLink(t.token);
+      return `<tr><td><b>${esc(t.name)}</b>${t.sent?'<br><span class="st ok">קיבל/ה קישור ✓</span>':''}</td><td>${t.classes}</td><td style="min-width:110px">${bar(t.done,t.total)}</td>
+        <td style="white-space:nowrap;text-align:left"><a class="btn small" target="_blank" rel="noopener" data-sent="${esc(t.name)}" href="https://wa.me/?text=${encodeURIComponent(waMsg(t.name,url))}">וואטסאפ</a>
+        <button class="btn small" data-copy="${esc(url)}" data-sent="${esc(t.name)}">העתקה</button>${canRenew?`<button class="btn small" data-new="${esc(t.name)}">קישור חדש</button>`:''}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+}
+/* reports 42 / 64 / 58 for many classes at once: each class takes only its own students */
+function bulkReports(classes){
+  const card=document.createElement('div'); card.className='card';
+  card.innerHTML=`<h2>דוחות לכל הכיתות</h2><p class="hint">גוררים לכאן דוח 42 של השכבה (או של כמה כיתות), ואם רוצים גם 64 ו-58. כל כיתה מקבלת רק את התלמידים שלה.</p><div id="zb"></div><div id="zbr"></div>`;
+  $('#zb',card).appendChild(dropZone('גררו לכאן את הדוחות','42, 64 או 58 – שכבה שלמה או כמה כיתות',async files=>{
+    const out=$('#zbr',card); out.innerHTML='<p class="hint">קורא את הקבצים…</p>';
+    const rd=await readReports(files), lines=[];
+    const show=()=>{ out.innerHTML=lines.map(([k,t])=>`<div class="note ${k}" style="padding:6px 12px;margin-top:6px">${esc(t)}</div>`).join(''); };
+    for(const n of rd.bad) lines.push(['bad','לא זוהה כדוח: '+n]);
+    for(const c of classes){
+      try{
+        const g=await call({action:'get',id:c.id,key:c.key}), cls=g.cls, keys=(cls.data.students||[]).map(s=>s.key), set=new Set(keys);
+        const patch=reportsFor(keys,rd), got=[];
+        const best=rd.g58.map(x=>({x,hit:x.students.filter(s=>set.has(s.key)).length})).sort((a,b)=>b.hit-a.hit)[0];
+        if(best&&best.hit){ Object.assign(patch,{a58:best.x.ans,s58:best.x.str,a58_at:Date.now()}); got.push('58'); }
+        if(patch.ev) got.push('42'); if(patch.a64) got.push('64');
+        if(got.length){ await call({action:'update',id:c.id,key:c.key,reports:{...(cls.reports||{}),...patch}}); lines.push(['good',`${c.name}: נשמרו ${got.join(', ')}`]); }
+        else lines.push(['warn',`${c.name}: אין בקבצים תלמידים מהכיתה`]);
+      }catch(e){ lines.push(['bad',`${c.name}: ${e.message}`]); }
+      show();
+    }
+    show();
+  }));
+  return card;
+}
+/* one PDF of every student page in these classes */
+async function printClasses(classes,btn){
+  const keep=S, html=[], list=[];
+  try{
+    for(const [i,c] of classes.entries()){
+      if(btn) btn.textContent=`מכין… ${i+1}/${classes.length}`;
+      await load(c.id,c.key);
+      for(const st of students()){ html.push(pageHTML(st)); list.push(st); }
+    }
+    const over=await renderPages(list,html.join(''));
+    if(over.length) toast(`שימו לב: אצל ${over.length} תלמידים הטקסט ארוך מדי לדף אחד`);
+    setTimeout(()=>window.print(),50);
+  }catch(e){ toast(e.message); }
+  finally{ S=keep; if(btn) btn.textContent=btn.dataset.label; }
+}
+function bindPrint(el,classes){
+  el.querySelectorAll('[data-print]').forEach(b=>{ b.dataset.label=b.textContent; b.onclick=()=>printClasses(classes.filter(c=>!b.dataset.print||c.grade===b.dataset.print),b); });
+}
+
+/* ================= the system manager ================= */
 async function viewAdmin(){
-  shell('דף רכז','טוען…');
+  shell('מנהל המערכת','טוען…');
   let r;
   try{ r=await call({action:'adminGet'}); }
   catch(e){ if(e.adminError){ const had=!!getAdmin(); localStorage.removeItem('yh_admin'); askAdmin(viewAdmin,had); } else errorView(e.message); return; }
-  S={teachers:r.teachers};
-  const m=shell('דף רכז','כל המורים');
-  const notSent=r.teachers.filter(t=>!t.sent);
-  const all=r.teachers.map(t=>`${t.name}: ${teacherLink(t.token)}`).join('\n');
-  m.innerHTML=`<div class="card" style="gap:8px"><b>${r.classes.length} כיתות פתוחות · ${r.teachers.length} מורים · ${notSent.length} עוד לא קיבלו קישור</b>
-    <p class="hint">לכל מורה קישור אחד לכל הכיתות. "קישור חדש" מבטל את הקודם (למשל אם הועבר למישהו אחר).</p>
-    <div class="row"><button class="btn small" id="cpAll">העתקת כל הקישורים</button><button class="btn small" id="rl">רענון</button></div></div>
-    <div class="card"><div class="scroll"><table class="t"><thead><tr><th>מורה</th><th>כיתות</th><th>מילוי</th><th></th></tr></thead><tbody>${r.teachers.map(t=>{
-      const w=t.total?Math.min(100,t.done/t.total*100):0, url=teacherLink(t.token);
-      return `<tr><td><b>${esc(t.name)}</b>${t.sent?'<br><span class="st ok">קיבל/ה קישור ✓</span>':''}</td><td>${t.classes}</td>
-        <td style="min-width:110px"><span class="hint" style="font-size:13px">${t.done}/${t.total}</span><div class="progress"><i style="width:${w}%;${w<100?'background:#F59E0B':''}"></i></div></td>
-        <td style="white-space:nowrap;text-align:left"><a class="btn small" target="_blank" rel="noopener" data-sent="${esc(t.name)}" href="https://wa.me/?text=${encodeURIComponent(waMsg(t.name,url))}">וואטסאפ</a>
-        <button class="btn small" data-copy="${esc(url)}" data-sent="${esc(t.name)}">העתקה</button>
-        <button class="btn small" data-new="${esc(t.name)}">קישור חדש</button></td></tr>`; }).join('')}</tbody></table></div></div>`;
-  if(r.classes.length&&r.classes[0].key) m.insertAdjacentHTML('beforeend',`<div class="card"><h2>כיתות פתוחות</h2><p class="hint">הקישור למסך המחנך של כל כיתה, למשל אם מחנך/ת איבד/ה אותו.</p>
-    <div class="scroll"><table class="t"><tbody>${r.classes.map(c=>{ const url=`${BASE}?c=${c.id}&k=${c.key}`;
-      return `<tr><td><b>${esc(c.name)}</b><br><span class="hint">${esc(c.homeroom)}</span></td><td style="white-space:nowrap;text-align:left"><button class="btn small" data-copy="${esc(url)}">העתקה</button><a class="btn small" href="${esc(url)}">פתיחה</a></td></tr>`; }).join('')}</tbody></table></div></div>`);
-  bindTeacherLinks(m,'adminSent');
+  WHO={by:'admin'}; S={teachers:r.teachers};
+  const grades=[...new Set([...r.classes.map(c=>c.grade),...(r.coords||[]).map(c=>c.grade)].filter(Boolean))].sort();
+  const coordOf=g=>(r.coords||[]).find(c=>c.grade===g);
+  const m=shell('מנהל המערכת','כל בית הספר');
+  m.innerHTML=`<div class="card" style="gap:10px"><b>${r.classes.length} כיתות · ${r.teachers.length} מורים · ${r.teachers.filter(t=>!t.sent).length} עוד לא קיבלו קישור</b>
+    <div class="row"><button class="btn primary" id="newCls">פתיחת כיתות</button><button class="btn" id="rl">רענון</button></div></div>
+    <div class="card"><h2>רכזי שכבה</h2><p class="hint">כל רכז/ת מקבל/ת קישור אישי לשכבה שלו/ה: פתיחת כיתות, מעקב, שליחת קישורים, דוחות והפקה.</p>
+    <div class="scroll"><table class="t"><tbody>${grades.map(g=>{ const c=coordOf(g), url=c?`${BASE}?g=${c.token}`:'', msg=c?`שלום ${c.name}, זה הקישור האישי שלך כרכז/ת שכבה ${g}' בדף יום ההורים. בכניסה הראשונה צריך את הקוד הבית ספרי:\n${url}`:'';
+      return `<tr><td><b>שכבה ${esc(g)}'</b></td><td><input type="text" data-cn="${esc(g)}" value="${esc(c?c.name:'')}" placeholder="שם הרכז/ת"></td>
+        <td style="white-space:nowrap;text-align:left">${c?`${c.sent?'<span class="st ok" style="margin-inline-end:6px">קיבל/ה ✓</span>':''}<a class="btn small" target="_blank" rel="noopener" data-csent="${esc(g)}" href="https://wa.me/?text=${encodeURIComponent(msg)}">וואטסאפ</a><button class="btn small" data-copy="${esc(url)}" data-csent="${esc(g)}">העתקה</button><button class="btn small" data-cnew="${esc(g)}">קישור חדש</button>`:`<button class="btn small" data-cset="${esc(g)}">יצירת קישור</button>`}
+        <button class="btn small" data-print="${esc(g)}">הפקת השכבה</button></td></tr>`; }).join('')}</tbody></table></div>
+    <form id="addG" class="row"><input type="text" id="ng" placeholder="שכבה (למשל ט)" style="max-width:140px" aria-label="שכבה"><input type="text" id="nn" placeholder="שם הרכז/ת" style="max-width:220px" aria-label="שם הרכז/ת"><button class="btn small">הוספת רכז/ת</button></form></div>
+    ${classesCard(r.classes,'כיתות פתוחות')}${teachersCard(r.teachers,true)}`;
+  m.insertBefore(bulkReports(r.classes),m.children[2]);
+  bindTeacherLinks(m,'adminSent'); bindPrint(m,r.classes);
+  $('#newCls').onclick=()=>viewCreate({by:'admin'});
   $('#rl').onclick=viewAdmin;
-  $('#cpAll').onclick=()=>{ copy(all); call({action:'adminSent',names:r.teachers.map(t=>t.name)}).catch(()=>{}); };
+  $('#cpAll').onclick=()=>{ copy(r.teachers.map(t=>`${t.name}: ${teacherLink(t.token)}`).join('\n')); call({action:'adminSent',names:r.teachers.map(t=>t.name)}).catch(()=>{}); };
+  const setCoord=async(g,name,newToken)=>{ try{ await call({action:'adminSetCoord',grade:g,name,newToken}); toast('נשמר'); viewAdmin(); }catch(e){ toast(e.message); } };
+  m.querySelectorAll('[data-cset]').forEach(b=>b.onclick=()=>{ const n=clean(m.querySelector(`[data-cn="${b.dataset.cset}"]`).value); if(!n){ toast('כתבו את שם הרכז/ת'); return; } setCoord(b.dataset.cset,n,false); });
+  m.querySelectorAll('[data-cn]').forEach(i=>i.onchange=()=>{ if(coordOf(i.dataset.cn)&&clean(i.value)) setCoord(i.dataset.cn,clean(i.value),false); });
+  m.querySelectorAll('[data-cnew]').forEach(b=>b.onclick=()=>{ if(confirm(`ליצור קישור חדש לרכז/ת שכבה ${b.dataset.cnew}'? הקישור הישן יפסיק לעבוד.`)) setCoord(b.dataset.cnew,coordOf(b.dataset.cnew).name,true); });
+  m.querySelectorAll('[data-csent]').forEach(b=>b.addEventListener('click',()=>call({action:'adminCoordSent',grade:b.dataset.csent}).catch(()=>{})));
+  $('#addG').onsubmit=e=>{ e.preventDefault(); const g=gradeOf($('#ng').value), n=clean($('#nn').value); if(!g||!n){ toast('חסרים שכבה או שם'); return; } setCoord(g,n,false); };
   m.querySelectorAll('[data-new]').forEach(b=>b.onclick=async()=>{
     if(!confirm(`ליצור קישור חדש ל${b.dataset.new}? הקישור הישן יפסיק לעבוד, וצריך לשלוח לו/ה את החדש.`)) return;
     try{ await call({action:'adminRetoken',name:b.dataset.new}); toast('נוצר קישור חדש'); viewAdmin(); }catch(e){ toast(e.message); }
   });
+}
+
+/* ================= a grade coordinator (personal link) ================= */
+async function viewCoord(g){
+  shell('רכז/ת שכבה','טוען…');
+  let r; try{ r=await withCode(()=>call({action:'gget',g})); }catch(e){ errorView(e.message); return; }
+  WHO={by:'coord',g,grade:r.grade}; S={teachers:r.teachers};
+  const m=shell(`רכז/ת שכבה ${r.grade}'`,`שלום ${r.name}`);
+  const done=r.classes.reduce((n,c)=>n+c.done,0), total=r.classes.reduce((n,c)=>n+c.total,0);
+  m.innerHTML=`<div class="card" style="gap:10px"><b>${r.classes.length} כיתות · ${r.teachers.length} מורים · מולאו ${pct(done,total)}% מההערכות</b>
+    <div class="row"><button class="btn primary" id="newCls">פתיחת כיתות בשכבה</button>${r.classes.length?`<button class="btn" data-print="">הפקת דפים לכל השכבה</button>`:''}<button class="btn" id="rl">רענון</button></div></div>
+    ${classesCard(r.classes,'הכיתות בשכבה')}${teachersCard(r.teachers,false)}`;
+  if(r.classes.length) m.insertBefore(bulkReports(r.classes),m.children[2]);
+  bindTeacherLinks(m,'gsent'); bindPrint(m,r.classes);
+  $('#newCls').onclick=()=>viewCreate(WHO);
+  $('#rl').onclick=()=>viewCoord(g);
+  $('#cpAll').onclick=()=>{ copy(r.teachers.map(t=>`${t.name}: ${teacherLink(t.token)}`).join('\n')); call({action:'gsent',g,names:r.teachers.map(t=>t.name)}).catch(()=>{}); };
 }
 
 /* ================= the printed page ================= */
@@ -541,11 +666,11 @@ function fit(page){
   }
   return false;
 }
-async function renderPages(list){
-  const area=$('#printArea'); area.innerHTML=list.map(pageHTML).join('');
+async function renderPages(list,html){
+  const area=$('#printArea'); area.innerHTML=html||list.map(pageHTML).join('');
   if(document.fonts&&document.fonts.ready) await document.fonts.ready;
   await Promise.all([...area.querySelectorAll('img')].map(i=>i.complete?0:new Promise(r=>{ i.onload=i.onerror=r; })));
-  const over=[]; [...area.querySelectorAll('.page')].forEach((pg,i)=>{ if(!fit(pg)) over.push(list[i].name); });
+  const over=[]; [...area.querySelectorAll('.page')].forEach((pg,i)=>{ if(!fit(pg)) over.push(list[i]?.name||''); });
   return over;
 }
 function panePrint(p){
@@ -580,6 +705,7 @@ function panePrint(p){
 (function(){
   const c=params.get('c'), k=params.get('k'), m=params.get('m');
   if(m) viewPortal(m);
+  else if(params.get('g')) viewCoord(params.get('g'));
   else if(params.get('admin')) viewAdmin();
   else if(c&&k) viewManager(c,k);
   else if(c) errorView('זה קישור ישן או חלקי. כל מורה מקבל/ת קישור אישי מהמחנך/ת.');

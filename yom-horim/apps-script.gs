@@ -9,6 +9,7 @@ const CLASSES = 'כיתות';
 const ENTRIES = 'הערכות';
 const TEACHERS = 'מורים';
 const SETTINGS = 'הגדרות';
+const COORDS = 'רכזי שכבה';
 
 function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
 function sheet_(name, headers) {
@@ -18,6 +19,7 @@ function sheet_(name, headers) {
 }
 const classesSheet_ = () => sheet_(CLASSES, ['מזהה', 'מפתח מחנך', 'כיתה', 'מחנך/ת', 'נוצר', 'נתונים', 'דוחות']);
 const entriesSheet_ = () => sheet_(ENTRIES, ['מזהה כיתה', 'מקצוע', 'תלמיד', 'הערכה', 'חוזקות', 'מענים', 'עודכן', 'נראה', 'מאת']);
+const coordsSheet_ = () => sheet_(COORDS, ['שכבה', 'רכז/ת', 'קוד קישור', 'נשלח', 'נוצר']);
 const teachersSheet_ = () => sheet_(TEACHERS, ['שם המורה', 'קוד קישור', 'נשלח', 'נוצר']);
 
 /* the codes live in the "הגדרות" tab, so pasting a new version of this script never needs editing */
@@ -28,7 +30,7 @@ function settings_() {
     sh.getRange(1, 1, 3, 3).setValues([
       ['הגדרה', 'ערך', 'הסבר'],
       ['קוד בית ספרי', '', 'קוד שנמסר לכל המורים בעל פה. נדרש בכניסה הראשונה ובפתיחת כיתה'],
-      ['קוד רכז', '', 'קוד לדף הרכז (רשימת כל המורים והקישורים). רק לך']]);
+      ['קוד מנהל', '', 'קוד לדף מנהל המערכת (כל הכיתות, המורים ורכזי השכבות). רק לך']]);
     sh.getRange('B2:B3').setNumberFormat('@'); sh.setColumnWidth(3, 420);
   }
   const v = sh.getRange(2, 2, 2, 1).getValues();
@@ -101,6 +103,33 @@ function teacherClasses_(name, done) {
   return out;
 }
 
+/* ---------- grades and grade coordinators ---------- */
+const gradeOf_ = name => (String(name || '').match(/[\u05D0-\u05EA]/) || [''])[0];
+function coords_() {
+  const sh = coordsSheet_(), v = sh.getDataRange().getValues(), list = [];
+  for (let r = 1; r < v.length; r++) list.push({ row: r + 1, grade: String(v[r][0]).trim(), name: norm_(v[r][1]), token: String(v[r][2]), sent: v[r][3] === true || v[r][3] === 'TRUE' });
+  return { sh, list };
+}
+function coordByToken_(tok) { return tok ? coords_().list.find(x => x.token === tok) || null : null; }
+/* classes (with progress) and their teachers, for the whole school or for one grade */
+function overview_(grade) {
+  const classes = allClasses_().filter(c => !grade || gradeOf_(c.v[2]) === grade), done = doneCounts_();
+  const per = {}, names = [];
+  const cls = classes.map(c => {
+    let d = 0, t = 0;
+    for (const s of (c.data.subjects || [])) {
+      const n = Math.min(done[c.id + '|' + s.id] || 0, s.students.length); d += n; t += s.students.length;
+      const name = norm_(s.teacher); names.push(name);
+      const p = (per[name] = per[name] || { classes: {}, done: 0, total: 0 }); p.classes[c.id] = 1; p.done += n; p.total += s.students.length;
+    }
+    return { id: c.id, key: c.v[1], name: c.v[2], homeroom: c.v[3], grade: gradeOf_(c.v[2]), done: d, total: t };
+  });
+  const map = ensureTeachers_(names);
+  const teachers = Object.values(map).map(x => ({ name: x.name, token: x.token, sent: x.sent, classes: Object.keys(per[x.name].classes).length, done: per[x.name].done, total: per[x.name].total }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'he'));
+  return { classes: cls, teachers };
+}
+
 function doGet() { settings_(); return out_({ ok: true, msg: 'דף יום הורים – השרת עובד' }); }
 
 function doPost(e) {
@@ -116,19 +145,24 @@ function handle_(q) {
   if (!S.school) return { error: 'עוד לא נקבע קוד בית ספרי (בגיליון, לשונית "הגדרות").' };
   const codeOk = String(q.code || '').trim() === S.school;
 
-  /* ---- coordinator: all teachers and their links ---- */
+  const adminOk = !!S.admin && String(q.admin || '').trim() === S.admin;
+  const coord = q.g ? coordByToken_(q.g) : null;
+
+  /* ---- the system manager: every class, teacher and grade coordinator ---- */
   if (q.action && q.action.indexOf('admin') === 0) {
-    if (!S.admin || String(q.admin || '').trim() !== S.admin) return { error: 'קוד רכז שגוי', adminError: true };
+    if (!adminOk) return { error: 'קוד מנהל שגוי', adminError: true };
     if (q.action === 'adminGet') {
-      const classes = allClasses_(), names = [];
-      classes.forEach(c => (c.data.subjects || []).forEach(s => names.push(s.teacher)));
-      const map = ensureTeachers_(names), done = doneCounts_();
-      const list = Object.values(map).map(t => {
-        const cl = teacherClasses_(t.name, done);
-        return { name: t.name, token: t.token, sent: t.sent, classes: cl.length, done: cl.reduce((n, x) => n + Math.min(x.done, x.total), 0), total: cl.reduce((n, x) => n + x.total, 0) };
-      }).sort((a, b) => a.name.localeCompare(b.name, 'he'));
-      return { teachers: list, classes: classes.map(c => ({ id: c.id, key: c.v[1], name: c.v[2], homeroom: c.v[3] })) };
+      const o = overview_('');
+      return { teachers: o.teachers, classes: o.classes, coords: coords_().list.map(x => ({ grade: x.grade, name: x.name, token: x.token, sent: x.sent })) };
     }
+    if (q.action === 'adminSetCoord') { /* appoint (or rename) the coordinator of a grade */
+      const g = gradeOf_(q.grade); if (!g) return { error: 'חסרה שכבה' };
+      const c = coords_(), x = c.list.find(y => y.grade === g);
+      if (x) { c.sh.getRange(x.row, 2).setValue(txt_(norm_(q.name))); if (q.newToken) c.sh.getRange(x.row, 3, 1, 2).setValues([[token_(14), false]]); }
+      else c.sh.appendRow([g, txt_(norm_(q.name)), token_(14), false, new Date()]);
+      return { ok: true };
+    }
+    if (q.action === 'adminCoordSent') { const x = coords_().list.find(y => y.grade === gradeOf_(q.grade)); if (x) coordsSheet_().getRange(x.row, 4).setValue(true); return { ok: true }; }
     if (q.action === 'adminRetoken') {
       const x = teachers_().list.find(y => y.name === norm_(q.name)); if (!x) return { error: 'לא נמצא' };
       x.token = token_(14); teachersSheet_().getRange(x.row, 2, 1, 2).setValues([[x.token, false]]); return { token: x.token };
@@ -137,12 +171,26 @@ function handle_(q) {
     return { error: 'unknown action' };
   }
 
-  /* ---- homeroom teacher opens a class (needs the school code) ---- */
-  if (q.action === 'create') {
+  /* ---- a grade coordinator: personal link + school code, only their grade ---- */
+  if (q.g && q.action !== 'create') {
     if (!codeOk) return { error: 'קוד בית ספר שגוי', codeError: true };
+    if (!coord) return { error: 'הקישור האישי הזה כבר לא בתוקף. בקשו קישור חדש ממנהל המערכת.' };
+    if (q.action === 'gget') { const o = overview_(coord.grade); return { name: coord.name, grade: coord.grade, classes: o.classes, teachers: o.teachers }; }
+    if (q.action === 'gsent') { const mine = overview_(coord.grade).teachers.map(t => t.name); return markSent_((q.names || []).filter(n => mine.indexOf(norm_(n)) >= 0)); }
+    return { error: 'אין הרשאה' };
+  }
+
+  /* ---- opening a class: the system manager, or a grade coordinator for their own grade ---- */
+  if (q.action === 'create') {
+    if (!adminOk) {
+      if (!q.g) return { error: 'רק מנהל המערכת או רכז/ת השכבה פותחים כיתות.' };
+      if (!codeOk) return { error: 'קוד בית ספר שגוי', codeError: true };
+      if (!coord) return { error: 'הקישור האישי הזה כבר לא בתוקף.' };
+      if (gradeOf_(q.name) !== coord.grade) return { error: 'הכיתה ' + q.name + ' לא בשכבה שלך.', notMine: true };
+    }
     const ck = clsKey_(q.name);
     if (!ck) return { error: 'חסר שם כיתה' };
-    if (allClasses_().some(c => clsKey_(c.v[2]) === ck)) return { error: 'הכיתה ' + q.name + ' כבר נפתחה. את הקישור למסך המחנך שלה אפשר למצוא בדף הרכז.', exists: true };
+    if (allClasses_().some(c => clsKey_(c.v[2]) === ck)) return { error: 'הכיתה ' + q.name + ' כבר נפתחה.', exists: true };
     const id = token_(10), key = token_(16), data = q.data || {};
     classesSheet_().appendRow([id, key, txt_(q.name), txt_(q.homeroom), new Date(), JSON.stringify(data), JSON.stringify(q.reports || {})]);
     ensureTeachers_((data.subjects || []).map(s => s.teacher));
