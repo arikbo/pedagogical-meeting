@@ -60,7 +60,12 @@ h2{font-family:var(--display);font-size:24px;margin:0;font-weight:700}
 /* test: open in Google Slides */
 .btn.gs-test{border-style:dashed}
 #gsHelp{position:fixed;inset:auto 16px 92px auto;z-index:60;max-width:420px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);padding:16px 18px;font-size:15px;line-height:1.55}
-#gsHelp[hidden]{display:none}
+#gsDone{position:fixed;inset:auto 16px 92px auto;z-index:60;max-width:420px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);padding:16px 18px;font-size:15px;line-height:1.55}
+#gsDone h3{margin:0 0 8px;font-size:17px}
+#gsDone .gs-note{font-size:13px;opacity:.75;margin:0 0 12px}
+#gsDone .gs-row a{text-decoration:none}
+#gsDone .gs-x{position:absolute;inset:8px auto auto 10px;background:none;border:0;font-size:18px;cursor:pointer;color:inherit}
+#gsHelp[hidden],#gsDone[hidden],#gsWhy[hidden]{display:none}
 #gsHelp h3{margin:0 0 8px;font-size:17px}
 #gsHelp ol{margin:0 0 10px;padding-inline-start:20px}
 #gsHelp .gs-note{font-size:13px;opacity:.75;margin:0 0 12px}
@@ -495,10 +500,11 @@ footer a{color:var(--accent)}
 <div class="bar-bottom"><div class="bar-in">
   <span id="status"></span>
   <button class="btn primary gen" id="bGen" type="button"><svg class="ic-dl" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="spin" aria-hidden="true"></span><span class="lbl">יצירת מצגת PowerPoint</span></button>
-  <button class="btn gen gs-test" id="bGS" type="button" title="ניסוי: מוריד את המצגת ומסביר איך לפתוח אותה ב-Google Slides ולשתף"><span class="spin" aria-hidden="true"></span><span class="lbl">טסט: פתיחה ב-Google Slides</span></button>
+  <button class="btn gen gs-test" id="bGS" type="button" title="ניסוי: יוצר את המצגת ישירות ב-Google Drive שלכם ופותח אותה ב-Google Slides"><span class="spin" aria-hidden="true"></span><span class="lbl">טסט: יצירה ב-Google Slides</span></button>
 </div></div>
 <div id="gsHelp" role="dialog" aria-labelledby="gsHelpT" hidden>
   <button class="gs-x" type="button" id="gsX" aria-label="סגירה">✕</button>
+  <p class="gs-note" id="gsWhy" hidden></p>
   <h3 id="gsHelpT">המצגת ירדה. עכשיו ל-Google Slides:</h3>
   <ol>
     <li>לחצו על ״פתיחת Google Drive״ (עם החשבון של משרד החינוך).</li>
@@ -509,6 +515,13 @@ footer a{color:var(--accent)}
   </ol>
   <p class="gs-note">זה ניסוי: בדקו שהעיצוב, העברית והקישורים בין השקפים נראים תקין אחרי ההמרה.</p>
   <div class="gs-row"><a class="btn primary" href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener">פתיחת Google Drive</a></div>
+</div>
+<div id="gsDone" role="dialog" aria-labelledby="gsDoneT" hidden>
+  <button class="gs-x" type="button" id="gsDoneX" aria-label="סגירה">✕</button>
+  <h3 id="gsDoneT">המצגת נוצרה ב-Google Slides ✓</h3>
+  <p style="margin:0 0 10px">היא נשמרה ב-Google Drive שלכם. כדי לעבוד עליה יחד: ״שיתוף״ (למעלה) ← מוסיפים את הרכז/ת ← ״עורך״.</p>
+  <p class="gs-note">זה ניסוי: בדקו שהעיצוב, העברית והקישורים בין השקפים נראים תקין.</p>
+  <div class="gs-row"><a class="btn primary" id="gsOpen" href="#" target="_blank" rel="noopener">פתיחת המצגת</a></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -3406,6 +3419,7 @@ async function generate(){
   let blob;
   try{ blob=await returnShows(await pptx.write({outputType:'arraybuffer'})); }
   catch(e){ console.error(e); blob=await pptx.write({outputType:'blob'}); }
+  if(wantBlob) return {blob,fname};
   const dl = window.claude?.use ? await window.claude.use('downloads') : null;
   if(dl){
     try{ await dl.save({filename:fname+'.pptx', data:blob}); return 'saved'; }
@@ -3472,26 +3486,91 @@ $('#inLogos').onchange=e=>{ handleLogos([...e.target.files]); e.target.value='';
 ['#sPass','#sAbsMin','#sLateMin'].forEach(id=>$(id).addEventListener('input',refresh));
 $('#sTeacher').addEventListener('input',()=>{ state.teacherAuto=false; renderChecks(); updateStatus(); });
 $('#sClass').addEventListener('input',()=>{ state.clsAuto=false; renderThemes(); });
-async function runGen(gs){
+function readyToGen(){
   if(!state.sample&&changedMissing().length){
     changedTried=true; markChanged(true); updateStatus();
     $('#changedBox').scrollIntoView({behavior:'smooth',block:'center'});
     const first=$('#changedBox .miss'); if(first) setTimeout(()=>first.focus({preventScroll:true}),400);
-    return;
+    return false;
   }
+  return true;
+}
+async function runGen(gs,why){
+  if(!readyToGen()) return;
   const b=$(gs?'#bGS':'#bGen'), lbl=b.querySelector('.lbl'), old=lbl.textContent;
-  $('#gsHelp').hidden=true;
+  $('#gsHelp').hidden=true; $('#gsDone').hidden=true;
   b.disabled=true; b.classList.add('busy'); b.setAttribute('aria-busy','true'); lbl.textContent='מכין את המצגת…';
   await new Promise(r=>setTimeout(r,50)); /* let the spinner show before the heavy work starts */
   try{ const r=await generate();
     $('#status').textContent = r==='saved' ? (gs?'המצגת נשמרה. העלו אותה ל-Google Drive לפי ההסבר.':'המצגת נשמרה. פתחו אותה ב-PowerPoint.') : r==='declined' ? 'ההורדה בוטלה. לחצו שוב כדי לשמור את המצגת.' : 'לא הצלחנו לשמור את הקובץ. נסו שוב.';
-    if(gs&&r==='saved') $('#gsHelp').hidden=false; }
+    if(gs&&r==='saved'){ $('#gsWhy').textContent=why||''; $('#gsWhy').hidden=!why; $('#gsHelp').hidden=false; } }
   catch(e){ console.error(e); $('#status').textContent='יצירת המצגת נכשלה. רעננו את הדף ונסו שוב.'; }
   b.classList.remove('busy'); b.removeAttribute('aria-busy'); lbl.textContent=old; updateStatus();
 }
 $('#bGen').onclick=()=>runGen(false);
-$('#bGS').onclick=()=>runGen(true);
 $('#gsX').onclick=()=>{ $('#gsHelp').hidden=true; };
+$('#gsDoneX').onclick=()=>{ $('#gsDone').hidden=true; };
+
+/* ---------- TEST: create the deck directly in Google Slides (this page only) ----------
+   The teacher signs in with Google and allows access only to files this site creates (drive.file).
+   The .pptx is built in the browser as usual, uploaded to the teacher's own Drive and converted
+   to Google Slides. If sign-in fails or is blocked, we fall back to download + manual steps. */
+const GS_CLIENT_ID='855762726620-5us5mp7lh7qi1cuodfmup2huvqeuj0vo.apps.googleusercontent.com';
+const PPTX_MIME='application/vnd.openxmlformats-officedocument.presentationml.presentation';
+let wantBlob=false, gsClient=null, gsToken=null, gsTokenExp=0;
+(function loadGIS(){
+  const sc=document.createElement('script'); sc.src='https://accounts.google.com/gsi/client'; sc.async=true;
+  sc.onload=()=>{ try{ gsClient=google.accounts.oauth2.initTokenClient({client_id:GS_CLIENT_ID,scope:'https://www.googleapis.com/auth/drive.file',
+    callback:r=>{ if(r&&r.access_token){ gsToken=r.access_token; gsTokenExp=Date.now()+((+r.expires_in||3600)-120)*1000; runGS(); } else gsFail('הכניסה ל-Google לא הושלמה.'); },
+    error_callback:e=>gsFail(e&&e.type==='popup_failed_to_open'?'הדפדפן חסם את חלון הכניסה של Google. אפשרו חלונות קופצים לאתר ונסו שוב.':'חלון הכניסה של Google נסגר. אם הופיעה בו הודעה שהגישה חסומה, החשבון הזה לא מאפשר יצירה ישירה. אפשר בדרך הידנית:') }); }catch(e){ console.error(e); } };
+  document.head.appendChild(sc);
+})();
+function gsFail(why){ runGen(true,why); }
+$('#bGS').onclick=()=>{
+  if(!readyToGen()) return;
+  $('#gsHelp').hidden=true; $('#gsDone').hidden=true;
+  if(!gsClient) return gsFail('החיבור ל-Google לא נטען. אפשר בדרך הידנית:');
+  if(gsToken&&Date.now()<gsTokenExp) return runGS();
+  gsClient.requestAccessToken({prompt:''});
+};
+async function gsUpload(blob,fname){
+  const auth={Authorization:'Bearer '+gsToken};
+  const meta={name:fname,mimeType:'application/vnd.google-apps.presentation'};
+  const init=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,webViewLink',
+    {method:'POST',headers:{...auth,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':PPTX_MIME,'X-Upload-Content-Length':String(blob.size)},body:JSON.stringify(meta)});
+  if(init.status===401){ gsToken=null; throw Object.assign(new Error('auth'),{code:401}); }
+  if(!init.ok) throw new Error('init '+init.status+' '+await init.text());
+  const loc=init.headers.get('Location');
+  let res;
+  if(loc) res=await fetch(loc,{method:'PUT',headers:{'Content-Type':PPTX_MIME},body:blob});
+  else{ /* no upload URL exposed: one-shot multipart */
+    const fd=new FormData(); fd.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'})); fd.append('file',blob,fname+'.pptx');
+    res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',{method:'POST',headers:auth,body:fd});
+  }
+  if(!res.ok) throw new Error('upload '+res.status+' '+await res.text());
+  const j=await res.json();
+  return j.webViewLink||('https://docs.google.com/presentation/d/'+j.id+'/edit');
+}
+async function runGS(){
+  const b=$('#bGS'), lbl=b.querySelector('.lbl'), old=lbl.textContent;
+  b.disabled=true; b.classList.add('busy'); b.setAttribute('aria-busy','true'); lbl.textContent='מכין את המצגת…';
+  await new Promise(r=>setTimeout(r,50));
+  let fallback=null;
+  try{
+    wantBlob=true; const out=await generate(); wantBlob=false;
+    lbl.textContent='יוצר ב-Google Slides…';
+    const link=await gsUpload(out.blob,out.fname);
+    $('#gsOpen').href=link; $('#gsDone').hidden=false;
+    $('#status').textContent='המצגת נוצרה ב-Google Slides ונשמרה ב-Drive שלכם.';
+    try{ window.open(link,'_blank','noopener'); }catch(e){}
+  }catch(e){
+    wantBlob=false; console.error(e);
+    fallback = e.code===401 ? 'החיבור ל-Google פג. לחצו שוב על הכפתור, או המשיכו בדרך הידנית:'
+      : 'לא הצלחנו ליצור את המצגת ב-Google Slides. אפשר בדרך הידנית:';
+  }
+  b.classList.remove('busy'); b.removeAttribute('aria-busy'); lbl.textContent=old; updateStatus();
+  if(fallback) runGen(true,fallback);
+}
 state.sample=false; refresh();
 $('#bSample').onclick=()=>{ loadSample(); };
 </script>
